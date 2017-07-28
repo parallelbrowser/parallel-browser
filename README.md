@@ -15,6 +15,7 @@ A custom web browser built in Electron giving users access to a "parallel Intern
 * A separate Tor hidden service
   * (to allow whistleblowers and political dissidents to participate without being tracked)
 
+### Rough wireframes below...
 ## Possible Data Flow for Getting Suggestions
 ![Suggestions Backend](./img/server.png?raw=true "Sample Usage")
 
