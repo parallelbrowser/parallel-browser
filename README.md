@@ -4,16 +4,13 @@ A custom web browser built in Electron giving users access to a "parallel Intern
 * Would be highly customizable and support a user community.
 * Useful for quickly finding/filtering related webpages and information
 
-## Features
-* Can track the user's URL and scrape metadata from webpage
-* Will use the Webhose.io and Algolia APIs to find web content related to the page
-* A collapsible/filterable "Suggestions" sidebar with links to related content
-* A collapsible "Conversations" sidebar with comment threads specific to each URL or domain
-* Interaction with the underlying webpage DOM
-  * (i.e., clicking a user comment could jump to quoted text on the page)
-* Ability to track and filter trending Conversations
-* A separate Tor hidden service
-  * (to allow whistleblowers and political dissidents to participate without being tracked)
+## Resources
+https://blog.jscrambler.com/building-a-web-browser-using-electron/
+https://electron.atom.io/docs/api/browser-window/
+https://medium.com/@ccnokes/deep-dive-into-electrons-main-and-renderer-processes-7a9599d5c9e2
+https://electron.atom.io/docs/api/ipc-main/
+https://electron.atom.io/docs/api/remote/
+https://electron.atom.io/docs/api/web-contents/
 
 ### Rough wireframes below...
 ## Possible Data Flow for Getting Suggestions
