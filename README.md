@@ -16,12 +16,12 @@ A custom web browser built in Electron giving users access to a "parallel Intern
 
 
 ## Resources
-https://blog.jscrambler.com/building-a-web-browser-using-electron/
-https://electron.atom.io/docs/api/browser-window/
-https://medium.com/@ccnokes/deep-dive-into-electrons-main-and-renderer-processes-7a9599d5c9e2
-https://electron.atom.io/docs/api/ipc-main/
-https://electron.atom.io/docs/api/remote/
-https://electron.atom.io/docs/api/web-contents/
+* https://blog.jscrambler.com/building-a-web-browser-using-electron/
+* https://electron.atom.io/docs/api/browser-window/
+* https://medium.com/@ccnokes/deep-dive-into-electrons-main-and-renderer-processes-7a9599d5c9e2
+* https://electron.atom.io/docs/api/ipc-main/
+* https://electron.atom.io/docs/api/remote/
+* https://electron.atom.io/docs/api/web-contents/
 
 
 ### Rough wireframes below...
