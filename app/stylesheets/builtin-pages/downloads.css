@@ -1,0 +1,37 @@
+.flex {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+}
+.link,
+.ll-row.download .actions,
+.ll-row.download .actions a {
+  color: #3064c9;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: none;
+  padding: 0;
+}
+.link:hover,
+.ll-row.download .actions a:hover {
+  text-decoration: underline;
+}
+.downloads h1 {
+  margin: 10px 0;
+  padding: 0;
+  border-bottom: 1px solid #d9d9d9;
+}
+.ll-row.download .actions {
+  opacity: 1;
+  margin-left: auto;
+}
+.ll-row.download .actions a:not(last-child) {
+  margin-right: 10px;
+}
+.ll-row.download .status {
+  margin-right: 5px;
+}
+.ll-row.download .progress * {
+  display: inline-block;
+}
