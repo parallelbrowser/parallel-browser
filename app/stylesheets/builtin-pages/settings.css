@@ -1,0 +1,45 @@
+.settings h1 {
+  font-size: 18px;
+  margin: 10px 0;
+  padding: 0;
+  border-bottom: 1px solid #d9d9d9;
+}
+.settings h2 {
+  font-size: 13px;
+  border-bottom: 1px solid #d9d9d9;
+}
+.settings-section {
+  padding: 0 10px;
+}
+.settings-section .version-info {
+  margin-left: 1rem;
+}
+.settings-section .version-info .spinner {
+  display: inline-block;
+}
+.settings-section .version-info label {
+  margin-left: 1rem;
+}
+.settings-section.start-page label {
+  display: block;
+}
+.settings-section.start-page input {
+  margin-left: 10px;
+}
+.settings-section.start-page input[type="radio"] {
+  margin-right: 5px;
+}
+.settings-section.start-page img.bg-preview {
+  display: block;
+  max-width: 40%;
+  margin: 10px 0 20px 0;
+}
+.settings-section.protocols a {
+  margin-left: 5px;
+}
+.settings-section.help a {
+  text-decoration: none;
+}
+ul.settings-section {
+  margin-left: 20px;
+}
