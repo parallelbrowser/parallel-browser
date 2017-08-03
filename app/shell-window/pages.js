@@ -73,15 +73,13 @@ export function create (opts) {
 
   console.log(ipcRenderer.sendSync('synchronous-message', 'ping')) // prints "pong"
 
-  // TCW CHANGES -- this listens for an asynchronous test reply from background-process/ui/windows.js
-
   ipcRenderer.on('asynchronous-reply', (event, arg) => {
     console.log(arg) // prints "pong"
   })
 
-  // TCW CHANGES -- this sends an asynchronous test message to background-process/ui/windows.js
-
   ipcRenderer.send('asynchronous-message', 'ping')
+
+  // TCW -- END
 
   var url
   if (opts && typeof opts == 'object') {
@@ -609,31 +607,8 @@ function onDidStartLoading (e) {
   }
 }
 
-//TCW CHANGES -- Turned into an async function
-
-async function onDidStopLoading (e) {
+function onDidStopLoading (e) {
   var page = getByWebview(e.target)
-
-  //TCW CHANGES -- This creates a new DatArchive object from the George2 Dat.
-  var scriptTest = new DatArchive('dat://e1fa3d35081a83abef84a622a2ed1de5cdc8ab880f7a168bdd5ed3d5ab263a88/')
-
-  // TCW CHANGES --- These asynchronously retrieve the scripts from the George2 dat.
-  // The first turns the background-color green, the second alerts "Hello, world!"
-  var qbertHtml = await scriptTest.readFile('/qbert/qbert_html.txt', 'utf8')
-  var qbertCss = await scriptTest.readFile('/qbert/qbert_css.txt', 'utf8')
-
-  // console.log('app', app);
-  // console.log('style', style);
-
-  // TCW CHANGES -- These insert the css and script into the DOM of
-  // the new webview element
-
-  // page.webviewEl.getElementsByTagName('body').innerHTML = '';
-
-  // page.webviewEl.getElementsByTagName('body').appendChild(new DOMParser().parseFromString(qbertHtml, 'text/xml'))
-  // page.webviewEl.executeJavaScript(emoji, false);
-  // page.webviewEl.insertCSS(qbertCss);
-
 
   if (page) {
     // update url
