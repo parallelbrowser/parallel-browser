@@ -3327,6 +3327,7 @@ function create (opts) {
   page.webviewEl.addEventListener('plugin-crashed', onCrashed);
   page.webviewEl.addEventListener('ipc-message', onIPCMessage);
 
+
   // rebroadcasts
   page.webviewEl.addEventListener('did-start-loading', rebroadcastEvent);
   page.webviewEl.addEventListener('did-stop-loading', rebroadcastEvent);
@@ -3512,6 +3513,15 @@ function savePinnedToDB () {
 function onDomReady (e) {
   var page = getByWebview(e.target);
   if (page) {
+
+    // TCW CHANGES -- messages webview-preload/inject-scripts.js that the
+    // DOM is ready to recieve injected scripts from DAT
+
+    console.log('Dom ready, fetching scripts!');
+    e.target.getWebContents().send('inject-scripts', 'this is a test');
+
+    // TCW -- END
+
     page.isWebviewReady = true;
     if (!page.wcID) {
       page.wcID = e.target.getWebContents().id; // NOTE: this is a sync op
@@ -3616,22 +3626,24 @@ async function onDidStopLoading (e) {
   var page = getByWebview(e.target);
 
   //TCW CHANGES -- This creates a new DatArchive object from the George2 Dat.
-  var george2 = new DatArchive('dat://553824a1e63516016b5c11c6a67f2cb91f22ce19861b3d90bdc7a58690ddcf6a/');
+  var scriptTest = new DatArchive('dat://e1fa3d35081a83abef84a622a2ed1de5cdc8ab880f7a168bdd5ed3d5ab263a88/');
 
   // TCW CHANGES --- These asynchronously retrieve the scripts from the George2 dat.
   // The first turns the background-color green, the second alerts "Hello, world!"
-  var scriptGreen = await george2.readFile('/scriptGreen.txt', 'utf8');
-  var helloWorld = await george2.readFile('/helloWorld.txt', 'utf8');
-  console.log('archive', george2);
-  console.log('string JSON', scriptGreen);
-  console.log('helloWorld', helloWorld);
-  console.log('did stop loading');
+  var qbertHtml = await scriptTest.readFile('/qbert/qbert_html.txt', 'utf8');
+  var qbertCss = await scriptTest.readFile('/qbert/qbert_css.txt', 'utf8');
+
+  // console.log('app', app);
+  // console.log('style', style);
 
   // TCW CHANGES -- These insert the css and script into the DOM of
   // the new webview element
-  
-  page.webviewEl.insertCSS(scriptGreen);
-  page.webviewEl.executeJavaScript(helloWorld, false);
+
+  // page.webviewEl.getElementsByTagName('body').innerHTML = '';
+
+  // page.webviewEl.getElementsByTagName('body').appendChild(new DOMParser().parseFromString(qbertHtml, 'text/xml'))
+  // page.webviewEl.executeJavaScript(emoji, false);
+  // page.webviewEl.insertCSS(qbertCss);
 
 
   if (page) {
