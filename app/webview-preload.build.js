@@ -475,11 +475,10 @@ function setup () {
     window.locationbar.closeMenus = closeMenus;
     window.locationbar.toggleLiveReloading = toggleLiveReloading;
   } else {
-
     // TCW CHANGES - this sends an asynchronous message to the listener at
     // background-process/ui/windows.js with the href of the new window.
 
-    electron.ipcRenderer.send('asynchronous-message', window.location.href);
+    electron.ipcRenderer.send('get-webview-url', window.location.href);
   }
 }
 
@@ -786,7 +785,7 @@ module.exports = function (channelName, manifest, methods, globalPermissionCheck
       try {
         event.returnValue = { success: valueToIPCValue(method.apply(event, args)) }
       } catch (e) {
-        event.returnValue = { error: e.message }
+        event.returnValue = { error: e.message }        
       }
       return
     }
@@ -1123,7 +1122,7 @@ module.exports = function (channelName, manifest, opts) {
   for (let name in manifest) {
     let type = manifest[name]
     api[name] = createAPIMethod[type](name)
-  }
+  } 
 
   // wire up the message-handler
   ipcRenderer.on(channelName, function onIPCMessage (event, msgType, requestId, ...args) {

@@ -788,7 +788,7 @@ class DatSidebarBtn {
       // hide the button
       return yo`<button class="toolbar-btn dat-sidebar btn hidden"></button>`
     }
-
+    
     return yo`
       <button title="Toggle sidebar" class="toolbar-btn dat-sidebar btn pressed" onclick=${e => this.onClickBtn(e)}>
         <i class="fa fa-columns"></i>
@@ -1167,6 +1167,7 @@ var toolbarNavDiv = document.getElementById('toolbar-nav');
 var updatesNavbarBtn = null;
 var datSidebarBtn = null;
 var browserMenuNavbarBtn = null;
+var browserScriptNavbarBtn = null;
 var pageMenuNavbarBtn = null;
 var siteInfoNavbarBtn = null;
 
@@ -1183,6 +1184,7 @@ function setup$3 () {
   updatesNavbarBtn = new UpdatesNavbarBtn();
   datSidebarBtn = new DatSidebarBtn();
   browserMenuNavbarBtn = new BrowserMenuNavbarBtn();
+  browserScriptNavbarBtn = new BrowserScriptNavbarBtn();
   pageMenuNavbarBtn = new PageMenuNavbarBtn();
   siteInfoNavbarBtn = new SiteInfoNavbarBtn();
 }
@@ -3079,13 +3081,18 @@ function setup$2 () {
 }
 
 function create (opts) {
-  // TCW
+  // TCW CHANGES -- this sends a synchronous test message to background-process/ui/windows.js
 
   console.log(electron.ipcRenderer.sendSync('synchronous-message', 'ping')); // prints "pong"
+
+  // TCW CHANGES -- this listens for an asynchronous test reply from background-process/ui/windows.js
 
   electron.ipcRenderer.on('asynchronous-reply', (event, arg) => {
     console.log(arg); // prints "pong"
   });
+
+  // TCW CHANGES -- this sends an asynchronous test message to background-process/ui/windows.js
+
   electron.ipcRenderer.send('asynchronous-message', 'ping');
 
   var url;

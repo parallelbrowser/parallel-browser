@@ -8,6 +8,7 @@ import * as yo from 'yo-yo'
 import prettyHash from 'pretty-hash'
 import { UpdatesNavbarBtn } from './navbar/updates'
 import { BrowserMenuNavbarBtn } from './navbar/browser-menu'
+import { BrowserScriptNavbarBtn } from './navbar/browser-script'
 import { PageMenuNavbarBtn } from './navbar/page-menu'
 import { DatSidebarBtn } from './navbar/dat-sidebar'
 import { SiteInfoNavbarBtn } from './navbar/site-info'
@@ -29,6 +30,7 @@ var toolbarNavDiv = document.getElementById('toolbar-nav')
 var updatesNavbarBtn = null
 var datSidebarBtn = null
 var browserMenuNavbarBtn = null
+var browserScriptNavbarBtn = null
 var pageMenuNavbarBtn = null
 var siteInfoNavbarBtn = null
 
@@ -45,6 +47,7 @@ export function setup () {
   updatesNavbarBtn = new UpdatesNavbarBtn()
   datSidebarBtn = new DatSidebarBtn()
   browserMenuNavbarBtn = new BrowserMenuNavbarBtn()
+  browserScriptNavbarBtn = new BrowserScriptNavbarBtn()
   pageMenuNavbarBtn = new PageMenuNavbarBtn()
   siteInfoNavbarBtn = new SiteInfoNavbarBtn()
 }
@@ -132,6 +135,10 @@ export function updateLocation (page) {
 export function closeMenus () {
   browserMenuNavbarBtn.isDropdownOpen = false
   browserMenuNavbarBtn.updateActives()
+
+  browserScriptNavbarBtn.isDropdownOpen = false
+  browserScriptNavbarBtn.updateActives()
+
   pageMenuNavbarBtn.close()
 }
 
@@ -338,6 +345,7 @@ function render (id, page) {
       <div class="toolbar-group">
         ${datSidebarBtn.render(addrValue)}
         ${browserMenuNavbarBtn.render()}
+        ${browserScriptNavbarBtn.render()}
         ${updatesNavbarBtn.render()}
       </div>
     </div>

@@ -11,7 +11,7 @@ export class DatSidebarBtn {
       // hide the button
       return yo`<button class="toolbar-btn dat-sidebar btn hidden"></button>`
     }
-
+    
     return yo`
       <button title="Toggle sidebar" class="toolbar-btn dat-sidebar btn pressed" onclick=${e => this.onClickBtn(e)}>
         <i class="fa fa-columns"></i>
