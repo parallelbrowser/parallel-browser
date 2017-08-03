@@ -10,7 +10,7 @@ import * as pages from '../../pages'
 // there can be many drop menu btns rendered at once, but they are all showing the same information
 // the BrowserMenuNavbarBtn manages all instances, and you should only create one
 
-export class BrowserMenuNavbarBtn {
+export class BrowserScriptNavbarBtn {
   constructor () {
     this.downloads = []
     this.sumProgress = null // null means no active downloads
@@ -33,67 +33,9 @@ export class BrowserMenuNavbarBtn {
   }
 
   render () {
-    // show active, then inactive, with a limit of 5 items
-    var progressingDownloads = this.downloads.filter(d => d.state == 'progressing').reverse()
-    var activeDownloads = (progressingDownloads.concat(this.downloads.filter(d => d.state != 'progressing').reverse())).slice(0, 5)
-
-    // render the progress bar if downloading anything
-    var progressEl = ''
-
-    if ((progressingDownloads.length > 0 || this.shouldPersistProgressBar) && this.sumProgress && this.sumProgress.receivedBytes <= this.sumProgress.totalBytes) {
-      progressEl = yo`<progress value=${this.sumProgress.receivedBytes} max=${this.sumProgress.totalBytes}></progress>`
-    }
-
     // render the dropdown if open
     var dropdownEl = ''
     if (this.isDropdownOpen) {
-      let downloadEls = activeDownloads.map(d => {
-        // status
-        var status = d.state === 'completed' ? '' : d.state
-        if (status == 'progressing') {
-          status = prettyBytes(d.receivedBytes) + ' / ' + prettyBytes(d.totalBytes)
-          if (d.isPaused) { status += ', Paused' }
-        } else { status = ucfirst(status) }
-
-        // ctrls
-        var ctrlsEl
-        if (d.state == 'completed') {
-          // actions
-          if (!d.fileNotFound) {
-            ctrlsEl = yo`
-              <li class="download-item-ctrls complete">
-                <a onclick=${e => this.onOpen(e, d)}>Open file</a>
-                <a onclick=${e => this.onShow(e, d)}>Show in folder</a>
-              </li>`
-          } else {
-            ctrlsEl = yo`
-              <li class="download-item-ctrls not-found">
-                File not found (moved or deleted)
-              </li>`
-          }
-        } else if (d.state == 'progressing') {
-          ctrlsEl = yo`
-            <li class="download-item-ctrls paused">
-              ${d.isPaused
-                ? yo`<a onclick=${e => this.onResume(e, d)}>Resume</a>`
-                : yo`<a onclick=${e => this.onPause(e, d)}>Pause</a>`}
-              <a onclick=${e => this.onCancel(e, d)}>Cancel</a>
-            </li>`
-        }
-
-        // render download
-        return yo`
-          <li class="download-item">
-            <div class="name">${d.name}</div>
-            <div class="status">
-              ${d.state == 'progressing'
-                ? yo`<progress value=${d.receivedBytes} max=${d.totalBytes}></progress>`
-                : ''}
-              ${status}
-            </div>
-            ${ctrlsEl}
-          </li>`
-      })
       dropdownEl = yo`
         <div class="toolbar-dropdown dropdown toolbar-dropdown-menu-dropdown">
           <div class="dropdown-items with-triangle visible">
@@ -127,26 +69,7 @@ export class BrowserMenuNavbarBtn {
                 <i class="fa fa-gear"></i>
                 Settings
               </div>
-            </div>
 
-            ${downloadEls.length ? yo`
-              <div>
-                <hr>
-                <div class="downloads">
-                  <h2>Downloads</h2>
-                  <ul class="downloads-list">${downloadEls}</ul>
-                </div>
-              </div>` : ''}
-
-            <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'https://github.com/beakerbrowser/beaker/issues')}>
-                <i class="fa fa-info-circle"></i>
-                <span>Report an issue</span>
-              </a>
-              <a onclick=${e => this.onOpenPage(e, 'https://beakerbrowser.com/docs')}>
-                <i class="fa fa-question"></i>
-                <span>Help</span>
-              </a>
             </div>
           </div>
         </div>`
@@ -154,17 +77,16 @@ export class BrowserMenuNavbarBtn {
 
     // render btn
     return yo`
-      <div class="toolbar-dropdown-menu browser-dropdown-menu">
-        <button class="toolbar-btn toolbar-dropdown-menu-btn ${this.isDropdownOpen ? 'pressed' : ''}" onclick=${e => this.onClickBtn(e)} title="Menu">
+      <div class="toolbar-dropdown-menu browser-dropdown-script">
+        <button class="toolbar-btn toolbar-dropdown-menu-btn ${this.isDropdownOpen ? 'pressed' : ''}" onclick=${e => this.onClickBtn(e)} title="Script">
           <span class="fa fa-bars"></span>
-          ${progressEl}
         </button>
         ${dropdownEl}
       </div>`
   }
 
   updateActives () {
-    Array.from(document.querySelectorAll('.browser-dropdown-menu')).forEach(el => yo.update(el, this.render()))
+    Array.from(document.querySelectorAll('.browser-dropdown-script')).forEach(el => yo.update(el, this.render()))
   }
 
   doAnimation () {

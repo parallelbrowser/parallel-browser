@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 (function () {'use strict';
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
@@ -5559,4 +5557,3 @@ electron.app.on('window-all-closed', function () {
 });
 
 }());
->>>>>>> 08a2dd7f2f48af7d0ab3ede7f5c3ec0ea12d025d

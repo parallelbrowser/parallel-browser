@@ -137,7 +137,6 @@ export function closeMenus () {
   browserMenuNavbarBtn.updateActives()
 
   browserScriptNavbarBtn.isDropdownOpen = false
-  browserScriptNavbarBtn.updateActives()
 
   pageMenuNavbarBtn.close()
 }
