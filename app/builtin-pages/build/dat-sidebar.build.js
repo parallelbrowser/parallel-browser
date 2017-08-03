@@ -469,6 +469,7 @@ const reloadDiffThrottled = throttle(reloadDiff, 500);
 setup();
 
 async function setup () {
+
   try {
     await parseURL();
 
@@ -503,6 +504,7 @@ async function setup () {
 }
 
 async function loadCurrentArchive () {
+  console.log('hi');
   update$1();
   if (archiveKey) {
     archive = new DatArchive(archiveKey);

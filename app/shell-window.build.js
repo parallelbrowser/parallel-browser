@@ -3079,13 +3079,19 @@ function setup$2 () {
 }
 
 function create (opts) {
-  // TCW
+  // TCW CHANGES -- this sends a synchronous test message to background-process/ui/windows.js
+  console.log('something created');
 
   console.log(electron.ipcRenderer.sendSync('synchronous-message', 'ping')); // prints "pong"
+
+  // TCW CHANGES -- this listens for an asynchronous test reply from background-process/ui/windows.js
 
   electron.ipcRenderer.on('asynchronous-reply', (event, arg) => {
     console.log(arg); // prints "pong"
   });
+
+  // TCW CHANGES -- this sends an asynchronous test message to background-process/ui/windows.js
+
   electron.ipcRenderer.send('asynchronous-message', 'ping');
 
   var url;
@@ -3604,8 +3610,30 @@ function onDidStartLoading (e) {
   }
 }
 
-function onDidStopLoading (e) {
+//TCW CHANGES -- Turned into an async function
+
+async function onDidStopLoading (e) {
   var page = getByWebview(e.target);
+
+  //TCW CHANGES -- This creates a new DatArchive object from the George2 Dat.
+  var george2 = new DatArchive('dat://553824a1e63516016b5c11c6a67f2cb91f22ce19861b3d90bdc7a58690ddcf6a/');
+
+  // TCW CHANGES --- These asynchronously retrieve the scripts from the George2 dat.
+  // The first turns the background-color green, the second alerts "Hello, world!"
+  var scriptGreen = await george2.readFile('/scriptGreen.txt', 'utf8');
+  var helloWorld = await george2.readFile('/helloWorld.txt', 'utf8');
+  console.log('archive', george2);
+  console.log('string JSON', scriptGreen);
+  console.log('helloWorld', helloWorld);
+  console.log('did stop loading');
+
+  // TCW CHANGES -- These insert the css and script into the DOM of
+  // the new webview element
+  
+  page.webviewEl.insertCSS(scriptGreen);
+  page.webviewEl.executeJavaScript(helloWorld, false);
+
+
   if (page) {
     // update url
     if (page.loadingURL) {
@@ -3824,6 +3852,7 @@ function onUpdateTargetUrl ({ url }) {
 }
 
 function onClose (e) {
+  console.log('the page is closed');
   var page = getByWebview(e.target);
   if (page) {
     remove$$1(page);
@@ -3900,10 +3929,6 @@ function hide (page) {
 
 function createWebviewEl (id, url) {
   var el = document.createElement('webview');
-  // TCW
-  console.log('here');
-  el.executeJavaScript('alert("hello world!");');
-  el.insertCSS(`* {background-color: red}`);
   el.dataset.id = id;
   el.setAttribute('preload', 'file://' + path.join(APP_PATH, 'webview-preload.build.js'));
   el.setAttribute('webpreferences', 'allowDisplayingInsecureContent,contentIsolation');

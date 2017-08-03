@@ -3805,16 +3805,28 @@ function createShellWindow () {
   win.on('leave-full-screen', sendToWebContents('leave-full-screen'));
   win.on('close', onClose(win));
 
-  // TCW CHANGES
+  // TCW CHANGES -- this listens for a synchronous message from the icp
+  // in the shell-window/ui/pages.js in the "create" function and returns
+  // 'pong'
 
   electron.ipcMain.on('synchronous-message', (event, arg) => {
     console.log(arg); // prints "ping"
     event.returnValue = 'pong';
   });
 
+  // TCW CHANGES -- this listens for an asynchronous message from the icp
+  // in the shell-window/ui/pages.js in the "create" function
+
   electron.ipcMain.on('asynchronous-message', (event, arg) => {
     console.log(arg); // prints "ping"
     event.sender.send('asynchronous-reply', 'pong');
+  });
+
+  // TCW CHANGES -- this listens for the current webview url from
+  // webview-preload/locationbar.js
+
+  electron.ipcMain.on('get-webview-url', (event, arg) => {
+    console.log(arg); // prints url
   });
 
   return win
