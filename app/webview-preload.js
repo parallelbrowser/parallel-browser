@@ -6,6 +6,9 @@ import { setup as setupLocationbar } from './webview-preload/locationbar'
 import { setup as setupPrompt } from './webview-preload/prompt'
 import setupRedirectHackfix from './webview-preload/redirect-hackfix'
 
+//TCW CHANGES --- import inject scripts
+import {setup as setupInjectScripts} from './webview-preload/inject-scripts'
+
 // HACKS
 setupRedirectHackfix()
 
@@ -29,3 +32,9 @@ if (window.location.protocol === 'beaker:') {
 }
 setupLocationbar()
 setupPrompt()
+
+//TCW CHANGES -- call inject scripts from webview-preload/inject-scripts
+
+setupInjectScripts()
+
+//TCW -- END
