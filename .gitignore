@@ -57,3 +57,8 @@ typings/
 # dotenv environment variables file
 .env
 
+
+background-process.build.js
+dat-sidebar.build.js
+shell-window.build.js
+webview-preload.build.js

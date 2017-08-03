@@ -477,7 +477,11 @@ function setup () {
   } else {
     // TCW CHANGES - this sends an asynchronous message to the listener at
     // background-process/ui/windows.js with the href of the new window.
+<<<<<<< HEAD
 
+=======
+    console.log('here in locationbar');
+>>>>>>> 08a2dd7f2f48af7d0ab3ede7f5c3ec0ea12d025d
     electron.ipcRenderer.send('get-webview-url', window.location.href);
   }
 }
