@@ -3814,7 +3814,7 @@ function createShellWindow () {
     event.returnValue = 'pong';
   });
 
-  // TCW CHANGES -- this listens for an asynchronous message from the icp
+  // this listens for an asynchronous message from the icp
   // in the shell-window/ui/pages.js in the "create" function
 
   electron.ipcMain.on('asynchronous-message', (event, arg) => {
@@ -3822,12 +3822,15 @@ function createShellWindow () {
     event.sender.send('asynchronous-reply', 'pong');
   });
 
-  // TCW CHANGES -- this listens for the current webview url from
+  // this listens for the current webview url from
   // webview-preload/locationbar.js
 
   electron.ipcMain.on('get-webview-url', (event, arg) => {
     console.log(arg); // prints url
   });
+
+  // TCW CHANGES -- END
+
 
   return win
 }

@@ -6,8 +6,11 @@ import { setup as setupLocationbar } from './webview-preload/locationbar'
 import { setup as setupPrompt } from './webview-preload/prompt'
 import setupRedirectHackfix from './webview-preload/redirect-hackfix'
 
-//TCW CHANGES --- import inject scripts
+// TCW CHANGES --- import inject scripts
+
 import {setup as setupInjectScripts} from './webview-preload/inject-scripts'
+
+// TCW --END
 
 // HACKS
 setupRedirectHackfix()
