@@ -3522,6 +3522,12 @@ function create (opts) {
   page.webviewEl.addEventListener('plugin-crashed', onCrashed);
   page.webviewEl.addEventListener('ipc-message', onIPCMessage);
 
+  //TCW CHANGES -- adds custom event listener for script reply
+
+  page.webviewEl.addEventListener('script-reply', onScriptReply);
+
+  //TCW -- END
+
 
   // rebroadcasts
   page.webviewEl.addEventListener('did-start-loading', rebroadcastEvent);
@@ -3726,6 +3732,15 @@ function onDomReady (e) {
     }
   }
 }
+
+// TCW CHANGES - function called on script reply
+
+function onScriptReply (e) {
+  console.log('here in script reply');
+  console.log('event', e);
+}
+
+// TCW -- END
 
 function onNewWindow (e) {
   var page = getByWebview(e.target);
