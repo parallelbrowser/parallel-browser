@@ -627,7 +627,6 @@ function pluralize (num, base, suffix = 's') {
 var isShelfOpen = false;
 var update$2;
 
-
 function renderShelf (shelfOpenBody, shelfClosedBody) {
   if (!isShelfOpen) {
     return yo`

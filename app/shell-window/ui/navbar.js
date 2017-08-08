@@ -343,8 +343,8 @@ function render (id, page) {
       </div>
       <div class="toolbar-group">
         ${datSidebarBtn.render(addrValue)}
-        ${browserMenuNavbarBtn.render()}
         ${browserScriptNavbarBtn.render()}
+        ${browserMenuNavbarBtn.render()}
         ${updatesNavbarBtn.render()}
       </div>
     </div>

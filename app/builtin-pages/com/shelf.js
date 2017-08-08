@@ -1,11 +1,8 @@
 import * as yo from 'yo-yo'
-import {ArchivesList} from 'builtin-pages-lib'
-import {pluralize} from '../../lib/strings'
 import {findParent} from '../../lib/fg/event-handlers'
 
 var isShelfOpen = false
 var update
-
 
 export function renderShelf (shelfOpenBody, shelfClosedBody) {
   if (!isShelfOpen) {

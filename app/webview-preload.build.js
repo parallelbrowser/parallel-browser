@@ -537,7 +537,6 @@ var setupRedirectHackfix = function () {
 
 function setup$2() {
   electron.ipcRenderer.on("inject-scripts", function(event , data){
-    console.log('in setup');
 
     // hardcoded sample results from a script query
 
@@ -577,7 +576,7 @@ async function getDatScripts(scriptInfo){
     // define SECURITY_POLICY constant to inject into the page, to allow
     // parallel scripts to run without compromising security
 
-    const SECURITY_POLICY = `<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'self';\">`;
+    const SECURITY_POLICY = `<meta http-equiv=\"Content-Security-Policy\" >`;
 
     //define strings to be retrieved
     let jsString;
