@@ -621,6 +621,8 @@ class BrowserScriptNavbarBtn {
       // map through and make them lis
       // Make them toggle-able
 
+      //TODO: dont click on the link
+      //TODO: dont click on the link
       dropdownEl = yo`
         <div class="script-dropdown dropdown toolbar-dropdown-menu-dropdown">
           <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
@@ -681,8 +683,8 @@ class BrowserScriptNavbarBtn {
       title = 'Your Post-Scripts';
       // TODO scripts = postScriptsQuery
     }
-    // TODO: need to render the actual scripts, right now, use dummy
-    var currLoc = window.location.href;
+
+    //TODO: dont click on the link
     return yo`
       <div>
         <div class="section-header">
@@ -712,6 +714,7 @@ class BrowserScriptNavbarBtn {
       );
     } else {
       scriptsList = scripts.map((scriptObj) => {
+        //TODO: dont click on the link
         return yo`
           <li>
             <div class="list-item">
@@ -732,7 +735,7 @@ class BrowserScriptNavbarBtn {
 
     // The last button is an add new scrips button
     scriptsList = scriptsList.concat(
-      //TODO: switch out the google link for the add new script link
+      //TODO: dont click on the link
       yo`
         <li>
           <div class="list-item">

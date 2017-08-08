@@ -4930,18 +4930,6 @@ async function beakerServer (req, res) {
     return cb(200, 'OK', 'text/html', path__default.join(__dirname, 'builtin-pages/dat-sidebar.html'))
   }
 
-  // PA additions
-  if (requestUrl === 'beaker://scripts/main.css') {
-    return cb(200, 'OK', 'text/css; charset=utf-8', path__default.join(__dirname, 'stylesheets/builtin-pages/scripts.css'))
-  }
-  if (requestUrl === 'beaker://scripts/main.js') {
-    return cb(200, 'OK', 'application/javascript; charset=utf-8', path__default.join(__dirname, 'builtin-pages/build/scripts.build.js'))
-  }
-  if (requestUrl === 'beaker://scripts/' || requestUrl.startsWith('beaker://scripts/')) {
-    return cb(200, 'OK', 'text/html; charset=utf-8', path__default.join(__dirname, 'builtin-pages/scripts.html'))
-  }
-  // End of edits PA
-
   // modals
   if (requestUrl === 'beaker://create-archive-modal/') {
     return cb(200, 'OK', 'text/html; charset=utf-8', path__default.join(__dirname, 'builtin-pages/create-archive-modal.html'))
