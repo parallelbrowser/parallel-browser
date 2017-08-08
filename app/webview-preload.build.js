@@ -542,6 +542,7 @@ function setup$2() {
 
   electron.ipcRenderer.on( 'inject-scripts', ( event , data ) => {
 
+
     // hardcoded sample results from a script query
 
     const dat1 = {
@@ -612,7 +613,9 @@ function setup$2() {
 
 async function getDatScripts( scriptInfo ){
 
+
   try {
+
 
     // define strings to be retrieved
     console.log('script info', scriptInfo);

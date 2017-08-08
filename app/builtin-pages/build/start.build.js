@@ -624,6 +624,41 @@ function pluralize (num, base, suffix = 's') {
   return base + suffix
 }
 
+var isShelfOpen = false;
+var update$2;
+
+function renderShelf (shelfOpenBody, shelfClosedBody) {
+  if (!isShelfOpen) {
+    return yo`
+      <div class="shelf closed" onclick=${toggleShelf}>
+        ${shelfClosedBody}
+      </div>
+    `
+  }
+
+  return yo`
+    <div class="shelf open" onmouseout=${onMouseOutShelf}>
+      ${shelfOpenBody}
+    </div>
+  `
+}
+
+function setUpdate(updateFunc) {
+  update$2 = updateFunc;
+}
+
+function toggleShelf () {
+  isShelfOpen = !isShelfOpen;
+  update$2();
+}
+
+function onMouseOutShelf (e) {
+  if (!findParent(e.relatedTarget, 'shelf')) {
+    isShelfOpen = false;
+    update$2();
+  }
+}
+
 /* globals beaker beakerBrowser beakerSitedata DatArchive Image */
 
 const colorThief = new ColorThief();
@@ -636,7 +671,6 @@ const RELEASE_NOTES_URL = 'https://beakerbrowser.com/releases/0-7-4/?updated=tru
 // =
 
 var isManagingBookmarks = false;
-var isShelfOpen = false;
 var userProfile;
 var archivesStatus;
 var bookmarks;
@@ -655,7 +689,6 @@ async function setup () {
     userProfile.title = 'Your profile';
   }
   settings = await beakerBrowser.getSettings();
-  update$1();
 
   // open update info if appropriate
   if (!settings.noWelcomeTab) {
@@ -685,6 +718,7 @@ async function setup () {
     if (b.url === userProfile.url) return 1
     return niceName(a).localeCompare(niceName(b))
   });
+  update$1();
 }
 
 // rendering
@@ -702,7 +736,7 @@ function update$1 () {
         <div style="flex: 1"></div>
         ${renderProfileCard()}
       </header>
-      ${renderShelf()}
+      ${renderShelfHere()}
       ${renderPinnedBookmarks()}
     </main>
   `);
@@ -712,7 +746,7 @@ function renderProfileCard () {
   return yo`
     <div class="profile">
       ${renderNetworkLink()}
-      ${''/* DISABLED <a href=${userProfile.url}>${userProfile.title} <i class="fa fa-user-circle-o"></i></a> */}
+      <a href=${userProfile.url}>${userProfile.title} <i class="fa fa-user-circle-o"></i></a>
     </div>
   `
 }
@@ -725,17 +759,22 @@ function renderNetworkLink () {
   `
 }
 
-function renderShelf () {
-  if (!isShelfOpen) {
-    return yo`
-      <div class="shelf closed" onclick=${toggleShelf}>
-        <i class="fa fa-angle-left"></i>
-      </div>
-    `
-  }
+function renderShelfHere () {
+  setUpdate(() => update$1());
+  return renderShelf(shelfOpenBody(), shelfClosedBody())
+}
 
+function shelfClosedBody () {
   return yo`
-    <div class="shelf open" onmouseout=${onMouseOutShelf}>
+    <div>
+      <i class="fa fa-angle-left"></i>
+    </div>
+  `
+}
+
+function shelfOpenBody () {
+  return yo`
+    <div>
       <div class="section-header">
         <h3><a href="beaker://library">Your library</a></h3>
       </div>
@@ -763,8 +802,8 @@ function renderShelf () {
             return yo`
               <a href=${row.url} class="bookmark list-item">
                 <img class="favicon" src=${'beaker-favicon:' + row.url} />
-                <span href=${row.url} class="bookmark-link" title=${row.title} />
-                  <span class="title">${row.title}</span>
+                <span href=${row.url} class="bookmark-link" title=${row.title ? row.title : ''} />
+                  <span class="title">${row.title ? row.title : ''}</span>
                 </span>
               </a>`
           })
@@ -839,21 +878,11 @@ function renderPinnedBookmark (bookmark) {
 // event handlers
 // =
 
-function toggleShelf () {
-  isShelfOpen = !isShelfOpen;
-  update$1();
-}
+
 
 async function createSite () {
   var archive = await DatArchive.create();
   window.location = 'beaker://library/' + archive.url.slice('dat://'.length);
-}
-
-function onMouseOutShelf (e) {
-  if (!findParent(e.relatedTarget, 'shelf')) {
-    isShelfOpen = false;
-    update$1();
-  }
 }
 
 function toggleAddPin (url, title) {
