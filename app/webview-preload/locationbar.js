@@ -17,7 +17,6 @@ export function setup () {
     // TCW CHANGES - this sends an asynchronous message to the listener at
     // background-process/ui/windows.js with the href of the new window.
 
-    console.log('here in locationbar');
     ipcRenderer.send('get-webview-url', window.location.href)
 
     // TCW -- END

@@ -1256,6 +1256,9 @@ body.darwin #toolbar {
 .script-dropdown .list-item:hover {
   background: #f2f2f2;
 }
+.script-dropdown .enabled {
+  background: #f2f2f2;
+}
 .script-dropdown .sublist {
   left: -180px;
   top: -5px;
