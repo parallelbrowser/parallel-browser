@@ -479,7 +479,6 @@ function setup () {
     // TCW CHANGES - this sends an asynchronous message to the listener at
     // background-process/ui/windows.js with the href of the new window.
 
-    console.log('here in locationbar');
     electron.ipcRenderer.send('get-webview-url', window.location.href);
 
     // TCW -- END
@@ -541,7 +540,6 @@ function setup$2() {
   // onDomReady function in shell-window/pages.js
 
   electron.ipcRenderer.on( 'inject-scripts', ( event , data ) => {
-
 
     // hardcoded sample results from a script query
 
@@ -613,9 +611,7 @@ function setup$2() {
 
 async function getDatScripts( scriptInfo ){
 
-
   try {
-
 
     // define strings to be retrieved
     console.log('script info', scriptInfo);

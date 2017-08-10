@@ -3827,10 +3827,10 @@ function createShellWindow () {
 
   electron.ipcMain.on('get-webview-url', (event, arg) => {
     console.log(arg); // prints url
+    event.sender.send('new-url', arg); // sends to shell-window/ui/navbar/browser-script.js
   });
 
   // TCW CHANGES -- END
-
 
   return win
 }

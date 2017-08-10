@@ -609,12 +609,31 @@ class BrowserScriptNavbarBtn {
   constructor () {
     this.isDropdownOpen = false;
     this.showPre = false;
+    this.preScripts = null;
+    this.postScripts = null;
+    this.url = null;
+
+
+    // refresh this.preScripts and this.postScripts to null when the url changes
+    electron.ipcRenderer.on('new-url', ( event , data ) => {
+      console.log('work ?');
+      // if(this.url !== data){
+      //   this.url = data
+      //   this.preScripts = null
+      //   this.postScripts = null
+      // }
+    });
+
     // wire up events
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
   }
 
+  componentDidMount () {
+
+  }
+
   render () {
-    // render the dropdown if open
+    // Set dropdown element
     var dropdownEl = '';
     if (this.isDropdownOpen) {
       // give a list of scripts for this page
@@ -672,16 +691,22 @@ class BrowserScriptNavbarBtn {
     //TODO: remove after testing, actually retrieve the scripts from somewhere
     //TODO: need to query this from backend instead
     let a = new Date(Date.now());
-    let scripts = [{name: 'Title', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS'},
-                   {name: 'Title', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS'}];
+    let preScripts = [{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}];
+    let postScripts = [{name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}];
 
 
     if(this.showPre) {
       title = 'Your Pre-Scripts';
-      // TODO scripts = preScriptsQuery
+      if(!this.preScripts){
+        this.preScripts = preScripts; // TODO: should be this.preScripts || preScriptsQuery
+      }
     } else {
       title = 'Your Post-Scripts';
-      // TODO scripts = postScriptsQuery
+      if(!this.postScripts){
+        this.postScripts = postScripts; //TODO: should be this.postScripts || postScriptsQuery
+      }
     }
 
     //TODO: dont click on the link
@@ -689,13 +714,11 @@ class BrowserScriptNavbarBtn {
       <div>
         <div class="section-header">
           <h3>
-            <div onclick=${e => this.onOpenPage(e, "https://www.youtube.com/watch?v=dQw4w9WgXcQ")}>
-              ${title}
-            </div>
+            ${title}
           </h3>
         </div>
         <ul>
-          ${this.scriptsList(scripts)}
+          ${this.showPre ? this.scriptsList(this.preScripts) : this.scriptsList(this.postScripts)}
         </ul>
       </div>`
   }
@@ -713,12 +736,12 @@ class BrowserScriptNavbarBtn {
         </li>`
       );
     } else {
-      scriptsList = scripts.map((scriptObj) => {
-        //TODO: dont click on the link
+      scriptsList = scripts.map((scriptObj, index) => {
+        //TODO: toggle
         return yo`
           <li>
-            <div class="list-item">
-              <a onclick=${e => this.onOpenPage(e, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')}>
+            <div class="list-item ${scriptObj.clicked ? 'enabled' : ''}">
+              <a onclick=${() => this.toggleActivated(scripts, index)}>
                 <div>
                   <span> <b>${scriptObj.name}</b></span>
                   <span> <i>${scriptObj.time}</i></span>
@@ -748,6 +771,11 @@ class BrowserScriptNavbarBtn {
     );
 
     return scriptsList;
+  }
+
+  toggleActivated (arr, index) {
+    arr[index].clicked = !arr[index].clicked;
+    this.updateActives();
   }
 
   prePostClick (isPre) {
@@ -3981,6 +4009,7 @@ function onDidGetResponseDetails (e) {
 
 function onDidFinishLoad (e) {
   var page = getByWebview(e.target);
+
   if (page) {
     // update page object
     if (page.loadingURL) {

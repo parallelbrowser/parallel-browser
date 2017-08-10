@@ -773,6 +773,7 @@ function onDidGetResponseDetails (e) {
 
 function onDidFinishLoad (e) {
   var page = getByWebview(e.target)
+
   if (page) {
     // update page object
     if (page.loadingURL) {

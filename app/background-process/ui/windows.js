@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, ipcMain, webContents } from 'electron'
+import { app, BrowserWindow, screen, ipcMain, webContents, ipcRenderer } from 'electron'
 import { register as registerShortcut, unregisterAll as unregisterAllShortcuts } from 'electron-localshortcut'
 import jetpack from 'fs-jetpack'
 import path from 'path'
@@ -96,10 +96,10 @@ export function createShellWindow () {
 
   ipcMain.on('get-webview-url', (event, arg) => {
     console.log(arg) // prints url
+    event.sender.send('new-url', arg) // sends to shell-window/ui/navbar/browser-script.js
   })
 
   // TCW CHANGES -- END
-
 
   return win
 }
