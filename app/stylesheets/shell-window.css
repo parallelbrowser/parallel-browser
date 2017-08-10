@@ -1874,3 +1874,7 @@ body {
 .btn[disabled] .icon {
   color: #aaa;
 }
+.fa-user,
+.fa-users {
+  font-size: 18px;
+}
