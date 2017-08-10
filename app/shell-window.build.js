@@ -611,37 +611,20 @@ class BrowserScriptNavbarBtn {
     this.showPre = false;
     this.preScripts = null;
     this.postScripts = null;
-    this.url = null;
 
-
-    // refresh this.preScripts and this.postScripts to null when the url changes
-    electron.ipcRenderer.on('new-url', ( event , data ) => {
-      console.log('work ?');
-      // if(this.url !== data){
-      //   this.url = data
-      //   this.preScripts = null
-      //   this.postScripts = null
-      // }
-    });
+    // TODO: find a way to lisen for an ipc message that tells whether you're
+    //       on a new site. If they are, set preScripts and postScripts to null
 
     // wire up events
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
   }
 
-  componentDidMount () {
-
-  }
 
   render () {
     // Set dropdown element
     var dropdownEl = '';
     if (this.isDropdownOpen) {
-      // give a list of scripts for this page
-      // map through and make them lis
-      // Make them toggle-able
-
-      //TODO: dont click on the link
-      //TODO: dont click on the link
+      //TODO: change the "view all scripts" and "discover" links
       dropdownEl = yo`
         <div class="script-dropdown dropdown toolbar-dropdown-menu-dropdown">
           <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
@@ -692,11 +675,34 @@ class BrowserScriptNavbarBtn {
     //TODO: need to query this from backend instead
     let a = new Date(Date.now());
     let preScripts = [{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
-                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}];
+                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                    {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                  {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+              {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+            {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+          {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+        {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+    {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+  {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}
+];
     let postScripts = [{name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
                       {name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}];
 
 
+    // If the user is viewing prescripts, show them. Otherwise, show postscripts for this site
     if(this.showPre) {
       title = 'Your Pre-Scripts';
       if(!this.preScripts){
@@ -709,7 +715,6 @@ class BrowserScriptNavbarBtn {
       }
     }
 
-    //TODO: dont click on the link
     return yo`
       <div>
         <div class="section-header">
@@ -723,9 +728,11 @@ class BrowserScriptNavbarBtn {
       </div>`
   }
 
+  // Render the list of scripts in the dropdown
   scriptsList (scripts) {
     var scriptsList = [];
 
+    // Check if there are any scripts. If not, let the user know
     if(scripts.length === 0){
       scriptsList.push(
         yo`
@@ -737,7 +744,7 @@ class BrowserScriptNavbarBtn {
       );
     } else {
       scriptsList = scripts.map((scriptObj, index) => {
-        //TODO: toggle
+        // For every script, add the properly formatted li
         return yo`
           <li>
             <div class="list-item ${scriptObj.clicked ? 'enabled' : ''}">
@@ -758,7 +765,7 @@ class BrowserScriptNavbarBtn {
 
     // The last button is an add new scrips button
     scriptsList = scriptsList.concat(
-      //TODO: dont click on the link
+      //TODO: change the "add new script" link
       yo`
         <li>
           <div class="list-item">
@@ -773,11 +780,16 @@ class BrowserScriptNavbarBtn {
     return scriptsList;
   }
 
+
+  // Manages the toggling of each script on click
+  // TODO: this should also send out an ipc message to inject-scripts notifying
+  //       a new list of enabled and disabled scripts
   toggleActivated (arr, index) {
     arr[index].clicked = !arr[index].clicked;
     this.updateActives();
   }
 
+  // Toggles whether the user is viewing prescripts or post scripts on the current site
   prePostClick (isPre) {
     if(isPre) {
       this.showPre = true;
