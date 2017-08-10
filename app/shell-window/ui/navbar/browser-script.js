@@ -74,11 +74,12 @@ export class BrowserScriptNavbarBtn {
 
     //TODO: remove after testing, actually retrieve the scripts from somewhere
     //TODO: need to query this from backend instead
+
     let a = new Date(Date.now())
-    let preScripts = [{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
-                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}]
-    let postScripts = [{name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
-                      {name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob Squarepants', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}]
+    let preScripts = [{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Sandy', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}]
+    let postScripts = [{name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Patrick', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
+                      {name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Squidward', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}]
 
 
     // If the user is viewing prescripts, show them. Otherwise, show postscripts for this site
@@ -109,6 +110,9 @@ export class BrowserScriptNavbarBtn {
 
   // Render the list of scripts in the dropdown
   scriptsList (scripts) {
+    //TODO: programatically get the name of the current user (for comparison against the author of the script)
+    let userName = 'Patrick'
+
     var scriptsList = [];
 
     // Check if there are any scripts. If not, let the user know
@@ -127,16 +131,22 @@ export class BrowserScriptNavbarBtn {
         return yo`
           <li>
             <div class="list-item ${scriptObj.clicked ? 'enabled' : ''}">
-              <a onclick=${() => this.toggleActivated(scripts, index)}>
-                <div>
-                  <span> <b>${scriptObj.name}</b></span>
-                  <span> <i>${scriptObj.time}</i></span>
+
+                <div style="display: inline-block" title=${scriptObj.author} onClick=${() => this.clickedAuthor(scriptObj)}>
+                  <i class="fa ${userName === scriptObj.author ? 'fa-user' : 'fa-users'}"></i>
                 </div>
-                <div>
-                  <span> ${scriptObj.desc}</span>
-                  <span> <i>${scriptObj.author}</i></span>
+                <a onclick=${() => this.toggleActivated(scripts, index)}>
+                <div style="display: inline-block">
+                  <div>
+                    <span> <b>${scriptObj.name}</b></span>
+                    <span> <i>${scriptObj.time}</i></span>
+                  </div>
+                  <div>
+                    <span> ${scriptObj.desc}</span>
+                    <span> <i> By: ${scriptObj.author}</i></span>
+                  </div>
                 </div>
-              </a>
+                </a>
             </div>
           </li>`
       })
@@ -159,6 +169,12 @@ export class BrowserScriptNavbarBtn {
     return scriptsList;
   }
 
+  // Manages the redirect to other scripts from the clicked author
+  clickedAuthor (scriptObj) {
+      // TODO: send an ipc request for the rest of the scripts from this author
+      //       and find a way to display them
+      this.updateActives()
+  }
 
   // Manages the toggling of each script on click
   // TODO: this should also send out an ipc message to inject-scripts notifying
