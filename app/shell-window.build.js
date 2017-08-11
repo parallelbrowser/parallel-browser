@@ -731,7 +731,7 @@ class BrowserScriptNavbarBtn {
           <li>
             <div class="list-item ${scriptObj.clicked ? 'enabled' : ''}">
 
-                <div style="display: inline-block" title="HEEBEEJEEEBEEZ">
+                <div style="display: inline-block" title=${scriptObj.author} onClick=${() => this.clickedAuthor(scriptObj)}>
                   <i class="fa ${userName === scriptObj.author ? 'fa-user' : 'fa-users'}"></i>
                 </div>
                 <a onclick=${() => this.toggleActivated(scripts, index)}>
@@ -768,6 +768,12 @@ class BrowserScriptNavbarBtn {
     return scriptsList;
   }
 
+  // Manages the redirect to other scripts from the clicked author
+  clickedAuthor (scriptObj) {
+      // TODO: send an ipc request for the rest of the scripts from this author
+      //       and find a way to display them
+      this.updateActives();
+  }
 
   // Manages the toggling of each script on click
   // TODO: this should also send out an ipc message to inject-scripts notifying
