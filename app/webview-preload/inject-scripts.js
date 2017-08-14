@@ -1,9 +1,9 @@
 import { ipcRenderer } from 'electron'
+import ParallelAPI from 'parallel-scratch-api'
 
 // TCW CHANGES -- injects scripts into the webview DOM
 
 export function setup() {
-
   // listens for the 'inject-scripts' ipc event called in the
   // onDomReady function in shell-window/pages.js
 

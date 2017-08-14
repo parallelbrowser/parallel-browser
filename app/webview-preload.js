@@ -15,6 +15,7 @@ import {setup as setupInjectScripts} from './webview-preload/inject-scripts'
 // HACKS
 setupRedirectHackfix()
 
+
 // register protocol behaviors
 /* This marks the scheme as:
  - Secure

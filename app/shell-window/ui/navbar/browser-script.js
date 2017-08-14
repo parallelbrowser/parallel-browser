@@ -1,10 +1,9 @@
-/* globals beakerDownloads DatArchive */
-
+/* globals DatArchive */
+import ParallelAPI from 'parallel-scratch-api'
 import * as yo from 'yo-yo'
 import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
-import { ipcRenderer } from 'electron'
-
+// import { ipcRenderer } from 'electron'
 
 export class BrowserScriptNavbarBtn {
   constructor () {
@@ -12,17 +11,18 @@ export class BrowserScriptNavbarBtn {
     this.showPre = false
     this.preScripts = null
     this.postScripts = null
-
-    // TODO: find a way to lisen for an ipc message that tells whether you're
-    //       on a new site. If they are, set preScripts and postScripts to null
-
-    // wire up events
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
+    this.loadPrescripts()
   }
-
-
+  async loadPrescripts () {
+    const userURL = 'dat://9349f5ff0c0a05332d9002eefc82d8ca935b9bc58e3be8e6967eb29b9615b491'
+    const userDB = await ParallelAPI.open(new DatArchive(userURL))
+    console.log('userDB', userDB)
+    this.preScripts = await userDB.listPrescripts()
+    console.log('these prescripts 1', this.preScripts);
+  }
   render () {
-    // Set dropdown element
+    console.log('these prescripts', this.preScripts)
     var dropdownEl = ''
     if (this.isDropdownOpen) {
       //TODO: change the "view all scripts" and "discover" links
@@ -76,8 +76,8 @@ export class BrowserScriptNavbarBtn {
     //TODO: need to query this from backend instead
 
     let a = new Date(Date.now())
-    let preScripts = [{name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Songebob', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
-                      {name: 'PRE', desc: 'Description of Script', time: a.toDateString(), author: 'Sandy', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}]
+    let preScripts = [{prescriptName: 'Dummy 1', prescriptInfo: 'Description of Script 1', clicked: false},
+                      {prescriptName: 'Dummy 2', prescriptInfo: 'Description of Script 2', clicked: false}]
     let postScripts = [{name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Patrick', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
                       {name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Squidward', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}]
 
@@ -128,6 +128,7 @@ export class BrowserScriptNavbarBtn {
     } else {
       scriptsList = scripts.map((scriptObj, index) => {
         // For every script, add the properly formatted li
+        console.log('script obj', scriptObj)
         return yo`
           <li>
             <div class="list-item ${scriptObj.clicked ? 'enabled' : ''}">
@@ -138,11 +139,11 @@ export class BrowserScriptNavbarBtn {
                 <a onclick=${() => this.toggleActivated(scripts, index)}>
                 <div style="display: inline-block">
                   <div>
-                    <span> <b>${scriptObj.name}</b></span>
+                    <span> <b>${scriptObj.prescriptName}</b></span>
                     <span> <i>${scriptObj.time}</i></span>
                   </div>
                   <div>
-                    <span> ${scriptObj.desc}</span>
+                    <span> ${scriptObj.prescriptInfo}</span>
                     <span> <i> By: ${scriptObj.author}</i></span>
                   </div>
                 </div>
