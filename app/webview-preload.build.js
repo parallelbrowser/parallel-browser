@@ -533,7 +533,7 @@ var setupRedirectHackfix = function () {
   });
 };
 
-/* globals DatArchive */
+/* globals DatArchive prescriptCredentials */
 
 // TCW CHANGES -- injects scripts into the webview DOM
 
@@ -542,12 +542,22 @@ function setup$2 () {
   // onDomReady function in shell-window/pages.js
   window.postscriptListener = postscriptListener;
 
-  electron.ipcRenderer.on('inject-scripts', (event, prescriptJS, prescriptCSS) => {
-    if (prescriptJS) {
-      prescriptJS = prescriptJS.toString();
+  electron.ipcRenderer.on('inject-scripts', (event, prescript) => {
+    console.log('prescript in inject', prescript);
+    const prescriptCredentials = {
+      prescriptName: prescript.prescriptName,
+      prescriptInfo: prescript.prescriptInfo,
+      prescriptOrigin: prescript._origin,
+      prescriptURL: prescript._url
+    };
+    window.prescriptCredentials = prescriptCredentials;
+    let prescriptJS;
+    let prescriptCSS;
+    if (prescript.prescriptJS) {
+      prescriptJS = prescript.prescriptJS.toString();
     }
-    if (prescriptCSS) {
-      prescriptCSS = prescriptCSS.toString();
+    if (prescript.prescriptCSS) {
+      prescriptCSS = prescript.prescriptCSS.toString();
     }
     inject(prescriptJS, prescriptCSS);
   });
@@ -587,9 +597,12 @@ function inject (jsString, cssString) {
   }
 }
 
-async function postscriptListener (postscript) {
+async function postscriptListener (postscriptJS) {
   console.log('hi!');
-  console.log('postscript', postscript);
+  console.log('postscript', postscriptJS.toString());
+  console.log('postscriptCredentials', prescriptCredentials);
+  const postscript = Object.assign(prescriptCredentials, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href});
+  console.log('postscript obj', postscript);
   const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4';
   const userDB = await ParallelAPI.open(new DatArchive(userURL));
   console.log('db in inject', userDB);
@@ -603,7 +616,6 @@ async function postscriptListener (postscript) {
 
 // HACKS
 setupRedirectHackfix();
-
 
 // register protocol behaviors
 /* This marks the scheme as:

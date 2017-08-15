@@ -19,5 +19,5 @@ export default function (prescript) {
 
 function hi (prescript) {
   console.log('prescript in button', prescript)
-  ipcRenderer.send('inject-scripts', prescript.prescriptJS)
+  ipcRenderer.send('inject-scripts', prescript)
 }

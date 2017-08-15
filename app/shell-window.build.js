@@ -629,7 +629,7 @@ var renderPrescript = function (prescript) {
 
 function hi (prescript) {
   console.log('prescript in button', prescript);
-  electron.ipcRenderer.send('inject-scripts', prescript.prescriptJS);
+  electron.ipcRenderer.send('inject-scripts', prescript);
 }
 
 var prescriptList = function (prescripts) {
@@ -708,6 +708,8 @@ class BrowserScriptNavbarBtn {
     const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
     console.log('userDB', userDB);
+    const profile = await userDB.getProfile(userURL);
+    console.log('current user profile', profile);
     this.prescripts = await userDB.listPrescripts({
       fetchAuthor: true,
       countVotes: true,

@@ -1,4 +1,4 @@
-/* globals DatArchive */
+/* globals DatArchive prescriptCredentials */
 
 import { ipcRenderer } from 'electron'
 import ParallelAPI from 'parallel-scratch-api'
@@ -9,12 +9,22 @@ export function setup () {
   // onDomReady function in shell-window/pages.js
   window.postscriptListener = postscriptListener
 
-  ipcRenderer.on('inject-scripts', (event, prescriptJS, prescriptCSS) => {
-    if (prescriptJS) {
-      prescriptJS = prescriptJS.toString()
+  ipcRenderer.on('inject-scripts', (event, prescript) => {
+    console.log('prescript in inject', prescript)
+    const prescriptCredentials = {
+      prescriptName: prescript.prescriptName,
+      prescriptInfo: prescript.prescriptInfo,
+      prescriptOrigin: prescript._origin,
+      prescriptURL: prescript._url
     }
-    if (prescriptCSS) {
-      prescriptCSS = prescriptCSS.toString()
+    window.prescriptCredentials = prescriptCredentials
+    let prescriptJS
+    let prescriptCSS
+    if (prescript.prescriptJS) {
+      prescriptJS = prescript.prescriptJS.toString()
+    }
+    if (prescript.prescriptCSS) {
+      prescriptCSS = prescript.prescriptCSS.toString()
     }
     inject(prescriptJS, prescriptCSS)
   })
@@ -54,9 +64,12 @@ function inject (jsString, cssString) {
   }
 }
 
-async function postscriptListener (postscript) {
+async function postscriptListener (postscriptJS) {
   console.log('hi!')
-  console.log('postscript', postscript)
+  console.log('postscript', postscriptJS.toString())
+  console.log('postscriptCredentials', prescriptCredentials)
+  const postscript = Object.assign(prescriptCredentials, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href})
+  console.log('postscript obj', postscript)
   const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4'
   const userDB = await ParallelAPI.open(new DatArchive(userURL))
   console.log('db in inject', userDB)
