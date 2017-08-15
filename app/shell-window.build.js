@@ -705,14 +705,14 @@ class BrowserScriptNavbarBtn {
     this.loadPrescripts();
   }
   async loadPrescripts () {
-    const userURL = 'dat://4e37e54d1c638750614bcf2cc314d855c320415d02088a6a4d924c22abdca747';
+    const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
     console.log('userDB', userDB);
     this.prescripts = await userDB.listPrescripts({
       fetchAuthor: true,
       countVotes: true,
       reverse: true,
-      author: 'dat://4e37e54d1c638750614bcf2cc314d855c320415d02088a6a4d924c22abdca747'
+      author: 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4'
     });
     console.log('these prescripts', this.prescripts);
   }
@@ -3553,6 +3553,10 @@ function create (opts) {
   page.webviewEl.addEventListener('plugin-crashed', onCrashed);
   page.webviewEl.addEventListener('ipc-message', onIPCMessage);
 
+  // TCW
+
+  page.webviewEl.addEventListener('postscript-submit', onPostscriptSubmit);
+
   // rebroadcasts
   page.webviewEl.addEventListener('did-start-loading', rebroadcastEvent);
   page.webviewEl.addEventListener('did-stop-loading', rebroadcastEvent);
@@ -3734,6 +3738,10 @@ function savePinnedToDB () {
 
 // event handlers
 // =
+
+function onPostscriptSubmit (e) {
+  console.log('event in postscript submit', e);
+}
 
 function onDomReady (e) {
   var page = getByWebview(e.target);

@@ -20,6 +20,7 @@
     "gulp-util": "^3.0.6",
     "gulp-watch": "^4.3.5",
     "into-stream": "^2.0.1",
+    "node-dat-archive": "^1.2.0",
     "parallel-scratch-api": "^0.3.2",
     "q": "^1.4.1",
     "rollup": "^0.41.0",

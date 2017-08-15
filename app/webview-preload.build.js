@@ -7,6 +7,7 @@ var electron = require('electron');
 var rpc = _interopDefault(require('pauls-electron-rpc'));
 var errors = _interopDefault(require('beaker-error-constants'));
 var parseDatURL = _interopDefault(require('parse-dat-url'));
+var ParallelAPI = _interopDefault(require('parallel-scratch-api'));
 
 // method which will populate window.beaker with the APIs deemed appropriate for the protocol
 var importWebAPIs = function () {
@@ -532,16 +533,16 @@ var setupRedirectHackfix = function () {
   });
 };
 
+/* globals DatArchive */
+
 // TCW CHANGES -- injects scripts into the webview DOM
 
 function setup$2 () {
   // listens for the 'inject-scripts' ipc event called in the
   // onDomReady function in shell-window/pages.js
+  window.postscriptListener = postscriptListener;
 
   electron.ipcRenderer.on('inject-scripts', (event, prescriptJS, prescriptCSS) => {
-    console.log('event', event);
-    console.log('data in setup', prescriptJS, prescriptCSS);
-    console.log('type', typeof jsString);
     if (prescriptJS) {
       prescriptJS = prescriptJS.toString();
     }
@@ -555,7 +556,6 @@ function setup$2 () {
 function inject (jsString, cssString) {
   // define SECURITY_POLICY constant to inject into the page, to allow
   // parallel scripts to run without compromising security
-  console.log('data in inject', jsString, cssString);
 
   const SECURITY_POLICY = `<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'self';\">`;
 
@@ -585,6 +585,14 @@ function inject (jsString, cssString) {
     cssElement.appendChild(document.createTextNode(cssString));
     head.appendChild(cssElement);
   }
+}
+
+async function postscriptListener (postscript) {
+  console.log('hi!');
+  console.log('postscript', postscript);
+  const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4';
+  const userDB = await ParallelAPI.open(new DatArchive(userURL));
+  console.log('db in inject', userDB);
 }
 
 // TCW -- END
@@ -618,13 +626,184 @@ if (window.location.protocol === 'beaker:') {
 setup();
 setup$1();
 
-//TCW CHANGES -- call inject scripts from webview-preload/inject-scripts
+// TCW CHANGES -- call inject scripts from webview-preload/inject-scripts
 
 setup$2();
 
-//TCW -- END
+// TCW -- END
 
-},{"beaker-error-constants":2,"electron":undefined,"parse-dat-url":3,"pauls-electron-rpc":4}],2:[function(require,module,exports){
+},{"beaker-error-constants":6,"electron":undefined,"parallel-scratch-api":37,"parse-dat-url":39,"pauls-electron-rpc":41}],2:[function(require,module,exports){
+/*!
+ * arr-diff <https://github.com/jonschlinkert/arr-diff>
+ *
+ * Copyright (c) 2014 Jon Schlinkert, contributors.
+ * Licensed under the MIT License
+ */
+
+'use strict';
+
+var flatten = require('arr-flatten');
+var slice = [].slice;
+
+/**
+ * Return the difference between the first array and
+ * additional arrays.
+ *
+ * ```js
+ * var diff = require('{%= name %}');
+ *
+ * var a = ['a', 'b', 'c', 'd'];
+ * var b = ['b', 'c'];
+ *
+ * console.log(diff(a, b))
+ * //=> ['a', 'd']
+ * ```
+ *
+ * @param  {Array} `a`
+ * @param  {Array} `b`
+ * @return {Array}
+ * @api public
+ */
+
+function diff(arr, arrays) {
+  var argsLen = arguments.length;
+  var len = arr.length, i = -1;
+  var res = [], arrays;
+
+  if (argsLen === 1) {
+    return arr;
+  }
+
+  if (argsLen > 2) {
+    arrays = flatten(slice.call(arguments, 1));
+  }
+
+  while (++i < len) {
+    if (!~arrays.indexOf(arr[i])) {
+      res.push(arr[i]);
+    }
+  }
+  return res;
+}
+
+/**
+ * Expose `diff`
+ */
+
+module.exports = diff;
+
+},{"arr-flatten":3}],3:[function(require,module,exports){
+/*!
+ * arr-flatten <https://github.com/jonschlinkert/arr-flatten>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+'use strict';
+
+module.exports = function (arr) {
+  return flat(arr, []);
+};
+
+function flat(arr, res) {
+  var i = 0, cur;
+  var len = arr.length;
+  for (; i < len; i++) {
+    cur = arr[i];
+    Array.isArray(cur) ? flat(cur, res) : res.push(cur);
+  }
+  return res;
+}
+
+},{}],4:[function(require,module,exports){
+/*!
+ * array-unique <https://github.com/jonschlinkert/array-unique>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+module.exports = function unique(arr) {
+  if (!Array.isArray(arr)) {
+    throw new TypeError('array-unique expects an array.');
+  }
+
+  var len = arr.length;
+  var i = -1;
+
+  while (i++ < len) {
+    var j = i + 1;
+
+    for (; j < arr.length; ++j) {
+      if (arr[i] === arr[j]) {
+        arr.splice(j--, 1);
+      }
+    }
+  }
+  return arr;
+};
+
+},{}],5:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _assert = require('assert');
+
+var _assert2 = _interopRequireDefault(_assert);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var AwaitLock = function () {
+  function AwaitLock() {
+    _classCallCheck(this, AwaitLock);
+
+    this._acquired = false;
+    this._waitingResolvers = [];
+  }
+
+  _createClass(AwaitLock, [{
+    key: 'acquireAsync',
+    value: function acquireAsync() {
+      var _this = this;
+
+      if (!this._acquired) {
+        this._acquired = true;
+        return Promise.resolve();
+      }
+
+      return new Promise(function (resolve) {
+        _this._waitingResolvers.push(resolve);
+      });
+    }
+  }, {
+    key: 'release',
+    value: function release() {
+      (0, _assert2.default)(this._acquired, 'Trying to release an unacquired lock');
+      if (this._waitingResolvers.length > 0) {
+        var resolve = this._waitingResolvers.shift();
+        resolve();
+      } else {
+        this._acquired = false;
+      }
+    }
+  }]);
+
+  return AwaitLock;
+}();
+
+exports.default = AwaitLock;
+module.exports = exports['default'];
+},{"assert":64}],6:[function(require,module,exports){
 class ExtendableError extends Error {
   constructor(msg) {
     super(msg)
@@ -769,7 +948,3787 @@ exports.ModalActiveError = class ModalActiveError extends ExtendableError {
   }
 }
 
-},{}],3:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
+/*!
+ * braces <https://github.com/jonschlinkert/braces>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT license.
+ */
+
+'use strict';
+
+/**
+ * Module dependencies
+ */
+
+var expand = require('expand-range');
+var repeat = require('repeat-element');
+var tokens = require('preserve');
+
+/**
+ * Expose `braces`
+ */
+
+module.exports = function(str, options) {
+  if (typeof str !== 'string') {
+    throw new Error('braces expects a string');
+  }
+  return braces(str, options);
+};
+
+/**
+ * Expand `{foo,bar}` or `{1..5}` braces in the
+ * given `string`.
+ *
+ * @param  {String} `str`
+ * @param  {Array} `arr`
+ * @param  {Object} `options`
+ * @return {Array}
+ */
+
+function braces(str, arr, options) {
+  if (str === '') {
+    return [];
+  }
+
+  if (!Array.isArray(arr)) {
+    options = arr;
+    arr = [];
+  }
+
+  var opts = options || {};
+  arr = arr || [];
+
+  if (typeof opts.nodupes === 'undefined') {
+    opts.nodupes = true;
+  }
+
+  var fn = opts.fn;
+  var es6;
+
+  if (typeof opts === 'function') {
+    fn = opts;
+    opts = {};
+  }
+
+  if (!(patternRe instanceof RegExp)) {
+    patternRe = patternRegex();
+  }
+
+  var matches = str.match(patternRe) || [];
+  var m = matches[0];
+
+  switch(m) {
+    case '\\,':
+      return escapeCommas(str, arr, opts);
+    case '\\.':
+      return escapeDots(str, arr, opts);
+    case '\/.':
+      return escapePaths(str, arr, opts);
+    case ' ':
+      return splitWhitespace(str);
+    case '{,}':
+      return exponential(str, opts, braces);
+    case '{}':
+      return emptyBraces(str, arr, opts);
+    case '\\{':
+    case '\\}':
+      return escapeBraces(str, arr, opts);
+    case '${':
+      if (!/\{[^{]+\{/.test(str)) {
+        return arr.concat(str);
+      } else {
+        es6 = true;
+        str = tokens.before(str, es6Regex());
+      }
+  }
+
+  if (!(braceRe instanceof RegExp)) {
+    braceRe = braceRegex();
+  }
+
+  var match = braceRe.exec(str);
+  if (match == null) {
+    return [str];
+  }
+
+  var outter = match[1];
+  var inner = match[2];
+  if (inner === '') { return [str]; }
+
+  var segs, segsLength;
+
+  if (inner.indexOf('..') !== -1) {
+    segs = expand(inner, opts, fn) || inner.split(',');
+    segsLength = segs.length;
+
+  } else if (inner[0] === '"' || inner[0] === '\'') {
+    return arr.concat(str.split(/['"]/).join(''));
+
+  } else {
+    segs = inner.split(',');
+    if (opts.makeRe) {
+      return braces(str.replace(outter, wrap(segs, '|')), opts);
+    }
+
+    segsLength = segs.length;
+    if (segsLength === 1 && opts.bash) {
+      segs[0] = wrap(segs[0], '\\');
+    }
+  }
+
+  var len = segs.length;
+  var i = 0, val;
+
+  while (len--) {
+    var path = segs[i++];
+
+    if (/(\.[^.\/])/.test(path)) {
+      if (segsLength > 1) {
+        return segs;
+      } else {
+        return [str];
+      }
+    }
+
+    val = splice(str, outter, path);
+
+    if (/\{[^{}]+?\}/.test(val)) {
+      arr = braces(val, arr, opts);
+    } else if (val !== '') {
+      if (opts.nodupes && arr.indexOf(val) !== -1) { continue; }
+      arr.push(es6 ? tokens.after(val) : val);
+    }
+  }
+
+  if (opts.strict) { return filter(arr, filterEmpty); }
+  return arr;
+}
+
+/**
+ * Expand exponential ranges
+ *
+ *   `a{,}{,}` => ['a', 'a', 'a', 'a']
+ */
+
+function exponential(str, options, fn) {
+  if (typeof options === 'function') {
+    fn = options;
+    options = null;
+  }
+
+  var opts = options || {};
+  var esc = '__ESC_EXP__';
+  var exp = 0;
+  var res;
+
+  var parts = str.split('{,}');
+  if (opts.nodupes) {
+    return fn(parts.join(''), opts);
+  }
+
+  exp = parts.length - 1;
+  res = fn(parts.join(esc), opts);
+  var len = res.length;
+  var arr = [];
+  var i = 0;
+
+  while (len--) {
+    var ele = res[i++];
+    var idx = ele.indexOf(esc);
+
+    if (idx === -1) {
+      arr.push(ele);
+
+    } else {
+      ele = ele.split('__ESC_EXP__').join('');
+      if (!!ele && opts.nodupes !== false) {
+        arr.push(ele);
+
+      } else {
+        var num = Math.pow(2, exp);
+        arr.push.apply(arr, repeat(ele, num));
+      }
+    }
+  }
+  return arr;
+}
+
+/**
+ * Wrap a value with parens, brackets or braces,
+ * based on the given character/separator.
+ *
+ * @param  {String|Array} `val`
+ * @param  {String} `ch`
+ * @return {String}
+ */
+
+function wrap(val, ch) {
+  if (ch === '|') {
+    return '(' + val.join(ch) + ')';
+  }
+  if (ch === ',') {
+    return '{' + val.join(ch) + '}';
+  }
+  if (ch === '-') {
+    return '[' + val.join(ch) + ']';
+  }
+  if (ch === '\\') {
+    return '\\{' + val + '\\}';
+  }
+}
+
+/**
+ * Handle empty braces: `{}`
+ */
+
+function emptyBraces(str, arr, opts) {
+  return braces(str.split('{}').join('\\{\\}'), arr, opts);
+}
+
+/**
+ * Filter out empty-ish values
+ */
+
+function filterEmpty(ele) {
+  return !!ele && ele !== '\\';
+}
+
+/**
+ * Handle patterns with whitespace
+ */
+
+function splitWhitespace(str) {
+  var segs = str.split(' ');
+  var len = segs.length;
+  var res = [];
+  var i = 0;
+
+  while (len--) {
+    res.push.apply(res, braces(segs[i++]));
+  }
+  return res;
+}
+
+/**
+ * Handle escaped braces: `\\{foo,bar}`
+ */
+
+function escapeBraces(str, arr, opts) {
+  if (!/\{[^{]+\{/.test(str)) {
+    return arr.concat(str.split('\\').join(''));
+  } else {
+    str = str.split('\\{').join('__LT_BRACE__');
+    str = str.split('\\}').join('__RT_BRACE__');
+    return map(braces(str, arr, opts), function(ele) {
+      ele = ele.split('__LT_BRACE__').join('{');
+      return ele.split('__RT_BRACE__').join('}');
+    });
+  }
+}
+
+/**
+ * Handle escaped dots: `{1\\.2}`
+ */
+
+function escapeDots(str, arr, opts) {
+  if (!/[^\\]\..+\\\./.test(str)) {
+    return arr.concat(str.split('\\').join(''));
+  } else {
+    str = str.split('\\.').join('__ESC_DOT__');
+    return map(braces(str, arr, opts), function(ele) {
+      return ele.split('__ESC_DOT__').join('.');
+    });
+  }
+}
+
+/**
+ * Handle escaped dots: `{1\\.2}`
+ */
+
+function escapePaths(str, arr, opts) {
+  str = str.split('\/.').join('__ESC_PATH__');
+  return map(braces(str, arr, opts), function(ele) {
+    return ele.split('__ESC_PATH__').join('\/.');
+  });
+}
+
+/**
+ * Handle escaped commas: `{a\\,b}`
+ */
+
+function escapeCommas(str, arr, opts) {
+  if (!/\w,/.test(str)) {
+    return arr.concat(str.split('\\').join(''));
+  } else {
+    str = str.split('\\,').join('__ESC_COMMA__');
+    return map(braces(str, arr, opts), function(ele) {
+      return ele.split('__ESC_COMMA__').join(',');
+    });
+  }
+}
+
+/**
+ * Regex for common patterns
+ */
+
+function patternRegex() {
+  return /\${|( (?=[{,}])|(?=[{,}]) )|{}|{,}|\\,(?=.*[{}])|\/\.(?=.*[{}])|\\\.(?={)|\\{|\\}/;
+}
+
+/**
+ * Braces regex.
+ */
+
+function braceRegex() {
+  return /.*(\\?\{([^}]+)\})/;
+}
+
+/**
+ * es6 delimiter regex.
+ */
+
+function es6Regex() {
+  return /\$\{([^}]+)\}/;
+}
+
+var braceRe;
+var patternRe;
+
+/**
+ * Faster alternative to `String.replace()` when the
+ * index of the token to be replaces can't be supplied
+ */
+
+function splice(str, token, replacement) {
+  var i = str.indexOf(token);
+  return str.substr(0, i) + replacement
+    + str.substr(i + token.length);
+}
+
+/**
+ * Fast array map
+ */
+
+function map(arr, fn) {
+  if (arr == null) {
+    return [];
+  }
+
+  var len = arr.length;
+  var res = new Array(len);
+  var i = -1;
+
+  while (++i < len) {
+    res[i] = fn(arr[i], i, arr);
+  }
+
+  return res;
+}
+
+/**
+ * Fast array filter
+ */
+
+function filter(arr, cb) {
+  if (arr == null) return [];
+  if (typeof cb !== 'function') {
+    throw new TypeError('braces: filter expects a callback function.');
+  }
+
+  var len = arr.length;
+  var res = arr.slice();
+  var i = 0;
+
+  while (len--) {
+    if (!cb(arr[len], i++)) {
+      res.splice(len, 1);
+    }
+  }
+  return res;
+}
+
+},{"expand-range":9,"preserve":45,"repeat-element":52}],8:[function(require,module,exports){
+/*!
+ * expand-brackets <https://github.com/jonschlinkert/expand-brackets>
+ *
+ * Copyright (c) 2015 Jon Schlinkert.
+ * Licensed under the MIT license.
+ */
+
+'use strict';
+
+var isPosixBracket = require('is-posix-bracket');
+
+/**
+ * POSIX character classes
+ */
+
+var POSIX = {
+  alnum: 'a-zA-Z0-9',
+  alpha: 'a-zA-Z',
+  blank: ' \\t',
+  cntrl: '\\x00-\\x1F\\x7F',
+  digit: '0-9',
+  graph: '\\x21-\\x7E',
+  lower: 'a-z',
+  print: '\\x20-\\x7E',
+  punct: '-!"#$%&\'()\\*+,./:;<=>?@[\\]^_`{|}~',
+  space: ' \\t\\r\\n\\v\\f',
+  upper: 'A-Z',
+  word:  'A-Za-z0-9_',
+  xdigit: 'A-Fa-f0-9',
+};
+
+/**
+ * Expose `brackets`
+ */
+
+module.exports = brackets;
+
+function brackets(str) {
+  if (!isPosixBracket(str)) {
+    return str;
+  }
+
+  var negated = false;
+  if (str.indexOf('[^') !== -1) {
+    negated = true;
+    str = str.split('[^').join('[');
+  }
+  if (str.indexOf('[!') !== -1) {
+    negated = true;
+    str = str.split('[!').join('[');
+  }
+
+  var a = str.split('[');
+  var b = str.split(']');
+  var imbalanced = a.length !== b.length;
+
+  var parts = str.split(/(?::\]\[:|\[?\[:|:\]\]?)/);
+  var len = parts.length, i = 0;
+  var end = '', beg = '';
+  var res = [];
+
+  // start at the end (innermost) first
+  while (len--) {
+    var inner = parts[i++];
+    if (inner === '^[!' || inner === '[!') {
+      inner = '';
+      negated = true;
+    }
+
+    var prefix = negated ? '^' : '';
+    var ch = POSIX[inner];
+
+    if (ch) {
+      res.push('[' + prefix + ch + ']');
+    } else if (inner) {
+      if (/^\[?\w-\w\]?$/.test(inner)) {
+        if (i === parts.length) {
+          res.push('[' + prefix + inner);
+        } else if (i === 1) {
+          res.push(prefix + inner + ']');
+        } else {
+          res.push(prefix + inner);
+        }
+      } else {
+        if (i === 1) {
+          beg += inner;
+        } else if (i === parts.length) {
+          end += inner;
+        } else {
+          res.push('[' + prefix + inner + ']');
+        }
+      }
+    }
+  }
+
+  var result = res.join('|');
+  var rlen = res.length || 1;
+  if (rlen > 1) {
+    result = '(?:' + result + ')';
+    rlen = 1;
+  }
+  if (beg) {
+    rlen++;
+    if (beg.charAt(0) === '[') {
+      if (imbalanced) {
+        beg = '\\[' + beg.slice(1);
+      } else {
+        beg += ']';
+      }
+    }
+    result = beg + result;
+  }
+  if (end) {
+    rlen++;
+    if (end.slice(-1) === ']') {
+      if (imbalanced) {
+        end = end.slice(0, end.length - 1) + '\\]';
+      } else {
+        end = '[' + end;
+      }
+    }
+    result += end;
+  }
+
+  if (rlen > 1) {
+    result = result.split('][').join(']|[');
+    if (result.indexOf('|') !== -1 && !/\(\?/.test(result)) {
+      result = '(?:' + result + ')';
+    }
+  }
+
+  result = result.replace(/\[+=|=\]+/g, '\\b');
+  return result;
+}
+
+brackets.makeRe = function(pattern) {
+  try {
+    return new RegExp(brackets(pattern));
+  } catch (err) {}
+};
+
+brackets.isMatch = function(str, pattern) {
+  try {
+    return brackets.makeRe(pattern).test(str);
+  } catch (err) {
+    return false;
+  }
+};
+
+brackets.match = function(arr, pattern) {
+  var len = arr.length, i = 0;
+  var res = arr.slice();
+
+  var re = brackets.makeRe(pattern);
+  while (i < len) {
+    var ele = arr[i++];
+    if (!re.test(ele)) {
+      continue;
+    }
+    res.splice(i, 1);
+  }
+  return res;
+};
+
+},{"is-posix-bracket":24}],9:[function(require,module,exports){
+/*!
+ * expand-range <https://github.com/jonschlinkert/expand-range>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT license.
+ */
+
+'use strict';
+
+var fill = require('fill-range');
+
+module.exports = function expandRange(str, options, fn) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expand-range expects a string.');
+  }
+
+  if (typeof options === 'function') {
+    fn = options;
+    options = {};
+  }
+
+  if (typeof options === 'boolean') {
+    options = {};
+    options.makeRe = true;
+  }
+
+  // create arguments to pass to fill-range
+  var opts = options || {};
+  var args = str.split('..');
+  var len = args.length;
+  if (len > 3) { return str; }
+
+  // if only one argument, it can't expand so return it
+  if (len === 1) { return args; }
+
+  // if `true`, tell fill-range to regexify the string
+  if (typeof fn === 'boolean' && fn === true) {
+    opts.makeRe = true;
+  }
+
+  args.push(opts);
+  return fill.apply(null, args.concat(fn));
+};
+
+},{"fill-range":12}],10:[function(require,module,exports){
+/*!
+ * extglob <https://github.com/jonschlinkert/extglob>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+/**
+ * Module dependencies
+ */
+
+var isExtglob = require('is-extglob');
+var re, cache = {};
+
+/**
+ * Expose `extglob`
+ */
+
+module.exports = extglob;
+
+/**
+ * Convert the given extglob `string` to a regex-compatible
+ * string.
+ *
+ * ```js
+ * var extglob = require('extglob');
+ * extglob('!(a?(b))');
+ * //=> '(?!a(?:b)?)[^/]*?'
+ * ```
+ *
+ * @param {String} `str` The string to convert.
+ * @param {Object} `options`
+ *   @option {Boolean} [options] `esc` If `false` special characters will not be escaped. Defaults to `true`.
+ *   @option {Boolean} [options] `regex` If `true` a regular expression is returned instead of a string.
+ * @return {String}
+ * @api public
+ */
+
+
+function extglob(str, opts) {
+  opts = opts || {};
+  var o = {}, i = 0;
+
+  // fix common character reversals
+  // '*!(.js)' => '*.!(js)'
+  str = str.replace(/!\(([^\w*()])/g, '$1!(');
+
+  // support file extension negation
+  str = str.replace(/([*\/])\.!\([*]\)/g, function (m, ch) {
+    if (ch === '/') {
+      return escape('\\/[^.]+');
+    }
+    return escape('[^.]+');
+  });
+
+  // create a unique key for caching by
+  // combining the string and options
+  var key = str
+    + String(!!opts.regex)
+    + String(!!opts.contains)
+    + String(!!opts.escape);
+
+  if (cache.hasOwnProperty(key)) {
+    return cache[key];
+  }
+
+  if (!(re instanceof RegExp)) {
+    re = regex();
+  }
+
+  opts.negate = false;
+  var m;
+
+  while (m = re.exec(str)) {
+    var prefix = m[1];
+    var inner = m[3];
+    if (prefix === '!') {
+      opts.negate = true;
+    }
+
+    var id = '__EXTGLOB_' + (i++) + '__';
+    // use the prefix of the _last_ (outtermost) pattern
+    o[id] = wrap(inner, prefix, opts.escape);
+    str = str.split(m[0]).join(id);
+  }
+
+  var keys = Object.keys(o);
+  var len = keys.length;
+
+  // we have to loop again to allow us to convert
+  // patterns in reverse order (starting with the
+  // innermost/last pattern first)
+  while (len--) {
+    var prop = keys[len];
+    str = str.split(prop).join(o[prop]);
+  }
+
+  var result = opts.regex
+    ? toRegex(str, opts.contains, opts.negate)
+    : str;
+
+  result = result.split('.').join('\\.');
+
+  // cache the result and return it
+  return (cache[key] = result);
+}
+
+/**
+ * Convert `string` to a regex string.
+ *
+ * @param  {String} `str`
+ * @param  {String} `prefix` Character that determines how to wrap the string.
+ * @param  {Boolean} `esc` If `false` special characters will not be escaped. Defaults to `true`.
+ * @return {String}
+ */
+
+function wrap(inner, prefix, esc) {
+  if (esc) inner = escape(inner);
+
+  switch (prefix) {
+    case '!':
+      return '(?!' + inner + ')[^/]' + (esc ? '%%%~' : '*?');
+    case '@':
+      return '(?:' + inner + ')';
+    case '+':
+      return '(?:' + inner + ')+';
+    case '*':
+      return '(?:' + inner + ')' + (esc ? '%%' : '*')
+    case '?':
+      return '(?:' + inner + '|)';
+    default:
+      return inner;
+  }
+}
+
+function escape(str) {
+  str = str.split('*').join('[^/]%%%~');
+  str = str.split('.').join('\\.');
+  return str;
+}
+
+/**
+ * extglob regex.
+ */
+
+function regex() {
+  return /(\\?[@?!+*$]\\?)(\(([^()]*?)\))/;
+}
+
+/**
+ * Negation regex
+ */
+
+function negate(str) {
+  return '(?!^' + str + ').*$';
+}
+
+/**
+ * Create the regex to do the matching. If
+ * the leading character in the `pattern` is `!`
+ * a negation regex is returned.
+ *
+ * @param {String} `pattern`
+ * @param {Boolean} `contains` Allow loose matching.
+ * @param {Boolean} `isNegated` True if the pattern is a negation pattern.
+ */
+
+function toRegex(pattern, contains, isNegated) {
+  var prefix = contains ? '^' : '';
+  var after = contains ? '$' : '';
+  pattern = ('(?:' + pattern + ')' + after);
+  if (isNegated) {
+    pattern = prefix + negate(pattern);
+  }
+  return new RegExp(prefix + pattern);
+}
+
+},{"is-extglob":21}],11:[function(require,module,exports){
+/*!
+ * filename-regex <https://github.com/regexps/filename-regex>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert
+ * Licensed under the MIT license.
+ */
+
+module.exports = function filenameRegex() {
+  return /([^\\\/]+)$/;
+};
+
+},{}],12:[function(require,module,exports){
+/*!
+ * fill-range <https://github.com/jonschlinkert/fill-range>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var isObject = require('isobject');
+var isNumber = require('is-number');
+var randomize = require('randomatic');
+var repeatStr = require('repeat-string');
+var repeat = require('repeat-element');
+
+/**
+ * Expose `fillRange`
+ */
+
+module.exports = fillRange;
+
+/**
+ * Return a range of numbers or letters.
+ *
+ * @param  {String} `a` Start of the range
+ * @param  {String} `b` End of the range
+ * @param  {String} `step` Increment or decrement to use.
+ * @param  {Function} `fn` Custom function to modify each element in the range.
+ * @return {Array}
+ */
+
+function fillRange(a, b, step, options, fn) {
+  if (a == null || b == null) {
+    throw new Error('fill-range expects the first and second args to be strings.');
+  }
+
+  if (typeof step === 'function') {
+    fn = step; options = {}; step = null;
+  }
+
+  if (typeof options === 'function') {
+    fn = options; options = {};
+  }
+
+  if (isObject(step)) {
+    options = step; step = '';
+  }
+
+  var expand, regex = false, sep = '';
+  var opts = options || {};
+
+  if (typeof opts.silent === 'undefined') {
+    opts.silent = true;
+  }
+
+  step = step || opts.step;
+
+  // store a ref to unmodified arg
+  var origA = a, origB = b;
+
+  b = (b.toString() === '-0') ? 0 : b;
+
+  if (opts.optimize || opts.makeRe) {
+    step = step ? (step += '~') : step;
+    expand = true;
+    regex = true;
+    sep = '~';
+  }
+
+  // handle special step characters
+  if (typeof step === 'string') {
+    var match = stepRe().exec(step);
+
+    if (match) {
+      var i = match.index;
+      var m = match[0];
+
+      // repeat string
+      if (m === '+') {
+        return repeat(a, b);
+
+      // randomize a, `b` times
+      } else if (m === '?') {
+        return [randomize(a, b)];
+
+      // expand right, no regex reduction
+      } else if (m === '>') {
+        step = step.substr(0, i) + step.substr(i + 1);
+        expand = true;
+
+      // expand to an array, or if valid create a reduced
+      // string for a regex logic `or`
+      } else if (m === '|') {
+        step = step.substr(0, i) + step.substr(i + 1);
+        expand = true;
+        regex = true;
+        sep = m;
+
+      // expand to an array, or if valid create a reduced
+      // string for a regex range
+      } else if (m === '~') {
+        step = step.substr(0, i) + step.substr(i + 1);
+        expand = true;
+        regex = true;
+        sep = m;
+      }
+    } else if (!isNumber(step)) {
+      if (!opts.silent) {
+        throw new TypeError('fill-range: invalid step.');
+      }
+      return null;
+    }
+  }
+
+  if (/[.&*()[\]^%$#@!]/.test(a) || /[.&*()[\]^%$#@!]/.test(b)) {
+    if (!opts.silent) {
+      throw new RangeError('fill-range: invalid range arguments.');
+    }
+    return null;
+  }
+
+  // has neither a letter nor number, or has both letters and numbers
+  // this needs to be after the step logic
+  if (!noAlphaNum(a) || !noAlphaNum(b) || hasBoth(a) || hasBoth(b)) {
+    if (!opts.silent) {
+      throw new RangeError('fill-range: invalid range arguments.');
+    }
+    return null;
+  }
+
+  // validate arguments
+  var isNumA = isNumber(zeros(a));
+  var isNumB = isNumber(zeros(b));
+
+  if ((!isNumA && isNumB) || (isNumA && !isNumB)) {
+    if (!opts.silent) {
+      throw new TypeError('fill-range: first range argument is incompatible with second.');
+    }
+    return null;
+  }
+
+  // by this point both are the same, so we
+  // can use A to check going forward.
+  var isNum = isNumA;
+  var num = formatStep(step);
+
+  // is the range alphabetical? or numeric?
+  if (isNum) {
+    // if numeric, coerce to an integer
+    a = +a; b = +b;
+  } else {
+    // otherwise, get the charCode to expand alpha ranges
+    a = a.charCodeAt(0);
+    b = b.charCodeAt(0);
+  }
+
+  // is the pattern descending?
+  var isDescending = a > b;
+
+  // don't create a character class if the args are < 0
+  if (a < 0 || b < 0) {
+    expand = false;
+    regex = false;
+  }
+
+  // detect padding
+  var padding = isPadded(origA, origB);
+  var res, pad, arr = [];
+  var ii = 0;
+
+  // character classes, ranges and logical `or`
+  if (regex) {
+    if (shouldExpand(a, b, num, isNum, padding, opts)) {
+      // make sure the correct separator is used
+      if (sep === '|' || sep === '~') {
+        sep = detectSeparator(a, b, num, isNum, isDescending);
+      }
+      return wrap([origA, origB], sep, opts);
+    }
+  }
+
+  while (isDescending ? (a >= b) : (a <= b)) {
+    if (padding && isNum) {
+      pad = padding(a);
+    }
+
+    // custom function
+    if (typeof fn === 'function') {
+      res = fn(a, isNum, pad, ii++);
+
+    // letters
+    } else if (!isNum) {
+      if (regex && isInvalidChar(a)) {
+        res = null;
+      } else {
+        res = String.fromCharCode(a);
+      }
+
+    // numbers
+    } else {
+      res = formatPadding(a, pad);
+    }
+
+    // add result to the array, filtering any nulled values
+    if (res !== null) arr.push(res);
+
+    // increment or decrement
+    if (isDescending) {
+      a -= num;
+    } else {
+      a += num;
+    }
+  }
+
+  // now that the array is expanded, we need to handle regex
+  // character classes, ranges or logical `or` that wasn't
+  // already handled before the loop
+  if ((regex || expand) && !opts.noexpand) {
+    // make sure the correct separator is used
+    if (sep === '|' || sep === '~') {
+      sep = detectSeparator(a, b, num, isNum, isDescending);
+    }
+    if (arr.length === 1 || a < 0 || b < 0) { return arr; }
+    return wrap(arr, sep, opts);
+  }
+
+  return arr;
+}
+
+/**
+ * Wrap the string with the correct regex
+ * syntax.
+ */
+
+function wrap(arr, sep, opts) {
+  if (sep === '~') { sep = '-'; }
+  var str = arr.join(sep);
+  var pre = opts && opts.regexPrefix;
+
+  // regex logical `or`
+  if (sep === '|') {
+    str = pre ? pre + str : str;
+    str = '(' + str + ')';
+  }
+
+  // regex character class
+  if (sep === '-') {
+    str = (pre && pre === '^')
+      ? pre + str
+      : str;
+    str = '[' + str + ']';
+  }
+  return [str];
+}
+
+/**
+ * Check for invalid characters
+ */
+
+function isCharClass(a, b, step, isNum, isDescending) {
+  if (isDescending) { return false; }
+  if (isNum) { return a <= 9 && b <= 9; }
+  if (a < b) { return step === 1; }
+  return false;
+}
+
+/**
+ * Detect the correct separator to use
+ */
+
+function shouldExpand(a, b, num, isNum, padding, opts) {
+  if (isNum && (a > 9 || b > 9)) { return false; }
+  return !padding && num === 1 && a < b;
+}
+
+/**
+ * Detect the correct separator to use
+ */
+
+function detectSeparator(a, b, step, isNum, isDescending) {
+  var isChar = isCharClass(a, b, step, isNum, isDescending);
+  if (!isChar) {
+    return '|';
+  }
+  return '~';
+}
+
+/**
+ * Correctly format the step based on type
+ */
+
+function formatStep(step) {
+  return Math.abs(step >> 0) || 1;
+}
+
+/**
+ * Format padding, taking leading `-` into account
+ */
+
+function formatPadding(ch, pad) {
+  var res = pad ? pad + ch : ch;
+  if (pad && ch.toString().charAt(0) === '-') {
+    res = '-' + pad + ch.toString().substr(1);
+  }
+  return res.toString();
+}
+
+/**
+ * Check for invalid characters
+ */
+
+function isInvalidChar(str) {
+  var ch = toStr(str);
+  return ch === '\\'
+    || ch === '['
+    || ch === ']'
+    || ch === '^'
+    || ch === '('
+    || ch === ')'
+    || ch === '`';
+}
+
+/**
+ * Convert to a string from a charCode
+ */
+
+function toStr(ch) {
+  return String.fromCharCode(ch);
+}
+
+
+/**
+ * Step regex
+ */
+
+function stepRe() {
+  return /\?|>|\||\+|\~/g;
+}
+
+/**
+ * Return true if `val` has either a letter
+ * or a number
+ */
+
+function noAlphaNum(val) {
+  return /[a-z0-9]/i.test(val);
+}
+
+/**
+ * Return true if `val` has both a letter and
+ * a number (invalid)
+ */
+
+function hasBoth(val) {
+  return /[a-z][0-9]|[0-9][a-z]/i.test(val);
+}
+
+/**
+ * Normalize zeros for checks
+ */
+
+function zeros(val) {
+  if (/^-*0+$/.test(val.toString())) {
+    return '0';
+  }
+  return val;
+}
+
+/**
+ * Return true if `val` has leading zeros,
+ * or a similar valid pattern.
+ */
+
+function hasZeros(val) {
+  return /[^.]\.|^-*0+[0-9]/.test(val);
+}
+
+/**
+ * If the string is padded, returns a curried function with
+ * the a cached padding string, or `false` if no padding.
+ *
+ * @param  {*} `origA` String or number.
+ * @return {String|Boolean}
+ */
+
+function isPadded(origA, origB) {
+  if (hasZeros(origA) || hasZeros(origB)) {
+    var alen = length(origA);
+    var blen = length(origB);
+
+    var len = alen >= blen
+      ? alen
+      : blen;
+
+    return function (a) {
+      return repeatStr('0', len - length(a));
+    };
+  }
+  return false;
+}
+
+/**
+ * Get the string length of `val`
+ */
+
+function length(val) {
+  return val.toString().length;
+}
+
+},{"is-number":23,"isobject":27,"randomatic":46,"repeat-element":52,"repeat-string":53}],13:[function(require,module,exports){
+/*!
+ * for-in <https://github.com/jonschlinkert/for-in>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+'use strict';
+
+module.exports = function forIn(obj, fn, thisArg) {
+  for (var key in obj) {
+    if (fn.call(thisArg, obj[key], key, obj) === false) {
+      break;
+    }
+  }
+};
+
+},{}],14:[function(require,module,exports){
+/*!
+ * for-own <https://github.com/jonschlinkert/for-own>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+'use strict';
+
+var forIn = require('for-in');
+var hasOwn = Object.prototype.hasOwnProperty;
+
+module.exports = function forOwn(obj, fn, thisArg) {
+  forIn(obj, function(val, key) {
+    if (hasOwn.call(obj, key)) {
+      return fn.call(thisArg, obj[key], key, obj);
+    }
+  });
+};
+
+},{"for-in":13}],15:[function(require,module,exports){
+/*!
+ * glob-base <https://github.com/jonschlinkert/glob-base>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var path = require('path');
+var parent = require('glob-parent');
+var isGlob = require('is-glob');
+
+module.exports = function globBase(pattern) {
+  if (typeof pattern !== 'string') {
+    throw new TypeError('glob-base expects a string.');
+  }
+
+  var res = {};
+  res.base = parent(pattern);
+  res.isGlob = isGlob(pattern);
+
+  if (res.base !== '.') {
+    res.glob = pattern.substr(res.base.length);
+    if (res.glob.charAt(0) === '/') {
+      res.glob = res.glob.substr(1);
+    }
+  } else {
+    res.glob = pattern;
+  }
+
+  if (!res.isGlob) {
+    res.base = dirname(pattern);
+    res.glob = res.base !== '.'
+      ? pattern.substr(res.base.length)
+      : pattern;
+  }
+
+  if (res.glob.substr(0, 2) === './') {
+    res.glob = res.glob.substr(2);
+  }
+  if (res.glob.charAt(0) === '/') {
+    res.glob = res.glob.substr(1);
+  }
+  return res;
+};
+
+function dirname(glob) {
+  if (glob.slice(-1) === '/') return glob;
+  return path.dirname(glob);
+}
+
+},{"glob-parent":16,"is-glob":22,"path":74}],16:[function(require,module,exports){
+'use strict';
+
+var path = require('path');
+var isglob = require('is-glob');
+
+module.exports = function globParent(str) {
+	str += 'a'; // preserves full path in case of trailing path separator
+	do {str = path.dirname(str)} while (isglob(str));
+	return str;
+};
+
+},{"is-glob":22,"path":74}],17:[function(require,module,exports){
+/*!
+ * Determine if an object is a Buffer
+ *
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @license  MIT
+ */
+
+// The _isBuffer check is for Safari 5-7 support, because it's missing
+// Object.prototype.constructor. Remove this eventually
+module.exports = function (obj) {
+  return obj != null && (isBuffer(obj) || isSlowBuffer(obj) || !!obj._isBuffer)
+}
+
+function isBuffer (obj) {
+  return !!obj.constructor && typeof obj.constructor.isBuffer === 'function' && obj.constructor.isBuffer(obj)
+}
+
+// For Node v0.10 support. Remove this eventually.
+function isSlowBuffer (obj) {
+  return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
+}
+
+},{}],18:[function(require,module,exports){
+/*!
+ * is-dotfile <https://github.com/jonschlinkert/is-dotfile>
+ *
+ * Copyright (c) 2015-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+module.exports = function(str) {
+  if (str.charCodeAt(0) === 46 /* . */ && str.indexOf('/', 1) === -1) {
+    return true;
+  }
+  var slash = str.lastIndexOf('/');
+  return slash !== -1 ? str.charCodeAt(slash + 1) === 46  /* . */ : false;
+};
+
+},{}],19:[function(require,module,exports){
+/*!
+ * is-equal-shallow <https://github.com/jonschlinkert/is-equal-shallow>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var isPrimitive = require('is-primitive');
+
+module.exports = function isEqual(a, b) {
+  if (!a && !b) { return true; }
+  if (!a && b || a && !b) { return false; }
+
+  var numKeysA = 0, numKeysB = 0, key;
+  for (key in b) {
+    numKeysB++;
+    if (!isPrimitive(b[key]) || !a.hasOwnProperty(key) || (a[key] !== b[key])) {
+      return false;
+    }
+  }
+  for (key in a) {
+    numKeysA++;
+  }
+  return numKeysA === numKeysB;
+};
+
+},{"is-primitive":25}],20:[function(require,module,exports){
+/*!
+ * is-extendable <https://github.com/jonschlinkert/is-extendable>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+module.exports = function isExtendable(val) {
+  return typeof val !== 'undefined' && val !== null
+    && (typeof val === 'object' || typeof val === 'function');
+};
+
+},{}],21:[function(require,module,exports){
+/*!
+ * is-extglob <https://github.com/jonschlinkert/is-extglob>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+module.exports = function isExtglob(str) {
+  return typeof str === 'string'
+    && /[@?!+*]\(/.test(str);
+};
+
+},{}],22:[function(require,module,exports){
+/*!
+ * is-glob <https://github.com/jonschlinkert/is-glob>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+var isExtglob = require('is-extglob');
+
+module.exports = function isGlob(str) {
+  return typeof str === 'string'
+    && (/[*!?{}(|)[\]]/.test(str)
+     || isExtglob(str));
+};
+},{"is-extglob":21}],23:[function(require,module,exports){
+/*!
+ * is-number <https://github.com/jonschlinkert/is-number>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var typeOf = require('kind-of');
+
+module.exports = function isNumber(num) {
+  var type = typeOf(num);
+  if (type !== 'number' && type !== 'string') {
+    return false;
+  }
+  var n = +num;
+  return (n - n + 1) >= 0 && num !== '';
+};
+
+},{"kind-of":28}],24:[function(require,module,exports){
+/*!
+ * is-posix-bracket <https://github.com/jonschlinkert/is-posix-bracket>
+ *
+ * Copyright (c) 2015-2016, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+module.exports = function isPosixBracket(str) {
+  return typeof str === 'string' && /\[([:.=+])(?:[^\[\]]|)+\1\]/.test(str);
+};
+
+},{}],25:[function(require,module,exports){
+/*!
+ * is-primitive <https://github.com/jonschlinkert/is-primitive>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+// see http://jsperf.com/testing-value-is-primitive/7
+module.exports = function isPrimitive(value) {
+  return value == null || (typeof value !== 'function' && typeof value !== 'object');
+};
+
+},{}],26:[function(require,module,exports){
+var toString = {}.toString;
+
+module.exports = Array.isArray || function (arr) {
+  return toString.call(arr) == '[object Array]';
+};
+
+},{}],27:[function(require,module,exports){
+/*!
+ * isobject <https://github.com/jonschlinkert/isobject>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var isArray = require('isarray');
+
+module.exports = function isObject(val) {
+  return val != null && typeof val === 'object' && isArray(val) === false;
+};
+
+},{"isarray":26}],28:[function(require,module,exports){
+var isBuffer = require('is-buffer');
+var toString = Object.prototype.toString;
+
+/**
+ * Get the native `typeof` a value.
+ *
+ * @param  {*} `val`
+ * @return {*} Native javascript type
+ */
+
+module.exports = function kindOf(val) {
+  // primitivies
+  if (typeof val === 'undefined') {
+    return 'undefined';
+  }
+  if (val === null) {
+    return 'null';
+  }
+  if (val === true || val === false || val instanceof Boolean) {
+    return 'boolean';
+  }
+  if (typeof val === 'string' || val instanceof String) {
+    return 'string';
+  }
+  if (typeof val === 'number' || val instanceof Number) {
+    return 'number';
+  }
+
+  // functions
+  if (typeof val === 'function' || val instanceof Function) {
+    return 'function';
+  }
+
+  // array
+  if (typeof Array.isArray !== 'undefined' && Array.isArray(val)) {
+    return 'array';
+  }
+
+  // check for instances of RegExp and Date before calling `toString`
+  if (val instanceof RegExp) {
+    return 'regexp';
+  }
+  if (val instanceof Date) {
+    return 'date';
+  }
+
+  // other objects
+  var type = toString.call(val);
+
+  if (type === '[object RegExp]') {
+    return 'regexp';
+  }
+  if (type === '[object Date]') {
+    return 'date';
+  }
+  if (type === '[object Arguments]') {
+    return 'arguments';
+  }
+  if (type === '[object Error]') {
+    return 'error';
+  }
+
+  // buffer
+  if (isBuffer(val)) {
+    return 'buffer';
+  }
+
+  // es6: Map, WeakMap, Set, WeakSet
+  if (type === '[object Set]') {
+    return 'set';
+  }
+  if (type === '[object WeakSet]') {
+    return 'weakset';
+  }
+  if (type === '[object Map]') {
+    return 'map';
+  }
+  if (type === '[object WeakMap]') {
+    return 'weakmap';
+  }
+  if (type === '[object Symbol]') {
+    return 'symbol';
+  }
+
+  // typed arrays
+  if (type === '[object Int8Array]') {
+    return 'int8array';
+  }
+  if (type === '[object Uint8Array]') {
+    return 'uint8array';
+  }
+  if (type === '[object Uint8ClampedArray]') {
+    return 'uint8clampedarray';
+  }
+  if (type === '[object Int16Array]') {
+    return 'int16array';
+  }
+  if (type === '[object Uint16Array]') {
+    return 'uint16array';
+  }
+  if (type === '[object Int32Array]') {
+    return 'int32array';
+  }
+  if (type === '[object Uint32Array]') {
+    return 'uint32array';
+  }
+  if (type === '[object Float32Array]') {
+    return 'float32array';
+  }
+  if (type === '[object Float64Array]') {
+    return 'float64array';
+  }
+
+  // must be a plain object
+  return 'object';
+};
+
+},{"is-buffer":17}],29:[function(require,module,exports){
+(function (global){
+/**
+ * lodash (Custom Build) <https://lodash.com/>
+ * Build: `lodash modularize exports="npm" -o ./`
+ * Copyright jQuery Foundation and other contributors <https://jquery.org/>
+ * Released under MIT license <https://lodash.com/license>
+ * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
+ * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+ */
+
+/** Used as references for various `Number` constants. */
+var MAX_SAFE_INTEGER = 9007199254740991;
+
+/** `Object#toString` result references. */
+var argsTag = '[object Arguments]',
+    funcTag = '[object Function]',
+    genTag = '[object GeneratorFunction]';
+
+/** Detect free variable `global` from Node.js. */
+var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
+
+/** Detect free variable `self`. */
+var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
+
+/** Used as a reference to the global object. */
+var root = freeGlobal || freeSelf || Function('return this')();
+
+/**
+ * Appends the elements of `values` to `array`.
+ *
+ * @private
+ * @param {Array} array The array to modify.
+ * @param {Array} values The values to append.
+ * @returns {Array} Returns `array`.
+ */
+function arrayPush(array, values) {
+  var index = -1,
+      length = values.length,
+      offset = array.length;
+
+  while (++index < length) {
+    array[offset + index] = values[index];
+  }
+  return array;
+}
+
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/** Used to check objects for own properties. */
+var hasOwnProperty = objectProto.hasOwnProperty;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var objectToString = objectProto.toString;
+
+/** Built-in value references. */
+var Symbol = root.Symbol,
+    propertyIsEnumerable = objectProto.propertyIsEnumerable,
+    spreadableSymbol = Symbol ? Symbol.isConcatSpreadable : undefined;
+
+/**
+ * The base implementation of `_.flatten` with support for restricting flattening.
+ *
+ * @private
+ * @param {Array} array The array to flatten.
+ * @param {number} depth The maximum recursion depth.
+ * @param {boolean} [predicate=isFlattenable] The function invoked per iteration.
+ * @param {boolean} [isStrict] Restrict to values that pass `predicate` checks.
+ * @param {Array} [result=[]] The initial result value.
+ * @returns {Array} Returns the new flattened array.
+ */
+function baseFlatten(array, depth, predicate, isStrict, result) {
+  var index = -1,
+      length = array.length;
+
+  predicate || (predicate = isFlattenable);
+  result || (result = []);
+
+  while (++index < length) {
+    var value = array[index];
+    if (depth > 0 && predicate(value)) {
+      if (depth > 1) {
+        // Recursively flatten arrays (susceptible to call stack limits).
+        baseFlatten(value, depth - 1, predicate, isStrict, result);
+      } else {
+        arrayPush(result, value);
+      }
+    } else if (!isStrict) {
+      result[result.length] = value;
+    }
+  }
+  return result;
+}
+
+/**
+ * Checks if `value` is a flattenable `arguments` object or array.
+ *
+ * @private
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is flattenable, else `false`.
+ */
+function isFlattenable(value) {
+  return isArray(value) || isArguments(value) ||
+    !!(spreadableSymbol && value && value[spreadableSymbol]);
+}
+
+/**
+ * Flattens `array` a single level deep.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Array
+ * @param {Array} array The array to flatten.
+ * @returns {Array} Returns the new flattened array.
+ * @example
+ *
+ * _.flatten([1, [2, [3, [4]], 5]]);
+ * // => [1, 2, [3, [4]], 5]
+ */
+function flatten(array) {
+  var length = array ? array.length : 0;
+  return length ? baseFlatten(array, 1) : [];
+}
+
+/**
+ * Checks if `value` is likely an `arguments` object.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an `arguments` object,
+ *  else `false`.
+ * @example
+ *
+ * _.isArguments(function() { return arguments; }());
+ * // => true
+ *
+ * _.isArguments([1, 2, 3]);
+ * // => false
+ */
+function isArguments(value) {
+  // Safari 8.1 makes `arguments.callee` enumerable in strict mode.
+  return isArrayLikeObject(value) && hasOwnProperty.call(value, 'callee') &&
+    (!propertyIsEnumerable.call(value, 'callee') || objectToString.call(value) == argsTag);
+}
+
+/**
+ * Checks if `value` is classified as an `Array` object.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an array, else `false`.
+ * @example
+ *
+ * _.isArray([1, 2, 3]);
+ * // => true
+ *
+ * _.isArray(document.body.children);
+ * // => false
+ *
+ * _.isArray('abc');
+ * // => false
+ *
+ * _.isArray(_.noop);
+ * // => false
+ */
+var isArray = Array.isArray;
+
+/**
+ * Checks if `value` is array-like. A value is considered array-like if it's
+ * not a function and has a `value.length` that's an integer greater than or
+ * equal to `0` and less than or equal to `Number.MAX_SAFE_INTEGER`.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
+ * @example
+ *
+ * _.isArrayLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isArrayLike(document.body.children);
+ * // => true
+ *
+ * _.isArrayLike('abc');
+ * // => true
+ *
+ * _.isArrayLike(_.noop);
+ * // => false
+ */
+function isArrayLike(value) {
+  return value != null && isLength(value.length) && !isFunction(value);
+}
+
+/**
+ * This method is like `_.isArrayLike` except that it also checks if `value`
+ * is an object.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an array-like object,
+ *  else `false`.
+ * @example
+ *
+ * _.isArrayLikeObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isArrayLikeObject(document.body.children);
+ * // => true
+ *
+ * _.isArrayLikeObject('abc');
+ * // => false
+ *
+ * _.isArrayLikeObject(_.noop);
+ * // => false
+ */
+function isArrayLikeObject(value) {
+  return isObjectLike(value) && isArrayLike(value);
+}
+
+/**
+ * Checks if `value` is classified as a `Function` object.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a function, else `false`.
+ * @example
+ *
+ * _.isFunction(_);
+ * // => true
+ *
+ * _.isFunction(/abc/);
+ * // => false
+ */
+function isFunction(value) {
+  // The use of `Object#toString` avoids issues with the `typeof` operator
+  // in Safari 8-9 which returns 'object' for typed array and other constructors.
+  var tag = isObject(value) ? objectToString.call(value) : '';
+  return tag == funcTag || tag == genTag;
+}
+
+/**
+ * Checks if `value` is a valid array-like length.
+ *
+ * **Note:** This method is loosely based on
+ * [`ToLength`](http://ecma-international.org/ecma-262/7.0/#sec-tolength).
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a valid length, else `false`.
+ * @example
+ *
+ * _.isLength(3);
+ * // => true
+ *
+ * _.isLength(Number.MIN_VALUE);
+ * // => false
+ *
+ * _.isLength(Infinity);
+ * // => false
+ *
+ * _.isLength('3');
+ * // => false
+ */
+function isLength(value) {
+  return typeof value == 'number' &&
+    value > -1 && value % 1 == 0 && value <= MAX_SAFE_INTEGER;
+}
+
+/**
+ * Checks if `value` is the
+ * [language type](http://www.ecma-international.org/ecma-262/7.0/#sec-ecmascript-language-types)
+ * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is an object, else `false`.
+ * @example
+ *
+ * _.isObject({});
+ * // => true
+ *
+ * _.isObject([1, 2, 3]);
+ * // => true
+ *
+ * _.isObject(_.noop);
+ * // => true
+ *
+ * _.isObject(null);
+ * // => false
+ */
+function isObject(value) {
+  var type = typeof value;
+  return !!value && (type == 'object' || type == 'function');
+}
+
+/**
+ * Checks if `value` is object-like. A value is object-like if it's not `null`
+ * and has a `typeof` result of "object".
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+ * @example
+ *
+ * _.isObjectLike({});
+ * // => true
+ *
+ * _.isObjectLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isObjectLike(_.noop);
+ * // => false
+ *
+ * _.isObjectLike(null);
+ * // => false
+ */
+function isObjectLike(value) {
+  return !!value && typeof value == 'object';
+}
+
+module.exports = flatten;
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],30:[function(require,module,exports){
+/*!
+ * micromatch <https://github.com/jonschlinkert/micromatch>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var expand = require('./lib/expand');
+var utils = require('./lib/utils');
+
+/**
+ * The main function. Pass an array of filepaths,
+ * and a string or array of glob patterns
+ *
+ * @param  {Array|String} `files`
+ * @param  {Array|String} `patterns`
+ * @param  {Object} `opts`
+ * @return {Array} Array of matches
+ */
+
+function micromatch(files, patterns, opts) {
+  if (!files || !patterns) return [];
+  opts = opts || {};
+
+  if (typeof opts.cache === 'undefined') {
+    opts.cache = true;
+  }
+
+  if (!Array.isArray(patterns)) {
+    return match(files, patterns, opts);
+  }
+
+  var len = patterns.length, i = 0;
+  var omit = [], keep = [];
+
+  while (len--) {
+    var glob = patterns[i++];
+    if (typeof glob === 'string' && glob.charCodeAt(0) === 33 /* ! */) {
+      omit.push.apply(omit, match(files, glob.slice(1), opts));
+    } else {
+      keep.push.apply(keep, match(files, glob, opts));
+    }
+  }
+  return utils.diff(keep, omit);
+}
+
+/**
+ * Return an array of files that match the given glob pattern.
+ *
+ * This function is called by the main `micromatch` function If you only
+ * need to pass a single pattern you might get very minor speed improvements
+ * using this function.
+ *
+ * @param  {Array} `files`
+ * @param  {String} `pattern`
+ * @param  {Object} `options`
+ * @return {Array}
+ */
+
+function match(files, pattern, opts) {
+  if (utils.typeOf(files) !== 'string' && !Array.isArray(files)) {
+    throw new Error(msg('match', 'files', 'a string or array'));
+  }
+
+  files = utils.arrayify(files);
+  opts = opts || {};
+
+  var negate = opts.negate || false;
+  var orig = pattern;
+
+  if (typeof pattern === 'string') {
+    negate = pattern.charAt(0) === '!';
+    if (negate) {
+      pattern = pattern.slice(1);
+    }
+
+    // we need to remove the character regardless,
+    // so the above logic is still needed
+    if (opts.nonegate === true) {
+      negate = false;
+    }
+  }
+
+  var _isMatch = matcher(pattern, opts);
+  var len = files.length, i = 0;
+  var res = [];
+
+  while (i < len) {
+    var file = files[i++];
+    var fp = utils.unixify(file, opts);
+
+    if (!_isMatch(fp)) { continue; }
+    res.push(fp);
+  }
+
+  if (res.length === 0) {
+    if (opts.failglob === true) {
+      throw new Error('micromatch.match() found no matches for: "' + orig + '".');
+    }
+
+    if (opts.nonull || opts.nullglob) {
+      res.push(utils.unescapeGlob(orig));
+    }
+  }
+
+  // if `negate` was defined, diff negated files
+  if (negate) { res = utils.diff(files, res); }
+
+  // if `ignore` was defined, diff ignored filed
+  if (opts.ignore && opts.ignore.length) {
+    pattern = opts.ignore;
+    opts = utils.omit(opts, ['ignore']);
+    res = utils.diff(res, micromatch(res, pattern, opts));
+  }
+
+  if (opts.nodupes) {
+    return utils.unique(res);
+  }
+  return res;
+}
+
+/**
+ * Returns a function that takes a glob pattern or array of glob patterns
+ * to be used with `Array#filter()`. (Internally this function generates
+ * the matching function using the [matcher] method).
+ *
+ * ```js
+ * var fn = mm.filter('[a-c]');
+ * ['a', 'b', 'c', 'd', 'e'].filter(fn);
+ * //=> ['a', 'b', 'c']
+ * ```
+ * @param  {String|Array} `patterns` Can be a glob or array of globs.
+ * @param  {Options} `opts` Options to pass to the [matcher] method.
+ * @return {Function} Filter function to be passed to `Array#filter()`.
+ */
+
+function filter(patterns, opts) {
+  if (!Array.isArray(patterns) && typeof patterns !== 'string') {
+    throw new TypeError(msg('filter', 'patterns', 'a string or array'));
+  }
+
+  patterns = utils.arrayify(patterns);
+  var len = patterns.length, i = 0;
+  var patternMatchers = Array(len);
+  while (i < len) {
+    patternMatchers[i] = matcher(patterns[i++], opts);
+  }
+
+  return function(fp) {
+    if (fp == null) return [];
+    var len = patternMatchers.length, i = 0;
+    var res = true;
+
+    fp = utils.unixify(fp, opts);
+    while (i < len) {
+      var fn = patternMatchers[i++];
+      if (!fn(fp)) {
+        res = false;
+        break;
+      }
+    }
+    return res;
+  };
+}
+
+/**
+ * Returns true if the filepath contains the given
+ * pattern. Can also return a function for matching.
+ *
+ * ```js
+ * isMatch('foo.md', '*.md', {});
+ * //=> true
+ *
+ * isMatch('*.md', {})('foo.md')
+ * //=> true
+ * ```
+ * @param  {String} `fp`
+ * @param  {String} `pattern`
+ * @param  {Object} `opts`
+ * @return {Boolean}
+ */
+
+function isMatch(fp, pattern, opts) {
+  if (typeof fp !== 'string') {
+    throw new TypeError(msg('isMatch', 'filepath', 'a string'));
+  }
+
+  fp = utils.unixify(fp, opts);
+  if (utils.typeOf(pattern) === 'object') {
+    return matcher(fp, pattern);
+  }
+  return matcher(pattern, opts)(fp);
+}
+
+/**
+ * Returns true if the filepath matches the
+ * given pattern.
+ */
+
+function contains(fp, pattern, opts) {
+  if (typeof fp !== 'string') {
+    throw new TypeError(msg('contains', 'pattern', 'a string'));
+  }
+
+  opts = opts || {};
+  opts.contains = (pattern !== '');
+  fp = utils.unixify(fp, opts);
+
+  if (opts.contains && !utils.isGlob(pattern)) {
+    return fp.indexOf(pattern) !== -1;
+  }
+  return matcher(pattern, opts)(fp);
+}
+
+/**
+ * Returns true if a file path matches any of the
+ * given patterns.
+ *
+ * @param  {String} `fp` The filepath to test.
+ * @param  {String|Array} `patterns` Glob patterns to use.
+ * @param  {Object} `opts` Options to pass to the `matcher()` function.
+ * @return {String}
+ */
+
+function any(fp, patterns, opts) {
+  if (!Array.isArray(patterns) && typeof patterns !== 'string') {
+    throw new TypeError(msg('any', 'patterns', 'a string or array'));
+  }
+
+  patterns = utils.arrayify(patterns);
+  var len = patterns.length;
+
+  fp = utils.unixify(fp, opts);
+  while (len--) {
+    var isMatch = matcher(patterns[len], opts);
+    if (isMatch(fp)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Filter the keys of an object with the given `glob` pattern
+ * and `options`
+ *
+ * @param  {Object} `object`
+ * @param  {Pattern} `object`
+ * @return {Array}
+ */
+
+function matchKeys(obj, glob, options) {
+  if (utils.typeOf(obj) !== 'object') {
+    throw new TypeError(msg('matchKeys', 'first argument', 'an object'));
+  }
+
+  var fn = matcher(glob, options);
+  var res = {};
+
+  for (var key in obj) {
+    if (obj.hasOwnProperty(key) && fn(key)) {
+      res[key] = obj[key];
+    }
+  }
+  return res;
+}
+
+/**
+ * Return a function for matching based on the
+ * given `pattern` and `options`.
+ *
+ * @param  {String} `pattern`
+ * @param  {Object} `options`
+ * @return {Function}
+ */
+
+function matcher(pattern, opts) {
+  // pattern is a function
+  if (typeof pattern === 'function') {
+    return pattern;
+  }
+  // pattern is a regex
+  if (pattern instanceof RegExp) {
+    return function(fp) {
+      return pattern.test(fp);
+    };
+  }
+
+  if (typeof pattern !== 'string') {
+    throw new TypeError(msg('matcher', 'pattern', 'a string, regex, or function'));
+  }
+
+  // strings, all the way down...
+  pattern = utils.unixify(pattern, opts);
+
+  // pattern is a non-glob string
+  if (!utils.isGlob(pattern)) {
+    return utils.matchPath(pattern, opts);
+  }
+  // pattern is a glob string
+  var re = makeRe(pattern, opts);
+
+  // `matchBase` is defined
+  if (opts && opts.matchBase) {
+    return utils.hasFilename(re, opts);
+  }
+  // `matchBase` is not defined
+  return function(fp) {
+    fp = utils.unixify(fp, opts);
+    return re.test(fp);
+  };
+}
+
+/**
+ * Create and cache a regular expression for matching
+ * file paths.
+ *
+ * If the leading character in the `glob` is `!`, a negation
+ * regex is returned.
+ *
+ * @param  {String} `glob`
+ * @param  {Object} `options`
+ * @return {RegExp}
+ */
+
+function toRegex(glob, options) {
+  // clone options to prevent  mutating the original object
+  var opts = Object.create(options || {});
+  var flags = opts.flags || '';
+  if (opts.nocase && flags.indexOf('i') === -1) {
+    flags += 'i';
+  }
+
+  var parsed = expand(glob, opts);
+
+  // pass in tokens to avoid parsing more than once
+  opts.negated = opts.negated || parsed.negated;
+  opts.negate = opts.negated;
+  glob = wrapGlob(parsed.pattern, opts);
+  var re;
+
+  try {
+    re = new RegExp(glob, flags);
+    return re;
+  } catch (err) {
+    err.reason = 'micromatch invalid regex: (' + re + ')';
+    if (opts.strict) throw new SyntaxError(err);
+  }
+
+  // we're only here if a bad pattern was used and the user
+  // passed `options.silent`, so match nothing
+  return /$^/;
+}
+
+/**
+ * Create the regex to do the matching. If the leading
+ * character in the `glob` is `!` a negation regex is returned.
+ *
+ * @param {String} `glob`
+ * @param {Boolean} `negate`
+ */
+
+function wrapGlob(glob, opts) {
+  var prefix = (opts && !opts.contains) ? '^' : '';
+  var after = (opts && !opts.contains) ? '$' : '';
+  glob = ('(?:' + glob + ')' + after);
+  if (opts && opts.negate) {
+    return prefix + ('(?!^' + glob + ').*$');
+  }
+  return prefix + glob;
+}
+
+/**
+ * Create and cache a regular expression for matching file paths.
+ * If the leading character in the `glob` is `!`, a negation
+ * regex is returned.
+ *
+ * @param  {String} `glob`
+ * @param  {Object} `options`
+ * @return {RegExp}
+ */
+
+function makeRe(glob, opts) {
+  if (utils.typeOf(glob) !== 'string') {
+    throw new Error(msg('makeRe', 'glob', 'a string'));
+  }
+  return utils.cache(toRegex, glob, opts);
+}
+
+/**
+ * Make error messages consistent. Follows this format:
+ *
+ * ```js
+ * msg(methodName, argNumber, nativeType);
+ * // example:
+ * msg('matchKeys', 'first', 'an object');
+ * ```
+ *
+ * @param  {String} `method`
+ * @param  {String} `num`
+ * @param  {String} `type`
+ * @return {String}
+ */
+
+function msg(method, what, type) {
+  return 'micromatch.' + method + '(): ' + what + ' should be ' + type + '.';
+}
+
+/**
+ * Public methods
+ */
+
+/* eslint no-multi-spaces: 0 */
+micromatch.any       = any;
+micromatch.braces    = micromatch.braceExpand = utils.braces;
+micromatch.contains  = contains;
+micromatch.expand    = expand;
+micromatch.filter    = filter;
+micromatch.isMatch   = isMatch;
+micromatch.makeRe    = makeRe;
+micromatch.match     = match;
+micromatch.matcher   = matcher;
+micromatch.matchKeys = matchKeys;
+
+/**
+ * Expose `micromatch`
+ */
+
+module.exports = micromatch;
+
+},{"./lib/expand":32,"./lib/utils":34}],31:[function(require,module,exports){
+'use strict';
+
+var chars = {}, unesc, temp;
+
+function reverse(object, prepender) {
+  return Object.keys(object).reduce(function(reversed, key) {
+    var newKey = prepender ? prepender + key : key; // Optionally prepend a string to key.
+    reversed[object[key]] = newKey; // Swap key and value.
+    return reversed; // Return the result.
+  }, {});
+}
+
+/**
+ * Regex for common characters
+ */
+
+chars.escapeRegex = {
+  '?': /\?/g,
+  '@': /\@/g,
+  '!': /\!/g,
+  '+': /\+/g,
+  '*': /\*/g,
+  '(': /\(/g,
+  ')': /\)/g,
+  '[': /\[/g,
+  ']': /\]/g
+};
+
+/**
+ * Escape characters
+ */
+
+chars.ESC = {
+  '?': '__UNESC_QMRK__',
+  '@': '__UNESC_AMPE__',
+  '!': '__UNESC_EXCL__',
+  '+': '__UNESC_PLUS__',
+  '*': '__UNESC_STAR__',
+  ',': '__UNESC_COMMA__',
+  '(': '__UNESC_LTPAREN__',
+  ')': '__UNESC_RTPAREN__',
+  '[': '__UNESC_LTBRACK__',
+  ']': '__UNESC_RTBRACK__'
+};
+
+/**
+ * Unescape characters
+ */
+
+chars.UNESC = unesc || (unesc = reverse(chars.ESC, '\\'));
+
+chars.ESC_TEMP = {
+  '?': '__TEMP_QMRK__',
+  '@': '__TEMP_AMPE__',
+  '!': '__TEMP_EXCL__',
+  '*': '__TEMP_STAR__',
+  '+': '__TEMP_PLUS__',
+  ',': '__TEMP_COMMA__',
+  '(': '__TEMP_LTPAREN__',
+  ')': '__TEMP_RTPAREN__',
+  '[': '__TEMP_LTBRACK__',
+  ']': '__TEMP_RTBRACK__'
+};
+
+chars.TEMP = temp || (temp = reverse(chars.ESC_TEMP));
+
+module.exports = chars;
+
+},{}],32:[function(require,module,exports){
+/*!
+ * micromatch <https://github.com/jonschlinkert/micromatch>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var utils = require('./utils');
+var Glob = require('./glob');
+
+/**
+ * Expose `expand`
+ */
+
+module.exports = expand;
+
+/**
+ * Expand a glob pattern to resolve braces and
+ * similar patterns before converting to regex.
+ *
+ * @param  {String|Array} `pattern`
+ * @param  {Array} `files`
+ * @param  {Options} `opts`
+ * @return {Array}
+ */
+
+function expand(pattern, options) {
+  if (typeof pattern !== 'string') {
+    throw new TypeError('micromatch.expand(): argument should be a string.');
+  }
+
+  var glob = new Glob(pattern, options || {});
+  var opts = glob.options;
+
+  if (!utils.isGlob(pattern)) {
+    glob.pattern = glob.pattern.replace(/([\/.])/g, '\\$1');
+    return glob;
+  }
+
+  glob.pattern = glob.pattern.replace(/(\+)(?!\()/g, '\\$1');
+  glob.pattern = glob.pattern.split('$').join('\\$');
+
+  if (typeof opts.braces !== 'boolean' && typeof opts.nobraces !== 'boolean') {
+    opts.braces = true;
+  }
+
+  if (glob.pattern === '.*') {
+    return {
+      pattern: '\\.' + star,
+      tokens: tok,
+      options: opts
+    };
+  }
+
+  if (glob.pattern === '*') {
+    return {
+      pattern: oneStar(opts.dot),
+      tokens: tok,
+      options: opts
+    };
+  }
+
+  // parse the glob pattern into tokens
+  glob.parse();
+  var tok = glob.tokens;
+  tok.is.negated = opts.negated;
+
+  // dotfile handling
+  if ((opts.dotfiles === true || tok.is.dotfile) && opts.dot !== false) {
+    opts.dotfiles = true;
+    opts.dot = true;
+  }
+
+  if ((opts.dotdirs === true || tok.is.dotdir) && opts.dot !== false) {
+    opts.dotdirs = true;
+    opts.dot = true;
+  }
+
+  // check for braces with a dotfile pattern
+  if (/[{,]\./.test(glob.pattern)) {
+    opts.makeRe = false;
+    opts.dot = true;
+  }
+
+  if (opts.nonegate !== true) {
+    opts.negated = glob.negated;
+  }
+
+  // if the leading character is a dot or a slash, escape it
+  if (glob.pattern.charAt(0) === '.' && glob.pattern.charAt(1) !== '/') {
+    glob.pattern = '\\' + glob.pattern;
+  }
+
+  /**
+   * Extended globs
+   */
+
+  // expand braces, e.g `{1..5}`
+  glob.track('before braces');
+  if (tok.is.braces) {
+    glob.braces();
+  }
+  glob.track('after braces');
+
+  // expand extglobs, e.g `foo/!(a|b)`
+  glob.track('before extglob');
+  if (tok.is.extglob) {
+    glob.extglob();
+  }
+  glob.track('after extglob');
+
+  // expand brackets, e.g `[[:alpha:]]`
+  glob.track('before brackets');
+  if (tok.is.brackets) {
+    glob.brackets();
+  }
+  glob.track('after brackets');
+
+  // special patterns
+  glob._replace('[!', '[^');
+  glob._replace('(?', '(%~');
+  glob._replace(/\[\]/, '\\[\\]');
+  glob._replace('/[', '/' + (opts.dot ? dotfiles : nodot) + '[', true);
+  glob._replace('/?', '/' + (opts.dot ? dotfiles : nodot) + '[^/]', true);
+  glob._replace('/.', '/(?=.)\\.', true);
+
+  // windows drives
+  glob._replace(/^(\w):([\\\/]+?)/gi, '(?=.)$1:$2', true);
+
+  // negate slashes in exclusion ranges
+  if (glob.pattern.indexOf('[^') !== -1) {
+    glob.pattern = negateSlash(glob.pattern);
+  }
+
+  if (opts.globstar !== false && glob.pattern === '**') {
+    glob.pattern = globstar(opts.dot);
+
+  } else {
+    glob.pattern = balance(glob.pattern, '[', ']');
+    glob.escape(glob.pattern);
+
+    // if the pattern has `**`
+    if (tok.is.globstar) {
+      glob.pattern = collapse(glob.pattern, '/**');
+      glob.pattern = collapse(glob.pattern, '**/');
+      glob._replace('/**/', '(?:/' + globstar(opts.dot) + '/|/)', true);
+      glob._replace(/\*{2,}/g, '**');
+
+      // 'foo/*'
+      glob._replace(/(\w+)\*(?!\/)/g, '$1[^/]*?', true);
+      glob._replace(/\*\*\/\*(\w)/g, globstar(opts.dot) + '\\/' + (opts.dot ? dotfiles : nodot) + '[^/]*?$1', true);
+
+      if (opts.dot !== true) {
+        glob._replace(/\*\*\/(.)/g, '(?:**\\/|)$1');
+      }
+
+      // 'foo/**' or '{**,*}', but not 'foo**'
+      if (tok.path.dirname !== '' || /,\*\*|\*\*,/.test(glob.orig)) {
+        glob._replace('**', globstar(opts.dot), true);
+      }
+    }
+
+    // ends with /*
+    glob._replace(/\/\*$/, '\\/' + oneStar(opts.dot), true);
+    // ends with *, no slashes
+    glob._replace(/(?!\/)\*$/, star, true);
+    // has 'n*.' (partial wildcard w/ file extension)
+    glob._replace(/([^\/]+)\*/, '$1' + oneStar(true), true);
+    // has '*'
+    glob._replace('*', oneStar(opts.dot), true);
+    glob._replace('?.', '?\\.', true);
+    glob._replace('?:', '?:', true);
+
+    glob._replace(/\?+/g, function(match) {
+      var len = match.length;
+      if (len === 1) {
+        return qmark;
+      }
+      return qmark + '{' + len + '}';
+    });
+
+    // escape '.abc' => '\\.abc'
+    glob._replace(/\.([*\w]+)/g, '\\.$1');
+    // fix '[^\\\\/]'
+    glob._replace(/\[\^[\\\/]+\]/g, qmark);
+    // '///' => '\/'
+    glob._replace(/\/+/g, '\\/');
+    // '\\\\\\' => '\\'
+    glob._replace(/\\{2,}/g, '\\');
+  }
+
+  // unescape previously escaped patterns
+  glob.unescape(glob.pattern);
+  glob._replace('__UNESC_STAR__', '*');
+
+  // escape dots that follow qmarks
+  glob._replace('?.', '?\\.');
+
+  // remove unnecessary slashes in character classes
+  glob._replace('[^\\/]', qmark);
+
+  if (glob.pattern.length > 1) {
+    if (/^[\[?*]/.test(glob.pattern)) {
+      // only prepend the string if we don't want to match dotfiles
+      glob.pattern = (opts.dot ? dotfiles : nodot) + glob.pattern;
+    }
+  }
+
+  return glob;
+}
+
+/**
+ * Collapse repeated character sequences.
+ *
+ * ```js
+ * collapse('a/../../../b', '../');
+ * //=> 'a/../b'
+ * ```
+ *
+ * @param  {String} `str`
+ * @param  {String} `ch` Character sequence to collapse
+ * @return {String}
+ */
+
+function collapse(str, ch) {
+  var res = str.split(ch);
+  var isFirst = res[0] === '';
+  var isLast = res[res.length - 1] === '';
+  res = res.filter(Boolean);
+  if (isFirst) res.unshift('');
+  if (isLast) res.push('');
+  return res.join(ch);
+}
+
+/**
+ * Negate slashes in exclusion ranges, per glob spec:
+ *
+ * ```js
+ * negateSlash('[^foo]');
+ * //=> '[^\\/foo]'
+ * ```
+ *
+ * @param  {String} `str` glob pattern
+ * @return {String}
+ */
+
+function negateSlash(str) {
+  return str.replace(/\[\^([^\]]*?)\]/g, function(match, inner) {
+    if (inner.indexOf('/') === -1) {
+      inner = '\\/' + inner;
+    }
+    return '[^' + inner + ']';
+  });
+}
+
+/**
+ * Escape imbalanced braces/bracket. This is a very
+ * basic, naive implementation that only does enough
+ * to serve the purpose.
+ */
+
+function balance(str, a, b) {
+  var aarr = str.split(a);
+  var alen = aarr.join('').length;
+  var blen = str.split(b).join('').length;
+
+  if (alen !== blen) {
+    str = aarr.join('\\' + a);
+    return str.split(b).join('\\' + b);
+  }
+  return str;
+}
+
+/**
+ * Special patterns to be converted to regex.
+ * Heuristics are used to simplify patterns
+ * and speed up processing.
+ */
+
+/* eslint no-multi-spaces: 0 */
+var qmark       = '[^/]';
+var star        = qmark + '*?';
+var nodot       = '(?!\\.)(?=.)';
+var dotfileGlob = '(?:\\/|^)\\.{1,2}($|\\/)';
+var dotfiles    = '(?!' + dotfileGlob + ')(?=.)';
+var twoStarDot  = '(?:(?!' + dotfileGlob + ').)*?';
+
+/**
+ * Create a regex for `*`.
+ *
+ * If `dot` is true, or the pattern does not begin with
+ * a leading star, then return the simpler regex.
+ */
+
+function oneStar(dotfile) {
+  return dotfile ? '(?!' + dotfileGlob + ')(?=.)' + star : (nodot + star);
+}
+
+function globstar(dotfile) {
+  if (dotfile) { return twoStarDot; }
+  return '(?:(?!(?:\\/|^)\\.).)*?';
+}
+
+},{"./glob":33,"./utils":34}],33:[function(require,module,exports){
+'use strict';
+
+var chars = require('./chars');
+var utils = require('./utils');
+
+/**
+ * Expose `Glob`
+ */
+
+var Glob = module.exports = function Glob(pattern, options) {
+  if (!(this instanceof Glob)) {
+    return new Glob(pattern, options);
+  }
+  this.options = options || {};
+  this.pattern = pattern;
+  this.history = [];
+  this.tokens = {};
+  this.init(pattern);
+};
+
+/**
+ * Initialize defaults
+ */
+
+Glob.prototype.init = function(pattern) {
+  this.orig = pattern;
+  this.negated = this.isNegated();
+  this.options.track = this.options.track || false;
+  this.options.makeRe = true;
+};
+
+/**
+ * Push a change into `glob.history`. Useful
+ * for debugging.
+ */
+
+Glob.prototype.track = function(msg) {
+  if (this.options.track) {
+    this.history.push({msg: msg, pattern: this.pattern});
+  }
+};
+
+/**
+ * Return true if `glob.pattern` was negated
+ * with `!`, also remove the `!` from the pattern.
+ *
+ * @return {Boolean}
+ */
+
+Glob.prototype.isNegated = function() {
+  if (this.pattern.charCodeAt(0) === 33 /* '!' */) {
+    this.pattern = this.pattern.slice(1);
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Expand braces in the given glob pattern.
+ *
+ * We only need to use the [braces] lib when
+ * patterns are nested.
+ */
+
+Glob.prototype.braces = function() {
+  if (this.options.nobraces !== true && this.options.nobrace !== true) {
+    // naive/fast check for imbalanced characters
+    var a = this.pattern.match(/[\{\(\[]/g);
+    var b = this.pattern.match(/[\}\)\]]/g);
+
+    // if imbalanced, don't optimize the pattern
+    if (a && b && (a.length !== b.length)) {
+      this.options.makeRe = false;
+    }
+
+    // expand brace patterns and join the resulting array
+    var expanded = utils.braces(this.pattern, this.options);
+    this.pattern = expanded.join('|');
+  }
+};
+
+/**
+ * Expand bracket expressions in `glob.pattern`
+ */
+
+Glob.prototype.brackets = function() {
+  if (this.options.nobrackets !== true) {
+    this.pattern = utils.brackets(this.pattern);
+  }
+};
+
+/**
+ * Expand bracket expressions in `glob.pattern`
+ */
+
+Glob.prototype.extglob = function() {
+  if (this.options.noextglob === true) return;
+
+  if (utils.isExtglob(this.pattern)) {
+    this.pattern = utils.extglob(this.pattern, {escape: true});
+  }
+};
+
+/**
+ * Parse the given pattern
+ */
+
+Glob.prototype.parse = function(pattern) {
+  this.tokens = utils.parseGlob(pattern || this.pattern, true);
+  return this.tokens;
+};
+
+/**
+ * Replace `a` with `b`. Also tracks the change before and
+ * after each replacement. This is disabled by default, but
+ * can be enabled by setting `options.track` to true.
+ *
+ * Also, when the pattern is a string, `.split()` is used,
+ * because it's much faster than replace.
+ *
+ * @param  {RegExp|String} `a`
+ * @param  {String} `b`
+ * @param  {Boolean} `escape` When `true`, escapes `*` and `?` in the replacement.
+ * @return {String}
+ */
+
+Glob.prototype._replace = function(a, b, escape) {
+  this.track('before (find): "' + a + '" (replace with): "' + b + '"');
+  if (escape) b = esc(b);
+  if (a && b && typeof a === 'string') {
+    this.pattern = this.pattern.split(a).join(b);
+  } else {
+    this.pattern = this.pattern.replace(a, b);
+  }
+  this.track('after');
+};
+
+/**
+ * Escape special characters in the given string.
+ *
+ * @param  {String} `str` Glob pattern
+ * @return {String}
+ */
+
+Glob.prototype.escape = function(str) {
+  this.track('before escape: ');
+  var re = /["\\](['"]?[^"'\\]['"]?)/g;
+
+  this.pattern = str.replace(re, function($0, $1) {
+    var o = chars.ESC;
+    var ch = o && o[$1];
+    if (ch) {
+      return ch;
+    }
+    if (/[a-z]/i.test($0)) {
+      return $0.split('\\').join('');
+    }
+    return $0;
+  });
+
+  this.track('after escape: ');
+};
+
+/**
+ * Unescape special characters in the given string.
+ *
+ * @param  {String} `str`
+ * @return {String}
+ */
+
+Glob.prototype.unescape = function(str) {
+  var re = /__([A-Z]+)_([A-Z]+)__/g;
+  this.pattern = str.replace(re, function($0, $1) {
+    return chars[$1][$0];
+  });
+  this.pattern = unesc(this.pattern);
+};
+
+/**
+ * Escape/unescape utils
+ */
+
+function esc(str) {
+  str = str.split('?').join('%~');
+  str = str.split('*').join('%%');
+  return str;
+}
+
+function unesc(str) {
+  str = str.split('%~').join('?');
+  str = str.split('%%').join('*');
+  return str;
+}
+
+},{"./chars":31,"./utils":34}],34:[function(require,module,exports){
+(function (process){
+'use strict';
+
+var win32 = process && process.platform === 'win32';
+var path = require('path');
+var fileRe = require('filename-regex');
+var utils = module.exports;
+
+/**
+ * Module dependencies
+ */
+
+utils.diff = require('arr-diff');
+utils.unique = require('array-unique');
+utils.braces = require('braces');
+utils.brackets = require('expand-brackets');
+utils.extglob = require('extglob');
+utils.isExtglob = require('is-extglob');
+utils.isGlob = require('is-glob');
+utils.typeOf = require('kind-of');
+utils.normalize = require('normalize-path');
+utils.omit = require('object.omit');
+utils.parseGlob = require('parse-glob');
+utils.cache = require('regex-cache');
+
+/**
+ * Get the filename of a filepath
+ *
+ * @param {String} `string`
+ * @return {String}
+ */
+
+utils.filename = function filename(fp) {
+  var seg = fp.match(fileRe());
+  return seg && seg[0];
+};
+
+/**
+ * Returns a function that returns true if the given
+ * pattern is the same as a given `filepath`
+ *
+ * @param {String} `pattern`
+ * @return {Function}
+ */
+
+utils.isPath = function isPath(pattern, opts) {
+  opts = opts || {};
+  return function(fp) {
+    var unixified = utils.unixify(fp, opts);
+    if(opts.nocase){
+      return pattern.toLowerCase() === unixified.toLowerCase();
+    }
+    return pattern === unixified;
+  };
+};
+
+/**
+ * Returns a function that returns true if the given
+ * pattern contains a `filepath`
+ *
+ * @param {String} `pattern`
+ * @return {Function}
+ */
+
+utils.hasPath = function hasPath(pattern, opts) {
+  return function(fp) {
+    return utils.unixify(pattern, opts).indexOf(fp) !== -1;
+  };
+};
+
+/**
+ * Returns a function that returns true if the given
+ * pattern matches or contains a `filepath`
+ *
+ * @param {String} `pattern`
+ * @return {Function}
+ */
+
+utils.matchPath = function matchPath(pattern, opts) {
+  var fn = (opts && opts.contains)
+    ? utils.hasPath(pattern, opts)
+    : utils.isPath(pattern, opts);
+  return fn;
+};
+
+/**
+ * Returns a function that returns true if the given
+ * regex matches the `filename` of a file path.
+ *
+ * @param {RegExp} `re`
+ * @return {Boolean}
+ */
+
+utils.hasFilename = function hasFilename(re) {
+  return function(fp) {
+    var name = utils.filename(fp);
+    return name && re.test(name);
+  };
+};
+
+/**
+ * Coerce `val` to an array
+ *
+ * @param  {*} val
+ * @return {Array}
+ */
+
+utils.arrayify = function arrayify(val) {
+  return !Array.isArray(val)
+    ? [val]
+    : val;
+};
+
+/**
+ * Normalize all slashes in a file path or glob pattern to
+ * forward slashes.
+ */
+
+utils.unixify = function unixify(fp, opts) {
+  if (opts && opts.unixify === false) return fp;
+  if (opts && opts.unixify === true || win32 || path.sep === '\\') {
+    return utils.normalize(fp, false);
+  }
+  if (opts && opts.unescape === true) {
+    return fp ? fp.toString().replace(/\\(\w)/g, '$1') : '';
+  }
+  return fp;
+};
+
+/**
+ * Escape/unescape utils
+ */
+
+utils.escapePath = function escapePath(fp) {
+  return fp.replace(/[\\.]/g, '\\$&');
+};
+
+utils.unescapeGlob = function unescapeGlob(fp) {
+  return fp.replace(/[\\"']/g, '');
+};
+
+utils.escapeRe = function escapeRe(str) {
+  return str.replace(/[-[\\$*+?.#^\s{}(|)\]]/g, '\\$&');
+};
+
+/**
+ * Expose `utils`
+ */
+
+module.exports = utils;
+
+}).call(this,require('_process'))
+},{"_process":76,"arr-diff":2,"array-unique":4,"braces":7,"expand-brackets":8,"extglob":10,"filename-regex":11,"is-extglob":21,"is-glob":22,"kind-of":28,"normalize-path":35,"object.omit":36,"parse-glob":40,"path":74,"regex-cache":50}],35:[function(require,module,exports){
+/*!
+ * normalize-path <https://github.com/jonschlinkert/normalize-path>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+var removeTrailingSeparator = require('remove-trailing-separator');
+
+module.exports = function normalizePath(str, stripTrailing) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expected a string');
+  }
+  str = str.replace(/[\\\/]+/g, '/');
+  if (stripTrailing !== false) {
+    str = removeTrailingSeparator(str);
+  }
+  return str;
+};
+
+},{"remove-trailing-separator":51}],36:[function(require,module,exports){
+/*!
+ * object.omit <https://github.com/jonschlinkert/object.omit>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var isObject = require('is-extendable');
+var forOwn = require('for-own');
+
+module.exports = function omit(obj, keys) {
+  if (!isObject(obj)) return {};
+
+  keys = [].concat.apply([], [].slice.call(arguments, 1));
+  var last = keys[keys.length - 1];
+  var res = {}, fn;
+
+  if (typeof last === 'function') {
+    fn = keys.pop();
+  }
+
+  var isFunction = typeof fn === 'function';
+  if (!keys.length && !isFunction) {
+    return obj;
+  }
+
+  forOwn(obj, function(value, key) {
+    if (keys.indexOf(key) === -1) {
+
+      if (!isFunction) {
+        res[key] = value;
+      } else if (fn(value, key, obj)) {
+        res[key] = value;
+      }
+    }
+  });
+  return res;
+};
+
+},{"for-own":14,"is-extendable":20}],37:[function(require,module,exports){
+const InjestDB = require('scratch-db-test')
+const coerce = require('./lib/coerce')
+
+// exported api
+// =
+
+exports.open = async function (userArchive) {
+  // setup the archive
+  var db = new InjestDB('nexus:' + (userArchive ? userArchive.url : 'cache'))
+  db.schema({
+    version: 1,
+    profile: {
+      singular: true,
+      index: ['*followUrls'],
+      validator: record => ({
+        name: coerce.string(record.name),
+        bio: coerce.string(record.bio),
+        avatar: coerce.path(record.avatar),
+        follows: coerce.arrayOfFollows(record.follows),
+        followUrls: coerce.arrayOfFollows(record.follows).map(f => f.url),
+        subscripts: coerce.arrayOfSubscripts(record.subscripts),
+        subscriptURLs: coerce.arrayOfSubscripts(record.subscripts).map(s => s.subscriptURL)
+      })
+    },
+    broadcasts: {
+      primaryKey: 'createdAt',
+      index: ['createdAt', '_origin+createdAt', 'threadRoot', 'threadParent'],
+      validator: record => ({
+        text: coerce.string(record.text),
+        threadRoot: coerce.datUrl(record.threadRoot),
+        threadParent: coerce.datUrl(record.threadParent),
+        createdAt: coerce.number(record.createdAt, {required: true}),
+        receivedAt: Date.now()
+      })
+    },
+    votes: {
+      primaryKey: 'subject',
+      index: ['subject'],
+      validator: record => ({
+        subject: coerce.voteSubject(coerce.datUrl(record.subject), {required: true}),
+        vote: coerce.vote(record.vote),
+        createdAt: coerce.number(record.createdAt, {required: true})
+      })
+    },
+
+    // TCW -- added prescript schema
+
+    prescripts: {
+      primaryKey: 'createdAt',
+      index: ['createdAt', '_origin+createdAt'],
+      validator: record => ({
+        prescriptName: coerce.string(record.prescriptName),
+        prescriptInfo: coerce.string(record.prescriptInfo),
+        prescriptJS: coerce.string(record.prescriptJS),
+        prescriptCSS: coerce.string(record.prescriptCSS),
+        createdAt: coerce.number(record.createdAt, {required: true}),
+        receivedAt: Date.now()
+      })
+    }
+    // TCW -- END
+
+  })
+  await db.open()
+
+  if (userArchive) {
+    // index the main user
+    await db.addArchive(userArchive, {prepare: true})
+
+    // index the followers
+    db.profile.get(userArchive).then(async profile => {
+      profile.followUrls.forEach(url => db.addArchive(url))
+    })
+  }
+
+  return {
+    db,
+
+    async close ({destroy} = {}) {
+      if (db) {
+        var name = db.name
+        await db.close()
+        if (destroy) {
+          await InjestDB.delete(name)
+        }
+        this.db = null
+      }
+    },
+
+    addArchive (a) { return db.addArchive(a, {prepare: true}) },
+    addArchives (as) { return db.addArchives(as, {prepare: true}) },
+    removeArchive (a) { return db.removeArchive(a) },
+    listArchives () { return db.listArchives() },
+
+    async pruneUnfollowedArchives (userArchive) {
+      var profile = await db.profile.get(userArchive)
+      var archives = db.listArchives()
+      await Promise.all(archives.map(a => {
+        if (profile.followUrls.indexOf(a.url) === -1) {
+          return db.removeArchive(a)
+        }
+      }))
+    },
+
+    // profiles api
+    // =
+
+    getProfile (archive) {
+      var archiveUrl = coerce.archiveUrl(archive)
+      return db.profile.get(archiveUrl)
+    },
+
+    setProfile (archive, profile) {
+      var archiveUrl = coerce.archiveUrl(archive)
+      return db.profile.upsert(archiveUrl, profile)
+    },
+
+    async setAvatar (archive, imgData, extension) {
+      archive = coerce.archive(archive)
+      const filename = `avatar.${extension}`
+
+      if (archive) {
+        await archive.writeFile(filename, imgData)
+        await archive.commit()
+      }
+      return db.profile.upsert(archive, {avatar: filename})
+    },
+
+    async follow (archive, target, name) {
+      // update the follow record
+      var archiveUrl = coerce.archiveUrl(archive)
+      var targetUrl = coerce.archiveUrl(target)
+      var changes = await db.profile.where('_origin').equals(archiveUrl).update(record => {
+        record.follows = record.follows || []
+        if (!record.follows.find(f => f.url === targetUrl)) {
+          record.follows.push({url: targetUrl, name})
+        }
+        return record
+      })
+      if (changes === 0) {
+        throw new Error('Failed to follow: no profile record exists. Run setProfile() before follow().')
+      }
+      // index the target
+      await db.addArchive(target)
+    },
+
+    async unfollow (archive, target) {
+      // update the follow record
+      var archiveUrl = coerce.archiveUrl(archive)
+      var targetUrl = coerce.archiveUrl(target)
+      var changes = await db.profile.where('_origin').equals(archiveUrl).update(record => {
+        record.follows = record.follows || []
+        record.follows = record.follows.filter(f => f.url !== targetUrl)
+        return record
+      })
+      if (changes === 0) {
+        throw new Error('Failed to unfollow: no profile record exists. Run setProfile() before unfollow().')
+      }
+      // unindex the target
+      await db.removeArchive(target)
+    },
+
+    getFollowersQuery (archive) {
+      var archiveUrl = coerce.archiveUrl(archive)
+      return db.profile.where('followUrls').equals(archiveUrl)
+    },
+
+    listFollowers (archive) {
+      return this.getFollowersQuery(archive).toArray()
+    },
+
+    countFollowers (archive) {
+      return this.getFollowersQuery(archive).count()
+    },
+
+    async isFollowing (archiveA, archiveB) {
+      var archiveBUrl = coerce.archiveUrl(archiveB)
+      var profileA = await db.profile.get(archiveA)
+      return profileA.followUrls.indexOf(archiveBUrl) !== -1
+    },
+
+    async listFriends (archive) {
+      var followers = await this.listFollowers(archive)
+      await Promise.all(followers.map(async follower => {
+        follower.isFriend = await this.isFollowing(archive, follower.url)
+      }))
+      return followers.filter(f => f.isFriend)
+    },
+
+    async countFriends (archive) {
+      var friends = await this.listFriends(archive)
+      return friends.length
+    },
+
+    async isFriendsWith (archiveA, archiveB) {
+      var [a, b] = await Promise.all([
+        this.isFollowing(archiveA, archiveB),
+        this.isFollowing(archiveB, archiveA)
+      ])
+      return a && b
+    },
+
+    // broadcasts api
+    // =
+
+    broadcast (archive, {text, threadRoot, threadParent}) {
+      text = coerce.string(text)
+      threadParent = threadParent ? coerce.recordUrl(threadParent) : undefined
+      threadRoot = threadRoot ? coerce.recordUrl(threadRoot) : threadParent
+      if (!text) throw new Error('Must provide text')
+      const createdAt = Date.now()
+      return db.broadcasts.add(archive, {text, threadRoot, threadParent, createdAt})
+    },
+
+    getBroadcastsQuery ({author, after, before, offset, limit, reverse} = {}) {
+      var query = db.broadcasts
+      if (author) {
+        author = coerce.archiveUrl(author)
+        after = after || 0
+        before = before || Infinity
+        query = query.where('_origin+createdAt').between([author, after], [author, before])
+      } else if (after || before) {
+        after = after || 0
+        before = before || Infinity
+        query = query.where('createdAt').between(after, before)
+      } else {
+        query = query.orderBy('createdAt')
+      }
+      if (offset) query = query.offset(offset)
+      if (limit) query = query.limit(limit)
+      if (reverse) query = query.reverse()
+      return query
+    },
+
+    getRepliesQuery (threadRootUrl, {offset, limit, reverse} = {}) {
+      var query = db.broadcasts.where('threadRoot').equals(threadRootUrl)
+      if (offset) query = query.offset(offset)
+      if (limit) query = query.limit(limit)
+      if (reverse) query = query.reverse()
+      return query
+    },
+
+    async listBroadcasts (opts = {}, query) {
+      var promises = []
+      query = query || this.getBroadcastsQuery(opts)
+      var broadcasts = await query.toArray()
+
+      // fetch author profile
+      if (opts.fetchAuthor) {
+        let profiles = {}
+        promises = promises.concat(broadcasts.map(async b => {
+          if (!profiles[b._origin]) {
+            profiles[b._origin] = this.getProfile(b._origin)
+          }
+          b.author = await profiles[b._origin]
+        }))
+      }
+
+      // tabulate votes
+      if (opts.countVotes) {
+        promises = promises.concat(broadcasts.map(async b => {
+          b.votes = await this.countVotes(b._url)
+        }))
+      }
+
+      // fetch replies
+      if (opts.fetchReplies) {
+        promises = promises.concat(broadcasts.map(async b => {
+          b.replies = await this.listBroadcasts({fetchAuthor: true}, this.getRepliesQuery(b._url))
+        }))
+      }
+
+      await Promise.all(promises)
+      return broadcasts
+    },
+
+    countBroadcasts (opts, query) {
+      query = query || this.getBroadcastsQuery(opts)
+      return query.count()
+    },
+
+    async getBroadcast (record) {
+      const recordUrl = coerce.recordUrl(record)
+      record = await db.broadcasts.get(recordUrl)
+      record.author = await this.getProfile(record._origin)
+      record.votes = await this.countVotes(recordUrl)
+      record.replies = await this.listBroadcasts({fetchAuthor: true}, this.getRepliesQuery(recordUrl))
+      return record
+    },
+
+    // votes api
+    // =
+
+    vote (archive, {vote, subject}) {
+      vote = coerce.vote(vote)
+      if (!subject) throw new Error('Subject is required')
+      if (subject._url) subject = subject._url
+      if (subject.url) subject = subject.url
+      subject = coerce.datUrl(subject)
+      const createdAt = Date.now()
+      return db.votes.add(archive, {vote, subject, createdAt})
+    },
+
+    getVotesQuery (subject) {
+      return db.votes.where('subject').equals(coerce.voteSubject(subject))
+    },
+
+    listVotes (subject) {
+      return this.getVotesQuery(subject).toArray()
+    },
+
+    async countVotes (subject) {
+      var res = {up: 0, down: 0, value: 0, upVoters: [], currentUsersVote: 0}
+      await this.getVotesQuery(subject).each(record => {
+        res.value += record.vote
+        if (record.vote === 1) {
+          res.upVoters.push(record._origin)
+          res.up++
+        }
+        if (record.vote === -1) {
+          res.down--
+        }
+        if (userArchive && record._origin === userArchive.url) {
+          res.currentUsersVote = record.vote
+        }
+      })
+      return res
+    },
+
+    // TCW -- prescript api
+
+    prescript (archive, {
+      prescriptName,
+      prescriptInfo,
+      prescriptJS,
+      prescriptCSS
+    }) {
+      prescriptName = coerce.string(prescriptName)
+      prescriptInfo = coerce.string(prescriptInfo)
+      prescriptJS = coerce.string(prescriptJS)
+      prescriptCSS = coerce.string(prescriptCSS)
+      const createdAt = Date.now()
+
+      return db.prescripts.add(archive, {
+        prescriptName,
+        prescriptInfo,
+        prescriptJS,
+        prescriptCSS,
+        createdAt
+      })
+    },
+
+    getPrescriptsQuery ({author, after, before, offset, limit, reverse} = {}) {
+      var query = db.prescripts
+      if (author) {
+        author = coerce.archiveUrl(author)
+        after = after || 0
+        before = before || Infinity
+        query = query.where('_origin+createdAt').between([author, after], [author, before])
+      } else if (after || before) {
+        after = after || 0
+        before = before || Infinity
+        query = query.where('createdAt').between(after, before)
+      } else {
+        query = query.orderBy('createdAt')
+      }
+      if (offset) query = query.offset(offset)
+      if (limit) query = query.limit(limit)
+      if (reverse) query = query.reverse()
+      return query
+    },
+
+    async listPrescripts (opts = {}, query) {
+      var promises = []
+      query = query || this.getPrescriptsQuery(opts)
+      var prescripts = await query.toArray()
+
+      // fetch author profile
+      if (opts.fetchAuthor) {
+        let profiles = {}
+        promises = promises.concat(prescripts.map(async b => {
+          if (!profiles[b._origin]) {
+            profiles[b._origin] = this.getProfile(b._origin)
+          }
+          b.author = await profiles[b._origin]
+        }))
+      }
+
+      // tabulate votes
+      if (opts.countVotes) {
+        promises = promises.concat(prescripts.map(async b => {
+          b.votes = await this.countVotes(b._url)
+        }))
+      }
+
+      await Promise.all(promises)
+      return prescripts
+    },
+
+    countPrescripts (opts, query) {
+      query = query || this.getPrescriptsQuery(opts)
+      return query.count()
+    },
+
+    async getPrescript (record) {
+      console.log('record', record)
+      const recordUrl = coerce.recordUrl(record)
+      record = await db.prescripts.get(recordUrl)
+      record.author = await this.getProfile(record._origin)
+      record.votes = await this.countVotes(recordUrl)
+      return record
+    },
+
+    // TCW -- subscripts api
+
+    async subscribe (
+      archive,
+      target,
+      subscriptOrigin,
+      subscriptName,
+      subscriptInfo,
+      subscriptJS,
+      subscriptCSS
+    ) {
+      // update the follow record
+      var archiveUrl = coerce.archiveUrl(archive)
+      var subscriptURL = coerce.archiveUrl(target)
+      var changes = await db.profile.where('_origin').equals(archiveUrl).update(record => {
+        record.subscripts = record.subscripts || []
+        if (!record.subscripts.find(s => s.subscriptURL === subscriptURL)) {
+          record.subscripts.push({
+            subscriptURL,
+            subscriptOrigin,
+            subscriptName,
+            subscriptInfo,
+            subscriptJS,
+            subscriptCSS
+          })
+        }
+        return record
+      })
+      if (changes === 0) {
+        throw new Error('Failed to follow: no profile record exists. Run setProfile() before follow().')
+      }
+
+      // index the target
+      await db.addArchive(target)
+    },
+
+    async unsubscribe (archive, target) {
+      // update the follow record
+      var archiveUrl = coerce.archiveUrl(archive)
+      var targetUrl = coerce.archiveUrl(target)
+      var changes = await db.profile.where('_origin').equals(archiveUrl).update(record => {
+        record.subscripts = record.subscripts || []
+        record.subscripts = record.subscripts.filter(s => s.subscriptURL !== targetUrl)
+        return record
+      })
+      if (changes === 0) {
+        throw new Error('Failed to unfollow: no profile record exists. Run setProfile() before unfollow().')
+      }
+      // unindex the target
+      await db.removeArchive(target)
+    }
+  }
+}
+
+},{"./lib/coerce":38,"scratch-db-test":54}],38:[function(require,module,exports){
+exports.string = function (v) {
+  if (typeof v === 'number') v = v.toString()
+  if (typeof v === 'string') return v
+  return null
+}
+
+exports.path = function (v) {
+  v = exports.string(v)
+  if (v && !v.startsWith('/')) v = '/' + v
+  return v
+}
+
+exports.arrayOfFollows = function (arr) {
+  arr = Array.isArray(arr) ? arr : [arr]
+  return arr.map(v => {
+    if (!v) return false
+    if (typeof v === 'string') {
+      return {url: exports.datUrl(v)}
+    }
+    if (v.url && typeof v.url === 'string') {
+      return {url: exports.datUrl(v.url), name: exports.string(v.name)}
+    }
+  }).filter(Boolean)
+}
+
+// TCW -- add coerce for subscripts
+
+exports.arrayOfSubscripts = function (arr) {
+  arr = Array.isArray(arr) ? arr : [arr]
+  return arr.map(v => {
+    if (!v) return false
+    if (typeof v === 'string') {
+      return {subscriptURL: exports.datUrl(v)}
+    }
+    if (v.subscriptURL && typeof v.subscriptURL === 'string') {
+      return {
+        subscriptURL: exports.datUrl(v.subscriptURL),
+        subscriptOrigin: exports.datUrl(v.subscriptOrigin),
+        subscriptName: exports.string(v.subscriptName),
+        subscriptInfo: exports.string(v.subscriptInfo),
+        subscriptJS: exports.string(v.subscriptJS),
+        subscriptCSS: exports.string(v.subscriptCSS)
+      }
+    }
+  }).filter(Boolean)
+}
+
+// TCW -- END
+
+exports.datUrl = function (v) {
+  if (v && typeof v === 'string') {
+    if (v.startsWith('http')) {
+      return null
+    }
+    if (!v.startsWith('dat://')) {
+      v = 'dat://' + v
+    }
+    return v
+  }
+  return null
+}
+
+exports.voteSubject = function (v) {
+  v = exports.datUrl(v)
+  if (!v) {
+    throw new Error('Subject required on votes')
+  }
+
+  v = v.slice('dat://'.length).replace(/\//g, ':')
+  return v
+}
+
+exports.number = function (v, opts) {
+  v = +v
+  if (opts && opts.required) {
+    if (typeof v !== 'number') {
+      throw new Error('Invalid field, must be a number')
+    }
+  }
+  return v
+}
+
+exports.vote = function (v) {
+  v = exports.number(v)
+  if (v > 0) return 1
+  if (v < 0) return 0
+  return 0
+}
+
+exports.archive = function (v) {
+  if (typeof v === 'string') {
+    try {
+      // return new DatArchive(v)
+    } catch (e) {
+      throw new Error('Not a valid archive')
+    }
+  }
+  if (v.url) {
+    return v
+  }
+  return null
+}
+
+exports.archiveUrl = function (v) {
+  if (typeof v === 'string') {
+    return v
+  }
+  if (typeof v.url === 'string') {
+    return v.url
+  }
+  throw new Error('Not a valid archive')
+}
+
+exports.recordUrl = function (v) {
+  if (typeof v === 'string') {
+    return v
+  }
+  if (typeof v._url === 'string') {
+    return v._url
+  }
+  throw new Error('Not a valid record')
+}
+
+},{}],39:[function(require,module,exports){
 const isNode = typeof window === 'undefined'
 const parse = isNode ? require('url').parse : browserParse
 
@@ -799,10 +4758,168 @@ module.exports = function parseDatURL (str, parseQS) {
 function browserParse (str) {
   return new URL(str)
 }
-},{"url":39}],4:[function(require,module,exports){
+},{"url":97}],40:[function(require,module,exports){
+/*!
+ * parse-glob <https://github.com/jonschlinkert/parse-glob>
+ *
+ * Copyright (c) 2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var isGlob = require('is-glob');
+var findBase = require('glob-base');
+var extglob = require('is-extglob');
+var dotfile = require('is-dotfile');
+
+/**
+ * Expose `cache`
+ */
+
+var cache = module.exports.cache = {};
+
+/**
+ * Parse a glob pattern into tokens.
+ *
+ * When no paths or '**' are in the glob, we use a
+ * different strategy for parsing the filename, since
+ * file names can contain braces and other difficult
+ * patterns. such as:
+ *
+ *  - `*.{a,b}`
+ *  - `(**|*.js)`
+ */
+
+module.exports = function parseGlob(glob) {
+  if (cache.hasOwnProperty(glob)) {
+    return cache[glob];
+  }
+
+  var tok = {};
+  tok.orig = glob;
+  tok.is = {};
+
+  // unescape dots and slashes in braces/brackets
+  glob = escape(glob);
+
+  var parsed = findBase(glob);
+  tok.is.glob = parsed.isGlob;
+
+  tok.glob = parsed.glob;
+  tok.base = parsed.base;
+  var segs = /([^\/]*)$/.exec(glob);
+
+  tok.path = {};
+  tok.path.dirname = '';
+  tok.path.basename = segs[1] || '';
+  tok.path.dirname = glob.split(tok.path.basename).join('') || '';
+  var basename = (tok.path.basename || '').split('.') || '';
+  tok.path.filename = basename[0] || '';
+  tok.path.extname = basename.slice(1).join('.') || '';
+  tok.path.ext = '';
+
+  if (isGlob(tok.path.dirname) && !tok.path.basename) {
+    if (!/\/$/.test(tok.glob)) {
+      tok.path.basename = tok.glob;
+    }
+    tok.path.dirname = tok.base;
+  }
+
+  if (glob.indexOf('/') === -1 && !tok.is.globstar) {
+    tok.path.dirname = '';
+    tok.path.basename = tok.orig;
+  }
+
+  var dot = tok.path.basename.indexOf('.');
+  if (dot !== -1) {
+    tok.path.filename = tok.path.basename.slice(0, dot);
+    tok.path.extname = tok.path.basename.slice(dot);
+  }
+
+  if (tok.path.extname.charAt(0) === '.') {
+    var exts = tok.path.extname.split('.');
+    tok.path.ext = exts[exts.length - 1];
+  }
+
+  // unescape dots and slashes in braces/brackets
+  tok.glob = unescape(tok.glob);
+  tok.path.dirname = unescape(tok.path.dirname);
+  tok.path.basename = unescape(tok.path.basename);
+  tok.path.filename = unescape(tok.path.filename);
+  tok.path.extname = unescape(tok.path.extname);
+
+  // Booleans
+  var is = (glob && tok.is.glob);
+  tok.is.negated  = glob && glob.charAt(0) === '!';
+  tok.is.extglob  = glob && extglob(glob);
+  tok.is.braces   = has(is, glob, '{');
+  tok.is.brackets = has(is, glob, '[:');
+  tok.is.globstar = has(is, glob, '**');
+  tok.is.dotfile  = dotfile(tok.path.basename) || dotfile(tok.path.filename);
+  tok.is.dotdir   = dotdir(tok.path.dirname);
+  return (cache[glob] = tok);
+}
+
+/**
+ * Returns true if the glob matches dot-directories.
+ *
+ * @param  {Object} `tok` The tokens object
+ * @param  {Object} `path` The path object
+ * @return {Object}
+ */
+
+function dotdir(base) {
+  if (base.indexOf('/.') !== -1) {
+    return true;
+  }
+  if (base.charAt(0) === '.' && base.charAt(1) !== '/') {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Returns true if the pattern has the given `ch`aracter(s)
+ *
+ * @param  {Object} `glob` The glob pattern.
+ * @param  {Object} `ch` The character to test for
+ * @return {Object}
+ */
+
+function has(is, glob, ch) {
+  return is && glob.indexOf(ch) !== -1;
+}
+
+/**
+ * Escape/unescape utils
+ */
+
+function escape(str) {
+  var re = /\{([^{}]*?)}|\(([^()]*?)\)|\[([^\[\]]*?)\]/g;
+  return str.replace(re, function (outter, braces, parens, brackets) {
+    var inner = braces || parens || brackets;
+    if (!inner) { return outter; }
+    return outter.split(inner).join(esc(inner));
+  });
+}
+
+function esc(str) {
+  str = str.split('/').join('__SLASH__');
+  str = str.split('.').join('__DOT__');
+  return str;
+}
+
+function unescape(str) {
+  str = str.split('__SLASH__').join('/');
+  str = str.split('__DOT__').join('.');
+  return str;
+}
+
+},{"glob-base":15,"is-dotfile":18,"is-extglob":21,"is-glob":22}],41:[function(require,module,exports){
 module.exports.exportAPI = require('./lib/export-api')
 module.exports.importAPI = require('./lib/import-api')
-},{"./lib/export-api":5,"./lib/import-api":6}],5:[function(require,module,exports){
+},{"./lib/export-api":42,"./lib/import-api":43}],42:[function(require,module,exports){
 (function (Buffer){
 const EventEmitter = require('events')
 const { Writable } = require('stream')
@@ -1070,7 +5187,7 @@ function errorObject (err) {
 }
 
 }).call(this,{"isBuffer":require("../../../../node_modules/is-buffer/index.js")})
-},{"../../../../node_modules/is-buffer/index.js":15,"./util":7,"electron":undefined,"events":12,"stream":37}],6:[function(require,module,exports){
+},{"../../../../node_modules/is-buffer/index.js":72,"./util":44,"electron":undefined,"events":69,"stream":95}],43:[function(require,module,exports){
 const EventEmitter = require('events')
 const { Readable, Writable } = require('stream')
 const { ipcRenderer } = require('electron')
@@ -1286,7 +5403,7 @@ module.exports = function (channelName, manifest, opts) {
   return api
 }
 
-},{"./util":7,"electron":undefined,"events":12,"stream":37}],7:[function(require,module,exports){
+},{"./util":44,"electron":undefined,"events":69,"stream":95}],44:[function(require,module,exports){
 (function (Buffer){
 
 module.exports.valueToIPCValue = function (v) {
@@ -1303,7 +5420,2800 @@ module.exports.IPCValueToValue = function (v) {
   return v
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":10}],8:[function(require,module,exports){
+},{"buffer":67}],45:[function(require,module,exports){
+/*!
+ * preserve <https://github.com/jonschlinkert/preserve>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT license.
+ */
+
+'use strict';
+
+/**
+ * Replace tokens in `str` with a temporary, heuristic placeholder.
+ *
+ * ```js
+ * tokens.before('{a\\,b}');
+ * //=> '{__ID1__}'
+ * ```
+ *
+ * @param  {String} `str`
+ * @return {String} String with placeholders.
+ * @api public
+ */
+
+exports.before = function before(str, re) {
+  return str.replace(re, function (match) {
+    var id = randomize();
+    cache[id] = match;
+    return '__ID' + id + '__';
+  });
+};
+
+/**
+ * Replace placeholders in `str` with original tokens.
+ *
+ * ```js
+ * tokens.after('{__ID1__}');
+ * //=> '{a\\,b}'
+ * ```
+ *
+ * @param  {String} `str` String with placeholders
+ * @return {String} `str` String with original tokens.
+ * @api public
+ */
+
+exports.after = function after(str) {
+  return str.replace(/__ID(.{5})__/g, function (_, id) {
+    return cache[id];
+  });
+};
+
+function randomize() {
+  return Math.random().toString().slice(2, 7);
+}
+
+var cache = {};
+},{}],46:[function(require,module,exports){
+/*!
+ * randomatic <https://github.com/jonschlinkert/randomatic>
+ *
+ * Copyright (c) 2014-2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+'use strict';
+
+var isNumber = require('is-number');
+var typeOf = require('kind-of');
+
+/**
+ * Expose `randomatic`
+ */
+
+module.exports = randomatic;
+
+/**
+ * Available mask characters
+ */
+
+var type = {
+  lower: 'abcdefghijklmnopqrstuvwxyz',
+  upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  number: '0123456789',
+  special: '~!@#$%^&()_+-={}[];\',.'
+};
+
+type.all = type.lower + type.upper + type.number + type.special;
+
+/**
+ * Generate random character sequences of a specified `length`,
+ * based on the given `pattern`.
+ *
+ * @param {String} `pattern` The pattern to use for generating the random string.
+ * @param {String} `length` The length of the string to generate.
+ * @param {String} `options`
+ * @return {String}
+ * @api public
+ */
+
+function randomatic(pattern, length, options) {
+  if (typeof pattern === 'undefined') {
+    throw new Error('randomatic expects a string or number.');
+  }
+
+  var custom = false;
+  if (arguments.length === 1) {
+    if (typeof pattern === 'string') {
+      length = pattern.length;
+
+    } else if (isNumber(pattern)) {
+      options = {}; length = pattern; pattern = '*';
+    }
+  }
+
+  if (typeOf(length) === 'object' && length.hasOwnProperty('chars')) {
+    options = length;
+    pattern = options.chars;
+    length = pattern.length;
+    custom = true;
+  }
+
+  var opts = options || {};
+  var mask = '';
+  var res = '';
+
+  // Characters to be used
+  if (pattern.indexOf('?') !== -1) mask += opts.chars;
+  if (pattern.indexOf('a') !== -1) mask += type.lower;
+  if (pattern.indexOf('A') !== -1) mask += type.upper;
+  if (pattern.indexOf('0') !== -1) mask += type.number;
+  if (pattern.indexOf('!') !== -1) mask += type.special;
+  if (pattern.indexOf('*') !== -1) mask += type.all;
+  if (custom) mask += pattern;
+
+  while (length--) {
+    res += mask.charAt(parseInt(Math.random() * mask.length, 10));
+  }
+  return res;
+};
+
+},{"is-number":47,"kind-of":49}],47:[function(require,module,exports){
+/*!
+ * is-number <https://github.com/jonschlinkert/is-number>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+var typeOf = require('kind-of');
+
+module.exports = function isNumber(num) {
+  var type = typeOf(num);
+
+  if (type === 'string') {
+    if (!num.trim()) return false;
+  } else if (type !== 'number') {
+    return false;
+  }
+
+  return (num - num + 1) >= 0;
+};
+
+},{"kind-of":48}],48:[function(require,module,exports){
+arguments[4][28][0].apply(exports,arguments)
+},{"dup":28,"is-buffer":17}],49:[function(require,module,exports){
+var isBuffer = require('is-buffer');
+var toString = Object.prototype.toString;
+
+/**
+ * Get the native `typeof` a value.
+ *
+ * @param  {*} `val`
+ * @return {*} Native javascript type
+ */
+
+module.exports = function kindOf(val) {
+  // primitivies
+  if (typeof val === 'undefined') {
+    return 'undefined';
+  }
+  if (val === null) {
+    return 'null';
+  }
+  if (val === true || val === false || val instanceof Boolean) {
+    return 'boolean';
+  }
+  if (typeof val === 'string' || val instanceof String) {
+    return 'string';
+  }
+  if (typeof val === 'number' || val instanceof Number) {
+    return 'number';
+  }
+
+  // functions
+  if (typeof val === 'function' || val instanceof Function) {
+    return 'function';
+  }
+
+  // array
+  if (typeof Array.isArray !== 'undefined' && Array.isArray(val)) {
+    return 'array';
+  }
+
+  // check for instances of RegExp and Date before calling `toString`
+  if (val instanceof RegExp) {
+    return 'regexp';
+  }
+  if (val instanceof Date) {
+    return 'date';
+  }
+
+  // other objects
+  var type = toString.call(val);
+
+  if (type === '[object RegExp]') {
+    return 'regexp';
+  }
+  if (type === '[object Date]') {
+    return 'date';
+  }
+  if (type === '[object Arguments]') {
+    return 'arguments';
+  }
+  if (type === '[object Error]') {
+    return 'error';
+  }
+  if (type === '[object Promise]') {
+    return 'promise';
+  }
+
+  // buffer
+  if (isBuffer(val)) {
+    return 'buffer';
+  }
+
+  // es6: Map, WeakMap, Set, WeakSet
+  if (type === '[object Set]') {
+    return 'set';
+  }
+  if (type === '[object WeakSet]') {
+    return 'weakset';
+  }
+  if (type === '[object Map]') {
+    return 'map';
+  }
+  if (type === '[object WeakMap]') {
+    return 'weakmap';
+  }
+  if (type === '[object Symbol]') {
+    return 'symbol';
+  }
+
+  // typed arrays
+  if (type === '[object Int8Array]') {
+    return 'int8array';
+  }
+  if (type === '[object Uint8Array]') {
+    return 'uint8array';
+  }
+  if (type === '[object Uint8ClampedArray]') {
+    return 'uint8clampedarray';
+  }
+  if (type === '[object Int16Array]') {
+    return 'int16array';
+  }
+  if (type === '[object Uint16Array]') {
+    return 'uint16array';
+  }
+  if (type === '[object Int32Array]') {
+    return 'int32array';
+  }
+  if (type === '[object Uint32Array]') {
+    return 'uint32array';
+  }
+  if (type === '[object Float32Array]') {
+    return 'float32array';
+  }
+  if (type === '[object Float64Array]') {
+    return 'float64array';
+  }
+
+  // must be a plain object
+  return 'object';
+};
+
+},{"is-buffer":17}],50:[function(require,module,exports){
+/*!
+ * regex-cache <https://github.com/jonschlinkert/regex-cache>
+ *
+ * Copyright (c) 2015 Jon Schlinkert.
+ * Licensed under the MIT license.
+ */
+
+'use strict';
+
+var isPrimitive = require('is-primitive');
+var equal = require('is-equal-shallow');
+var basic = {};
+var cache = {};
+
+/**
+ * Expose `regexCache`
+ */
+
+module.exports = regexCache;
+
+/**
+ * Memoize the results of a call to the new RegExp constructor.
+ *
+ * @param  {Function} fn [description]
+ * @param  {String} str [description]
+ * @param  {Options} options [description]
+ * @param  {Boolean} nocompare [description]
+ * @return {RegExp}
+ */
+
+function regexCache(fn, str, opts) {
+  var key = '_default_', regex, cached;
+
+  if (!str && !opts) {
+    if (typeof fn !== 'function') {
+      return fn;
+    }
+    return basic[key] || (basic[key] = fn(str));
+  }
+
+  var isString = typeof str === 'string';
+  if (isString) {
+    if (!opts) {
+      return basic[str] || (basic[str] = fn(str));
+    }
+    key = str;
+  } else {
+    opts = str;
+  }
+
+  cached = cache[key];
+  if (cached && equal(cached.opts, opts)) {
+    return cached.regex;
+  }
+
+  memo(key, opts, (regex = fn(str, opts)));
+  return regex;
+}
+
+function memo(key, opts, regex) {
+  cache[key] = {regex: regex, opts: opts};
+}
+
+/**
+ * Expose `cache`
+ */
+
+module.exports.cache = cache;
+module.exports.basic = basic;
+
+},{"is-equal-shallow":19,"is-primitive":25}],51:[function(require,module,exports){
+(function (process){
+var isWin = process.platform === 'win32';
+
+module.exports = function (str) {
+	while (endsInSeparator(str)) {
+		str = str.slice(0, -1);
+	}
+	return str;
+};
+
+function endsInSeparator(str) {
+	var last = str[str.length - 1];
+	return str.length > 1 && (last === '/' || (isWin && last === '\\'));
+}
+
+}).call(this,require('_process'))
+},{"_process":76}],52:[function(require,module,exports){
+/*!
+ * repeat-element <https://github.com/jonschlinkert/repeat-element>
+ *
+ * Copyright (c) 2015 Jon Schlinkert.
+ * Licensed under the MIT license.
+ */
+
+'use strict';
+
+module.exports = function repeat(ele, num) {
+  var arr = new Array(num);
+
+  for (var i = 0; i < num; i++) {
+    arr[i] = ele;
+  }
+
+  return arr;
+};
+
+},{}],53:[function(require,module,exports){
+/*!
+ * repeat-string <https://github.com/jonschlinkert/repeat-string>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+'use strict';
+
+/**
+ * Results cache
+ */
+
+var res = '';
+var cache;
+
+/**
+ * Expose `repeat`
+ */
+
+module.exports = repeat;
+
+/**
+ * Repeat the given `string` the specified `number`
+ * of times.
+ *
+ * **Example:**
+ *
+ * ```js
+ * var repeat = require('repeat-string');
+ * repeat('A', 5);
+ * //=> AAAAA
+ * ```
+ *
+ * @param {String} `string` The string to repeat
+ * @param {Number} `number` The number of times to repeat the string
+ * @return {String} Repeated string
+ * @api public
+ */
+
+function repeat(str, num) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expected a string');
+  }
+
+  // cover common, quick use cases
+  if (num === 1) return str;
+  if (num === 2) return str + str;
+
+  var max = str.length * num;
+  if (cache !== str || typeof cache === 'undefined') {
+    cache = str;
+    res = '';
+  } else if (res.length >= max) {
+    return res.substr(0, max);
+  }
+
+  while (max > res.length && num > 1) {
+    if (num & 1) {
+      res += str;
+    }
+
+    num >>= 1;
+    str += str;
+  }
+
+  res += str;
+  res = res.substr(0, max);
+  return res;
+}
+
+},{}],54:[function(require,module,exports){
+/* globals window DatArchive */
+const DatArchive = window.DatArchive
+const EventEmitter = require('events')
+const {debug, veryDebug, assert, eventHandler, errorHandler, eventRebroadcaster} = require('./lib/util')
+const {DatabaseClosedError, SchemaError} = require('./lib/errors')
+const Schemas = require('./lib/schemas')
+const Indexer = require('./lib/indexer')
+const InjestTable = require('./lib/table')
+const indexedDB = window.indexedDB
+
+class InjestDB extends EventEmitter {
+  constructor (name) {
+    super()
+    this.idx = false
+    this.name = name
+    this.version = 0
+    this.isBeingOpened = false
+    this.isOpen = false
+    this.isClosed = false
+    this._schemas = []
+    this._archives = {}
+    this._tablesToRebuild = []
+    this._activeTableNames = []
+    this._activeSchema = null
+    this._tablePathPatterns = []
+    this._dbReadyPromise = new Promise((resolve, reject) => {
+      this.once('open', () => resolve(this))
+      this.once('open-failed', reject)
+    })
+
+    // Default subscribers to 'versionchange' and 'blocked'.
+    // Can be overridden by custom handlers. If custom handlers return false, these default
+    // behaviours will be prevented.
+    this.on('versionchange', e => {
+      // Default behavior for versionchange event is to close database connection.
+      // Caller can override this behavior by doing this.on('versionchange', function(){ return false; });
+      // Let's not block the other window from making it's delete() or open() call.
+      // NOTE! This event is never fired in IE,Edge or Safari.
+      if (e.newVersion > 0) {
+        console.warn(`Another connection wants to upgrade database '${this.name}'. Closing db now to resume the upgrade.`)
+      } else {
+        console.warn(`Another connection wants to delete database '${this.name}'. Closing db now to resume the delete request.`)
+      }
+      this.close()
+      // In many web applications, it would be recommended to force window.reload()
+      // when this event occurs. To do that, subscribe to the versionchange event
+      // and call window.location.reload(true) if e.newVersion > 0 (not a deletion)
+      // The reason for this is that your current web app obviously has old schema code that needs
+      // to be updated. Another window got a newer version of the app and needs to upgrade DB but
+      // your window is blocking it unless we close it here.
+    })
+    this.on('blocked', e => {
+      if (!e.newVersion || e.newVersion < e.oldVersion) {
+        console.warn(`InjestDB.delete('${this.name}') was blocked`)
+      } else {
+        console.warn(`Upgrade '${this.name}' blocked by other connection holding version ${e.oldVersion}`)
+      }
+    })
+  }
+
+  async open () {
+    // guard against duplicate opens
+    if (this.isBeingOpened || this.idx) {
+      veryDebug('duplicate open, returning ready promise')
+      return this._dbReadyPromise
+    }
+    if (this.isOpen) {
+      return
+    }
+    // if (this.isClosed) {
+    //   veryDebug('open after close')
+    //   throw new DatabaseClosedError()
+    // }
+    this.isBeingOpened = true
+    Schemas.addBuiltinTableSchemas(this)
+
+    debug('opening')
+
+    var upgradeTransaction
+    try {
+      // start the opendb request
+      await new Promise((resolve, reject) => {
+        var req = indexedDB.open(this.name, this.version)
+        req.onerror = errorHandler(reject)
+        req.onblocked = eventRebroadcaster(this, 'blocked')
+
+        // run the upgrades
+        req.onupgradeneeded = eventHandler(async e => {
+          debug('upgrade needed', {oldVersion: e.oldVersion, newVersion: e.newVersion})
+          upgradeTransaction = req.transaction
+          upgradeTransaction.onerror = errorHandler(reject) // if upgrade fails, open() fails
+          await runUpgrades({db: this, oldVersion: e.oldVersion, upgradeTransaction})
+        }, reject)
+
+        // open suceeded
+        req.onsuccess = eventHandler(async () => {
+          // construct the final injestdb object
+          this._activeSchema = this._schemas.reduce(Schemas.merge, {})
+          this.isBeingOpened = false
+          this.isOpen = true
+          this.idx = req.result
+          Schemas.addTables(this)
+          var needsRebuild = await Indexer.resetOutdatedIndexes(this)
+          await Indexer.loadArchives(this, needsRebuild)
+
+          // events
+          debug('opened')
+          this.idx.onversionchange = eventRebroadcaster(this, 'versionchange')
+          this.emit('open')
+          resolve()
+        }, reject)
+      })
+    } catch (e) {
+      // Did we fail within onupgradeneeded? Make sure to abort the upgrade transaction so it doesnt commit.
+      console.error('Upgrade has failed', e)
+      if (upgradeTransaction) {
+        upgradeTransaction.abort()
+      }
+      this.isBeingOpened = false
+      this.emit('open-failed', e)
+    }
+  }
+
+  close () {
+    debug('closing')
+    if (this.idx) {
+      Schemas.removeTables(this)
+      this.listArchives().forEach(archive => Indexer.unwatchArchive(this, archive))
+      this.idx.close()
+      this.idx = null
+      veryDebug('db .idx closed')
+    } else {
+      veryDebug('db .idx didnt yet exist')
+    }
+    this.isOpen = false
+    this.isClosed = true
+  }
+
+  schema (desc) {
+    assert(!this.idx && !this.isBeingOpened, SchemaError, 'Cannot add version when database is open')
+    Schemas.validateAndSanitize(desc)
+
+    // update current version
+    this.version = Math.max(this.version, desc.version)
+    this._schemas.push(desc)
+    this._schemas.sort(lowestVersionFirst)
+  }
+
+  get tables () {
+    return this._activeTableNames
+      .filter(name => !name.startsWith('_'))
+      .map(name => this[name])
+  }
+
+  async prepareArchive (archive) {
+    archive = typeof archive === 'string' ? new window.DatArchive(archive) : archive
+    await Promise.all(this.tables.map(table => {
+      if (!table.schema.singular) {
+        return archive.mkdir(`/${table.name}`).catch(() => {})
+      }
+    }))
+  }
+
+  async addArchive (archive, {prepare} = {}) {
+    // create our own new DatArchive instance
+    archive = typeof archive === 'string' ? new window.DatArchive(archive) : archive
+    if (!(archive.url in this._archives)) {
+      // store and process
+      debug('Injest.addArchive', archive.url)
+      this._archives[archive.url] = archive
+      if (prepare) await this.prepareArchive(archive)
+      await Indexer.addArchive(this, archive)
+    }
+  }
+
+  async addArchives (archives, opts) {
+    archives = Array.isArray(archives) ? archives : [archives]
+    return Promise.all(archives.map(a => this.addArchive(a, opts)))
+  }
+
+  async removeArchive (archive) {
+    archive = typeof archive === 'string' ? new window.DatArchive(archive) : archive
+    if (archive.url in this._archives) {
+      debug('Injest.removeArchive', archive.url)
+      delete this._archives[archive.url]
+      await Indexer.removeArchive(this, archive)
+    }
+  }
+
+  listArchives (archive) {
+    return Object.keys(this._archives).map(url => this._archives[url])
+  }
+
+  static list () {
+    // TODO
+  }
+
+  static delete (name) {
+    // delete the database from indexeddb
+    return new Promise((resolve, reject) => {
+      var req = indexedDB.deleteDatabase(name)
+      req.onsuccess = resolve
+      req.onerror = errorHandler(reject)
+      req.onblocked = eventRebroadcaster(this, 'blocked')
+    })
+  }
+}
+module.exports = InjestDB
+
+// run the database's queued upgrades
+async function runUpgrades ({db, oldVersion, upgradeTransaction}) {
+  // get the ones that haven't been run
+  var upgrades = db._schemas.filter(s => s.version > oldVersion)
+  db._activeSchema = db._schemas.filter(s => s.version <= oldVersion).reduce(Schemas.merge, {})
+  if (oldVersion > 0 && !db._activeSchema) {
+    throw new SchemaError(`Missing schema for previous version (${oldVersion}), unable to run upgrade.`)
+  }
+  debug(`running upgrade from ${oldVersion}, ${upgrades.length} upgrade(s) found`)
+
+  // diff and apply changes
+  var tablesToRebuild = []
+  for (let schema of upgrades) {
+    // compute diff
+    debug(`applying upgrade for version ${schema.version}`)
+    var diff = Schemas.diff(db._activeSchema, schema)
+
+    // apply diff
+    await Schemas.applyDiff(db, upgradeTransaction, diff)
+    tablesToRebuild.push(diff.tablesToRebuild)
+
+    // update current schema
+    db._activeSchema = Schemas.merge(db._activeSchema, schema)
+    debug(`version ${schema.version} applied`)
+  }
+
+  // track the tables that need rebuilding
+  db._tablesToRebuild = Array.from(new Set(...tablesToRebuild))
+  debug('Injest.runUpgrades complete', (db._tablesToRebuild.length === 0) ? '- no rebuilds needed' : 'REBUILD REQUIRED')
+}
+
+function lowestVersionFirst (a, b) {
+  return a.version - b.version
+}
+
+},{"./lib/errors":55,"./lib/indexer":57,"./lib/schemas":59,"./lib/table":60,"./lib/util":61,"events":69}],55:[function(require,module,exports){
+class ExtendableError extends Error {
+  constructor (msg) {
+    super(msg)
+    this.name = this.constructor.name
+    this.message = msg
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, this.constructor)
+    } else {
+      this.stack = (new Error(msg)).stack
+    }
+  }
+}
+
+exports.DatabaseClosedError = class DatabaseClosedError extends ExtendableError {
+  constructor (msg) {
+    super(msg || 'Database has been closed')
+    this.databaseClosedError = true
+  }
+}
+
+exports.SchemaError = class SchemaError extends ExtendableError {
+  constructor (msg) {
+    super(msg || 'Schema error')
+    this.schemaError = true
+  }
+}
+
+exports.ParameterError = class ParameterError extends ExtendableError {
+  constructor (msg) {
+    super(msg || 'Invalid parameter')
+    this.parameterError = true
+  }
+}
+
+exports.QueryError = class QueryError extends ExtendableError {
+  constructor (msg) {
+    super(msg || 'Query is malformed')
+    this.queryError = true
+  }
+}
+
+},{}],56:[function(require,module,exports){
+const IDBKeyRange = window.IDBKeyRange
+const {assert, eventHandler, errorHandler, debug, veryDebug} = require('./util')
+
+// exported api
+// =
+
+exports.get = async function (table, key) {
+  assert(key && typeof key === 'string')
+  return transact(table, store => store.get(key))
+}
+
+exports.put = async function (table, record) {
+  assert(record && typeof record === 'object')
+  return transact(table, store => store.put(record), 'readwrite')
+}
+
+exports.update = async function (table, key, updates) {
+  assert(updates && typeof updates === 'object')
+  var record = await exports.get(table, key)
+  record = record || {}
+  for (var k in updates) {
+    record[k] = updates[k]
+  }
+  await exports.put(table, record)
+}
+
+exports.delete = async function (table, key) {
+  assert(key && typeof key === 'string')
+  return transact(table, store => store.delete(key), 'readwrite')
+}
+
+exports.clear = async function (table) {
+  return transact(table, store => store.clear(), 'readwrite')
+}
+
+exports.iterate = async function (recordSet, fn) {
+  return new Promise((resolve, reject) => {
+    debug('IDB.iterate', recordSet._table.name)
+    var tx = getTransaction(recordSet._table)
+    var store = getStore(recordSet._table, tx)
+    var request = createCursor(store, recordSet)
+    // veryDebug('iterating', recordSet)
+
+    var resultIndex = 0
+    var numEmitted = 0
+    var {_offset, _limit} = recordSet
+    _offset = _offset || 0
+    _limit = _limit || false
+    veryDebug('offset', _offset, 'limit', _limit)
+    veryDebug('where', recordSet._where)
+    request.onsuccess = (e) => {
+      var cursor = e.target.result
+      if (cursor) {
+        veryDebug('onsuccess', cursor.value)
+        if (resultIndex >= _offset && applyFilters(recordSet, cursor.value)) {
+          // iter call
+          fn(cursor.value)
+          numEmitted++
+        }
+        resultIndex++
+        if (_limit && numEmitted >= _limit || applyUntil(recordSet, cursor.value)) {
+          // hit limit/until, stop here
+          cursor.advance(1e9) // let's assume there wont ever be a billion records
+        } else {
+          cursor.continue()
+        }
+      } else {
+        // no result signals we're finished
+        resolve()
+      }
+    }
+    request.onerror = errorHandler(reject)
+  })
+}
+
+// internal methods
+// =
+
+async function transact (table, fn, type) {
+  return new Promise((resolve, reject) => {
+    var tx = getTransaction(table, type)
+    var store = getStore(table, tx)
+    var req = fn(store)
+    tx.onerror = errorHandler(reject)
+    tx.oncomplete = eventHandler(e => resolve(req.result), reject)
+  })
+}
+
+function getTransaction (table, type) {
+  return table.db.idx.transaction([table.name], type)
+}
+
+function getStore (table, tx) {
+  return tx.objectStore(table.name)
+}
+
+function createCursor (store, recordSet) {
+  const {_direction, _distinct, _where} = recordSet
+
+  // use an index if reading from the non-primary key
+  var cursorFactory = store
+  if (_where && _where._index !== '_url') {
+    veryDebug('IDB.createCursor setting cursor factory to index', _where._index)
+    cursorFactory = store.index(_where._index)
+  } else {
+    veryDebug('IDB.createCursor using default cursor factory')
+  }
+
+  // build params and start read
+  const keyRange = createKeyRange(_where)
+  return cursorFactory.openCursor(keyRange, _direction + (_distinct ? 'unique' : ''))
+}
+
+function createKeyRange (whereClause) {
+  if (!whereClause) return
+  if (whereClause._only) {
+    return IDBKeyRange.only(whereClause._only)
+  }
+  if (whereClause._lowerBound && whereClause._upperBound) {
+    return IDBKeyRange.bound(
+      whereClause._lowerBound,
+      whereClause._upperBound,
+      !whereClause._lowerBoundInclusive,
+      !whereClause._upperBoundInclusive
+    )
+  }
+  if (whereClause._lowerBound) {
+    return IDBKeyRange.lowerBound(
+      whereClause._lowerBound,
+      !whereClause._lowerBoundInclusive
+    )
+  }
+  if (whereClause._upperBound) {
+    return IDBKeyRange.upperBound(
+      whereClause._upperBound,
+      !whereClause._upperBoundInclusive
+    )
+  }
+}
+
+function applyFilters (recordSet, value) {
+  for (let i = 0; i < recordSet._filters.length; i++) {
+    if (!recordSet._filters[i](value)) {
+      return false
+    }
+  }
+  return true
+}
+
+function applyUntil (recordSet, value) {
+  return (recordSet._until && recordSet._until(value))
+}
+
+},{"./util":61}],57:[function(require,module,exports){
+/* globals window */
+
+const flatten = require('lodash.flatten')
+const anymatch = require('anymatch')
+const DatArchive = window.DatArchive
+const IDB = require('./idb-wrapper')
+const {debug, veryDebug, lock} = require('./util')
+
+// exported api
+// =
+
+exports.loadArchives = async function (db, needsRebuild) {
+  debug('Indexer.loadArchives, needsRebuild=' + needsRebuild)
+  var promises = []
+  await db._indexMeta.each(indexMeta => {
+    debug('loading archive', indexMeta._url)
+    // load the archive
+    const archive = newDatArchive(indexMeta._url)
+    archive.isWritable = indexMeta.isWritable
+    db._archives[archive.url] = archive
+
+    // process the archive
+    promises.push(indexArchive(db, archive, needsRebuild))
+    exports.watchArchive(db, archive)
+  })
+  debug('Indexer.loadArchives done')
+  return Promise.all(promises)
+}
+
+exports.addArchive = async function (db, archive) {
+  veryDebug('Indexer.addArchive', archive.url)
+  // store entry in the meta db
+  var info = await archive.getInfo()
+  archive.isWritable = info.isOwner
+  await IDB.put(db._indexMeta, {
+    _url: archive.url,
+    version: 0,
+    isWritable: archive.isWritable
+  })
+  // process the archive
+  await indexArchive(db, archive)
+  exports.watchArchive(db, archive)
+}
+
+exports.removeArchive = async function (db, archive) {
+  veryDebug('Indexer.removeArchive', archive.url)
+  await unindexArchive(db, archive)
+  exports.unwatchArchive(db, archive)
+}
+
+exports.watchArchive = async function (db, archive) {
+  veryDebug('Indexer.watchArchive', archive.url)
+  if (archive.fileEvents) {
+    console.error('watchArchive() called on archive that already is being watched', archive.url)
+    return
+  }
+  if (archive._loadPromise) {
+    // HACK node-dat-archive fix
+    // Because of a weird API difference btwn node-dat-archive and beaker's DatArchive...
+    // ...the event-stream methods need await _loadPromise
+    // -prf
+    await archive._loadPromise
+  }
+  archive.fileEvents = archive.createFileActivityStream(db.tablePathPatterns)
+  // autodownload all changes to the watched files
+  archive.fileEvents.addEventListener('invalidated', ({path}) => archive.download(path))
+  // autoindex on changes
+  // TODO debounce!!!!
+  archive.fileEvents.addEventListener('changed', ({path}) => indexArchive(db, archive))
+}
+
+exports.unwatchArchive = function (db, archive) {
+  veryDebug('unwatching', archive.url)
+  if (archive.fileEvents) {
+    archive.fileEvents.close()
+    archive.fileEvents = null
+  }
+}
+
+exports.waitTillIndexed = async function (db, archive) {
+  debug('Indexer.waitTillIndexed', archive.url)
+  // fetch the current state of the archive's index
+  var [indexMeta, archiveMeta] = await Promise.all([
+    IDB.get(db._indexMeta, archive.url),
+    archive.getInfo()
+  ])
+  indexMeta = indexMeta || {version: 0}
+
+  // done?
+  if (indexMeta.version >= archiveMeta.version) {
+    debug('Indexer.waitTillIndexed already indexed')
+    return
+  }
+
+  return new Promise(resolve => {
+    db.on('indexes-updated', onIndex)
+    function onIndex (indexedArchive, version) {
+      if (indexedArchive.url === archive.url && version >= archiveMeta.version) {
+        db.removeListener('indexes-updated', onIndex)
+        resolve()
+      }
+    }
+  })
+}
+
+exports.resetOutdatedIndexes = async function (db) {
+  if (db._tablesToRebuild.length === 0) {
+    return false
+  }
+  debug(`Indexer.resetOutdatedIndexes need to rebuid ${db._tablesToRebuild.length} tables`)
+  veryDebug('Indexer.resetOutdatedIndexes tablesToRebuild', db._tablesToRebuild)
+
+  // clear tables
+  // TODO
+  // for simplicity, we just clear all data and re-index everything
+  // a better future design would only clear the tables that changed
+  // unfortunately our indexer isn't smart enough for that yet
+  // -prf
+  const tables = db.tables
+  for (let i = 0; i < tables.length; i++) {
+    let table = tables[i]
+    veryDebug('clearing', table.name)
+    // clear indexed data
+    await IDB.clear(table)
+  }
+
+  // reset meta records
+  var promises = []
+  await db._indexMeta.each(indexMeta => {
+    indexMeta.version = 0
+    promises.push(IDB.put(db._indexMeta, indexMeta))
+  })
+  await Promise.all(promises)
+
+  return true
+}
+
+// figure how what changes need to be processed
+// then update the indexes
+async function indexArchive (db, archive, needsRebuild) {
+  debug('Indexer.indexArchive', archive.url, {needsRebuild})
+  var release = await lock(`index:${archive.url}`)
+  try {
+    // sanity check
+    if (!db.isOpen) {
+      return console.log('indexArchive called on closed db')
+    }
+    if (!db.idx) {
+      return console.log('indexArchive called on corrupted db')
+    }
+
+    // fetch the current state of the archive's index
+    var [indexMeta, archiveMeta] = await Promise.all([
+      IDB.get(db._indexMeta, archive.url),
+      archive.getInfo()
+    ])
+    indexMeta = indexMeta || {version: 0}
+
+    // has this version of the archive been processed?
+    if (indexMeta && indexMeta.version >= archiveMeta.version) {
+      debug('Indexer.indexArchive no index needed for', archive.url)
+      return // yes, stop
+    }
+    debug('Indexer.indexArchive ', archive.url, 'start', indexMeta.version, 'end', archiveMeta.version)
+
+    // find and apply all changes which haven't yet been processed
+    var updates = await scanArchiveHistoryForUpdates(db, archive, {
+      start: indexMeta.version + 1,
+      end: archiveMeta.version + 1
+    })
+    var results = await applyUpdates(db, archive, updates)
+    debug('Indexer.indexArchive applied', results.length, 'updates from', archive.url)
+
+    // update meta
+    await IDB.update(db._indexMeta, archive.url, {
+      _url: archive.url,
+      version: archiveMeta.version // record the version we've indexed
+    })
+
+    // emit
+    var updatedTables = new Set(results)
+    for (let tableName of updatedTables) {
+      if (!tableName) continue
+      db[tableName].emit('index-updated', archive, archiveMeta.version)
+    }
+    db.emit('indexes-updated', archive, archiveMeta.version)
+  } finally {
+    release()
+  }
+}
+exports.indexArchive = indexArchive
+
+// delete all records generated from the archive
+async function unindexArchive (db, archive) {
+  var release = await lock(`index:${archive.url}`)
+  try {
+    // find any relevant records and delete them from the indexes
+    var recordMatches = await scanArchiveForRecords(db, archive)
+    await Promise.all(recordMatches.map(match => IDB.delete(match.table, match.recordUrl)))
+    await IDB.delete(db._indexMeta, archive.url)
+  } finally {
+    release()
+  }
+}
+exports.unindexArchive = unindexArchive
+
+// internal methods
+// =
+
+// look through the given history slice
+// match against the tables' path patterns
+// return back the *latest* change to each matching changed record
+async function scanArchiveHistoryForUpdates (db, archive, {start, end}) {
+  var history = await archive.history({start, end})
+  var updates = {}
+  history.forEach(update => {
+    if (anymatch(db._tablePathPatterns, update.path)) {
+      updates[update.path] = update
+    }
+  })
+  return updates
+}
+
+// look through the archive for any files that generate records
+async function scanArchiveForRecords (db, archive) {
+  var recordFiles = await Promise.all(db.tables.map(table => {
+    return table.listRecordFiles(archive)
+  }))
+  return flatten(recordFiles)
+}
+
+// iterate the updates and apply them to the indexes
+async function applyUpdates (db, archive, updates) {
+  return Promise.all(Object.keys(updates).map(async path => {
+    var update = updates[path]
+    if (update.type === 'del') {
+      return unindexFile(db, archive, update.path)
+    } else {
+      return readAndIndexFile(db, archive, update.path)
+    }
+  }))
+}
+
+// read the file, find the matching table, validate, then store
+async function readAndIndexFile (db, archive, filepath) {
+  const tables = db.tables
+  const fileUrl = archive.url + filepath
+  try {
+    // read file
+    var record = JSON.parse(await archive.readFile(filepath))
+
+    // index on the first matching table
+    for (var i = 0; i < tables.length; i++) {
+      let table = tables[i]
+      if (table.isRecordFile(filepath)) {
+        // validate if needed
+        if (table.schema.validator) {
+          record = table.schema.validator(record)
+        }
+        // add standard attributes
+        record._url = fileUrl
+        record._origin = archive.url
+        // save
+        await IDB.put(table, record)
+        return table.name
+      }
+    }
+  } catch (e) {
+    console.log('Failed to index', fileUrl, e)
+  }
+  return false
+}
+
+async function unindexFile (db, archive, filepath) {
+  const tables = db.tables
+  const fileUrl = archive.url + filepath
+  try {
+    // unindex on the first matching table
+    for (var i = 0; i < tables.length; i++) {
+      let table = tables[i]
+      if (table.isRecordFile(filepath)) {
+        await IDB.delete(table, fileUrl)
+        return table.name
+      }
+    }
+  } catch (e) {
+    console.log('Failed to unindex', fileUrl, e)
+  }
+  return false
+}
+
+function newDatArchive (url) {
+  console.log('dat archive in injest', DatArchive)
+  console.log('window', window)
+  console.log('dat class', window.DatArchive)
+  if (!DatArchive) {
+    return new window.DatArchive(url)
+  }
+  return new DatArchive(url)
+}
+
+},{"./idb-wrapper":56,"./util":61,"anymatch":63,"lodash.flatten":29}],58:[function(require,module,exports){
+const IDB = require('./idb-wrapper')
+const InjestWhereClause = require('./where-clause')
+const Indexer = require('./indexer')
+const {assert, debug} = require('./util')
+const {QueryError, ParameterError} = require('./errors')
+
+class InjestRecordSet {
+  constructor (table) {
+    this._table = table
+    this._filters = []
+    this._direction = 'next'
+    this._offset = 0
+    this._limit = false
+    this._until = null
+    this._distinct = false
+    this._where = null
+  }
+
+  // () => InjestRecordSet
+  clone () {
+    var clone = new InjestRecordSet()
+    for (var k in this) {
+      if (k.startsWith('_')) {
+        clone[k] = this[k]
+      }
+    }
+    return clone
+  }
+
+  // () => Promise<Number>
+  async count () {
+    var count = 0
+    await this.each(() => { count++ })
+    return count
+  }
+
+  // () => Promise<Number>
+  async delete () {
+    var deletes = []
+    await this.each(record => {
+      const archive = this._table.db._archives[record._origin]
+      debug('RecordSet.delete', record)
+      if (archive && archive.isWritable) {
+        const filepath = record._url.slice(record._origin.length)
+        deletes.push(
+          archive.unlink(filepath)
+            .then(() => Indexer.indexArchive(this._table.db, archive))
+        )
+      } else {
+        debug('RecordSet.delete not enacted:', !archive ? 'Archive not found' : 'Archive not writable')
+      }
+    })
+    await Promise.all(deletes)
+    return deletes.length
+  }
+
+  // () => InjestRecordSet
+  distinct () {
+    this._distinct = true
+    return this
+  }
+
+  // (Function) => Promise<Void>
+  async each (fn) {
+    return IDB.iterate(this, fn)
+  }
+
+  // (Function) => Promise<Void>
+  async eachKey (fn) {
+    assert(typeof fn === 'function', ParameterError, `First parameter of .eachKey() must be a function, got ${fn}`)
+    return this.each(cursor => { fn(cursor[this._table.schema.primaryKey || '_url']) })
+  }
+
+  // (Function) => Promise<Void>
+  async eachUrl (fn) {
+    assert(typeof fn === 'function', ParameterError, `First parameter of .eachUrl() must be a function, got ${fn}`)
+    return this.each(cursor => { fn(cursor._url) })
+  }
+
+  // (Function) => InjestRecordSet
+  filter (fn) {
+    assert(typeof fn === 'function', ParameterError, `First parameter of .filter() must be a function, got ${fn}`)
+    this._filters.push(fn)
+    return this
+  }
+
+  // () => Promise<Object>
+  async first () {
+    var arr = await this.limit(1).toArray()
+    return arr[0]
+  }
+
+  // () => Promise<Array<String>>
+  async keys () {
+    var keys = []
+    await this.eachKey(key => keys.push(key))
+    return keys
+  }
+
+  // () => Promise<Object>
+  async last () {
+    return this.reverse().first()
+  }
+
+  // (Number) => InjestRecordSet
+  limit (n) {
+    assert(typeof n === 'number', ParameterError, `The first parameter to .limit() must be a number, got ${n}`)
+    this._limit = n
+    return this
+  }
+
+  // (Number) => InjestRecordSet
+  offset (n) {
+    assert(typeof n === 'number', ParameterError, `The first parameter to .offset() must be a number, got ${n}`)
+    this._offset = n
+    return this
+  }
+
+  // (index) => InjestWhereClause
+  or (index) {
+    assert(this._where, QueryError, 'Can not have a .or() before a .where()')
+    // TODO
+  }
+
+  // (index) => InjestRecordset
+  orderBy (index) {
+    assert(typeof index === 'string', ParameterError, `The first parameter to .orderBy() must be a string, got ${index}`)
+    assert(!this._where, QueryError, 'Can not have an .orderBy() and a .where() - where() implicitly sets the orderBy() to its key')
+    this._where = new InjestWhereClause(this, index)
+    return this
+  }
+
+  // () => Promise<Array<String>>
+  async urls () {
+    var urls = []
+    await this.eachUrl(url => urls.push(url))
+    return urls
+  }
+
+  // () => InjestRecordSet
+  reverse () {
+    this._direction = this._direction === 'prev' ? 'next' : 'prev'
+    return this
+  }
+
+  // () => Promise<Array<Object>>
+  async toArray () {
+    var records = []
+    await this.each(record => records.push(record))
+    return records
+  }
+
+  // () => Promise<Array<String>>
+  async uniqueKeys () {
+    return Array.from(new Set(await this.keys()))
+  }
+
+  // (Function) => InjestRecordSet
+  until (fn) {
+    assert(typeof fn === 'function', ParameterError, `First parameter of .until() must be a function, got ${fn}`)
+    this._until = fn
+    return this
+  }
+
+  // (Object|Function) => Promise<Number>
+  async update (objOrFn) {
+    var fn
+    if (objOrFn && typeof objOrFn === 'object') {
+      // create a function which applies the object updates
+      const obj = objOrFn
+      fn = record => {
+        for (var k in obj) {
+          if (k === '_url' || k === '_origin') {
+            continue // skip special attrs
+          }
+          record[k] = obj[k]
+        }
+      }
+    } else if (typeof objOrFn === 'function') {
+      fn = objOrFn
+    } else {
+      throw new ParameterError(`First parameter of .update() must be a function or object, got ${objOrFn}`)
+    }
+
+    // apply updates
+    var updates = []
+    await this.each(record => {
+      const archive = this._table.db._archives[record._origin]
+      debug('RecordSet.update', record)
+      if (archive && archive.isWritable) {
+        // run update
+        fn(record)
+
+        // run validation
+        if (this._table.schema.validator) {
+          let _url = record._url
+          let _origin = record._origin
+          record = this._table.schema.validator(record)
+          record._url = _url
+          record._origin = _origin
+        }
+
+        // write to archvie
+        const filepath = record._url.slice(record._origin.length)
+        updates.push(
+          archive.writeFile(filepath, JSON.stringify(record))
+            .then(() => archive.commit())
+            .then(() => Indexer.indexArchive(this._table.db, archive))
+        )
+      } else {
+        debug('RecordSet.delete not enacted:', !archive ? 'Archive not found' : 'Archive not writable')
+      }
+    })
+    await Promise.all(updates)
+    return updates.length
+  }
+
+  // (index|query) => InjestWhereClause|InjestRecordSet
+  where (indexOrQuery) {
+    assert(!this._where, QueryError, 'Can not have two .where()s unless they are separated by a .or()')
+    this._where = new InjestWhereClause(this, indexOrQuery)
+    return this._where
+  }
+}
+
+module.exports = InjestRecordSet
+
+},{"./errors":55,"./idb-wrapper":56,"./indexer":57,"./util":61,"./where-clause":62}],59:[function(require,module,exports){
+const InjestTable = require('./table')
+const {diffArrays, assert, debug, veryDebug, deepClone} = require('./util')
+const {SchemaError} = require('./errors')
+
+exports.validateAndSanitize = function (schema) {
+  // validate and sanitize
+  assert(schema && typeof schema === 'object', SchemaError, `Must pass a schema object to db.schema(), got ${schema}`)
+  assert(schema.version > 0 && typeof schema.version === 'number', SchemaError, `The .version field is required and must be a number, got ${schema.version}`)
+  getTableNames(schema).forEach(tableName => {
+    var table = schema[tableName]
+    if (table === null) {
+      return // done, this is a deleted table
+    }
+    assert(!('singular' in table) || typeof table.singular === 'boolean', SchemaError, `The .singular field must be a bool, got ${table.singular}`)
+    assert(!table.index || typeof table.index === 'string' || isArrayOfStrings(table.index), SchemaError, `The .index field must be a string or an array of strings, got ${schema.index}`)
+    table.index = arrayify(table.index)
+  })
+}
+
+// returns {add:[], change: [], remove: [], tablesToRebuild: []}
+// - `add` is an array of [name, tableDef]s
+// - `change` is an array of [name, tableChanges]s
+// - `remove` is an array of names
+// - `tablesToRebuild` is an array of names- tables that will need to be cleared and re-ingested
+// - applied using `applyDiff()`, below
+exports.diff = function (oldSchema, newSchema) {
+  if (!oldSchema) {
+    debug(`Schemas.diff creating diff for first version`)
+  } else {
+    debug(`Schemas.diff diffing ${oldSchema.version} against ${newSchema.version}`)
+  }
+  veryDebug('diff old', oldSchema)
+  veryDebug('diff new', newSchema)
+  // compare tables in both schemas
+  // and produce a set of changes which will modify the db
+  // to match `newSchema`
+  var diff = {add: [], change: [], remove: [], tablesToRebuild: []}
+  var allTableNames = new Set(getTableNames(oldSchema).concat(getTableNames(newSchema)))
+  for (let tableName of allTableNames) {
+    var oldSchemaHasTable = oldSchema ? (tableName in oldSchema) : false
+    var newSchemaHasTable = (newSchema[tableName] !== null)
+    if (oldSchemaHasTable && !newSchemaHasTable) {
+      // remove
+      diff.remove.push(tableName)
+    } else if (!oldSchemaHasTable && newSchemaHasTable) {
+      // add
+      diff.add.push([tableName, newSchema[tableName]])
+      diff.tablesToRebuild.push(tableName)
+    } else if (newSchema[tableName]) {
+      // different?
+      var tableChanges = diffTables(oldSchema[tableName], newSchema[tableName])
+      veryDebug('Schemas.diff diffTables', tableName, tableChanges)
+      if (tableChanges.indexDiff) {
+        diff.change.push([tableName, tableChanges])
+      }
+      if (tableChanges.needsRebuild) {
+        diff.tablesToRebuild.push(tableName)
+      }
+    }
+  }
+  veryDebug('diff result, add', diff.add, 'change', diff.change, 'remove', diff.remove, 'rebuilds', diff.tablesToRebuild)
+  return diff
+}
+
+// takes the return value of .diff()
+// updates `db`
+exports.applyDiff = function (db, upgradeTransaction, diff) {
+  debug('Schemas.applyDiff')
+  veryDebug('diff', diff)
+  const tx = upgradeTransaction
+  diff.remove.forEach(tableName => {
+    // deleted tables
+    tx.db.deleteObjectStore(tableName)
+  })
+  diff.add.forEach(([tableName, tableDef]) => {
+    // added tables
+    const tableStore = tx.db.createObjectStore(tableName, {keyPath: '_url'})
+    addIndex(tableStore, '_origin')
+    tableDef.index.forEach(index => addIndex(tableStore, index))
+  })
+  diff.change.forEach(([tableName, tableChanges]) => {
+    // updated tables
+    const tableStore = tx.objectStore(tableName)
+    tableChanges.indexDiff.remove.forEach(index => removeIndex(tableStore, index))
+    tableChanges.indexDiff.add.forEach(index => addIndex(tableStore, index))
+  })
+}
+
+// add builtin table defs to the db object
+exports.addBuiltinTableSchemas = function (db) {
+  // metadata on each indexed record
+  db._schemas[0]._indexMeta = {index: []}
+}
+
+// add table defs to the db object
+exports.addTables = function (db) {
+  const tableNames = getActiveTableNames(db)
+  debug('Schemas.addTables', tableNames)
+  db._activeTableNames = tableNames
+  tableNames.forEach(tableName => {
+    db[tableName] = new InjestTable(db, tableName, db._activeSchema[tableName])
+    db._tablePathPatterns.push(db[tableName]._pathPattern)
+  })
+}
+
+// remove table defs from the db object
+exports.removeTables = function (db) {
+  const tableNames = getActiveTableNames(db)
+  debug('Schemas.removeTables', tableNames)
+  tableNames.forEach(tableName => {
+    delete db[tableName]
+  })
+}
+
+// helper to compute the current schema
+exports.merge = function (currentSchema, newSchema) {
+  var result = currentSchema ? deepClone(currentSchema) : {}
+  // apply updates
+  for (let k in newSchema) {
+    if (newSchema[k] === null) {
+      delete result[k]
+    } else if (typeof newSchema[k] === 'object' && !Array.isArray(newSchema[k])) {
+      result[k] = exports.merge(currentSchema[k], newSchema[k])
+    } else {
+      result[k] = newSchema[k]
+    }
+  }
+  return result
+}
+
+// helpers
+// =
+
+function diffTables (oldTableDef, newTableDef) {
+  const indexDiff = newTableDef.index ? diffArrays(oldTableDef.index, newTableDef.index) : false
+  return {
+    indexDiff,
+    needsRebuild: !!indexDiff
+      || (oldTableDef.primaryKey !== newTableDef.primaryKey)
+      || (oldTableDef.singular !== newTableDef.singular)
+  }
+}
+
+function addIndex (tableStore, index) {
+  if (!index) {
+    return
+  }
+  const multiEntry = index.startsWith('*')
+  if (multiEntry) index = index.slice(1)
+  var keyPath = index.split('+')
+  if (keyPath.length === 1) {
+    // simple index
+    keyPath = keyPath[0]
+  }
+  tableStore.createIndex(index, keyPath, {multiEntry})
+}
+
+function removeIndex (tableStore, index) {
+  tableStore.deleteIndex(index)
+}
+
+function getTableNames (schema, fn) {
+  if (!schema) {
+    return []
+  }
+  // all keys except 'version'
+  return Object.keys(schema).filter(k => k !== 'version')
+}
+
+function getActiveTableNames (db) {
+  var tableNames = new Set()
+  db._schemas.forEach(schema => {
+    getTableNames(schema).forEach(tableName => {
+      if (schema[tableName] === null) {
+        tableNames.delete(tableName)
+      } else {
+        tableNames.add(tableName)
+      }
+    })
+  })
+  return Array.from(tableNames)
+}
+
+function arrayify (v) {
+  return Array.isArray(v) ? v : [v]
+}
+
+function isArrayOfStrings (v) {
+  return Array.isArray(v) && v.reduce((acc, v) => acc && typeof v === 'string', true)
+}
+
+},{"./errors":55,"./table":60,"./util":61}],60:[function(require,module,exports){
+const anymatch = require('anymatch')
+const EventEmitter = require('events')
+const Indexer = require('./indexer')
+const InjestRecordSet = require('./record-set')
+const {assert, debug, veryDebug} = require('./util')
+const {ParameterError, QueryError} = require('./errors')
+
+// exported api
+// =
+
+class InjestTable extends EventEmitter {
+  constructor (db, name, schema) {
+    super()
+    this.db = db
+    this.name = name
+    this.schema = schema
+    veryDebug('InjestTable', this.name, this.schema)
+    this._pathPattern = schema.singular ? `/${name}.json` : `/${name}${'/*'}.json`
+    // ^ HACKERY: the ${'/*'} is to fool sublime's syntax highlighting -prf
+  }
+
+  // queries
+  // =
+
+  // () => InjestRecordset
+  getRecordSet () {
+    return new InjestRecordSet(this)
+  }
+
+  // (DatArchive, record) => Promise<url>
+  async add (archive, record) {
+    assert(archive && (typeof archive === 'string' || typeof archive.url === 'string'), ParameterError, 'The first parameter of .add() must be an archive or url')
+    assert(record && typeof record === 'object', 'The second parameter of .add() must be a record object')
+
+    // run validation
+    if (this.schema.validator) {
+      record = this.schema.validator(record)
+    }
+
+    // lookup the archive
+    archive = this.db._archives[typeof archive === 'string' ? archive : archive.url]
+    if (!archive) {
+      throw new QueryError('Unable to add(): the given archive is not part of the index')
+    }
+    if (!archive.isWritable) {
+      throw new QueryError('Unable to add(): the given archive is not owned by this user')
+    }
+
+    // build the path
+    var filepath
+    if (this.schema.singular) {
+      filepath = `/${this.name}.json`
+    } else {
+      let key = record[this.schema.primaryKey]
+      if (!key) throw new QueryError(`Unable to add(): the given archive is missing the primary key attribute, ${this.schema.primaryKey}`)
+      filepath = `/${this.name}/${key}.json`
+    }
+    debug('Table.add', filepath)
+    veryDebug('Table.add archive', archive.url)
+    veryDebug('Table.add record', record)
+    await archive.writeFile(filepath, JSON.stringify(record))
+    await archive.commit()
+    await Indexer.indexArchive(this.db, archive)
+    return archive.url + filepath
+  }
+
+  // () => Promise<Number>
+  async count () {
+    return this.getRecordSet().count()
+  }
+
+  // (url|DatArchive, key?) => Promise<url>
+  async delete (urlOrArchive, key) {
+    if (typeof urlOrArchive === 'string') {
+      return this.where('_url').equals(urlOrArchive).delete()
+    }
+    const filepath = (this.schema.singular)
+      ? `/${this.name}.json`
+      : `/${this.name}/${key}.json`
+    const url = urlOrArchive.url + filepath
+    return this.where('_url').equals(url).delete()
+  }
+
+  // (Function) => Promise<Void>
+  async each (fn) {
+    return this.getRecordSet().each(fn)
+  }
+
+  // (Function) => InjestRecordset
+  filter (fn) {
+    return this.getRecordSet().filter(fn)
+  }
+
+  // (url) => Promise<Object>
+  // (archive) => Promise<Object>
+  // (archive, key) => Promise<Object>
+  // (index, value) => Promise<Object>
+  async get (...args) {
+    if (args.length === 2) {
+      if (typeof args[0] === 'string' && args[0].indexOf('://') === -1) {
+        return getByKeyValue(this, ...args)
+      }
+      return getMultiByKey(this, ...args)
+    }
+    if (typeof args[0] === 'string' && args[0].endsWith('.json')) {
+      return getByRecordUrl(this, ...args)
+    }
+    return getSingle(this, args[0])
+  }
+
+  // (Number) => InjestRecordset
+  limit (n) {
+    return this.getRecordSet().limit(n)
+  }
+
+  // (Number) => InjestRecordset
+  offset (n) {
+    return this.getRecordSet().offset(n)
+  }
+
+  // (index) => InjestRecordset
+  orderBy (index) {
+    return this.getRecordSet().orderBy(index)
+  }
+
+  // () => InjestRecordset
+  reverse () {
+    return this.getRecordSet().reverse()
+  }
+
+  // () => Promise<Array>
+  async toArray () {
+    return this.getRecordSet().toArray()
+  }
+
+  // (record) => Promise<Number>
+  // (url, updates) => Promise<Number>
+  // (archive, updates) => Promise<Number>
+  // (archive, key, updates) => Promise<Number>
+  async update (...args) {
+    if (args.length === 3) {
+      return updateByKey(this, ...args)
+    }
+    if (args.length === 2) {
+      if (this.schema.singular && typeof args[0] === 'object') {
+        return updateSingular(this, ...args)
+      }
+      return updateByUrl(this, ...args)
+    }
+    return updateRecord(this, ...args)
+  }
+
+  // (url, updates) => Promise<Void | url>
+  // (archive, updates) => Promise<Void | url>
+  async upsert (archive, record) {
+    assert(archive && (typeof archive === 'string' || typeof archive.url === 'string'), ParameterError, 'The first parameter of .upsert() must be an archive or url')
+    assert(record && typeof record === 'object', 'The second parameter of .upsert() must be a record object')
+    var changes = await this.update(archive, record)
+    if (changes === 0) {
+      return this.add(archive, record)
+    }
+    return changes
+  }
+
+  // (index|query) => InjestWhereClause|InjestRecordset
+  where (indexOrQuery) {
+    return this.getRecordSet().where(indexOrQuery)
+  }
+
+  // record helpers
+  // =
+
+  // (String) => Boolean
+  isRecordFile (filepath) {
+    return anymatch(this._pathPattern, filepath)
+  }
+
+  // (DatArchive) => Array<Object>
+  async listRecordFiles (archive) {
+    try {
+      if (this.schema.singular) {
+        // check if the record exists on this archive
+        let filepath = `/${this.name}.json`
+        await archive.stat(filepath)
+        return [{recordUrl: archive.url + filepath, table: this}]
+      } else {
+        // scan for matching records
+        let records = await archive.readdir(this.name)
+        return records.filter(name => name.endsWith('.json')).map(name => {
+          return {
+            recordUrl: archive.url + '/' + this.name + '/' + name,
+            table: this
+          }
+        })
+      }
+    } catch (e) {
+      return []
+    }
+  }
+}
+
+function getByKeyValue (table, key, value) {
+  debug('getByKeyValue')
+  veryDebug('getByKeyValue table', table)
+  veryDebug('getByKeyValue key', key)
+  veryDebug('getByKeyValue value', value)
+  return table.where(key).equals(value).first()
+}
+
+function getMultiByKey (table, archive, key) {
+  debug('getMultiByKey')
+  veryDebug('getMultiByKey table', table)
+  veryDebug('getMultiByKey archive', archive)
+  veryDebug('getMultiByKey key', key)
+  var url = typeof archive === 'string' ? archive : archive.url
+  return table.where('_url').equals(`${url}/${table.name}/${key}.json`).first()
+}
+
+function getSingle (table, archive) {
+  debug('getSingle')
+  veryDebug('getSingle table', table)
+  veryDebug('getSingle archive', archive)
+  var url = typeof archive === 'string' ? archive : archive.url
+  return table.where('_url').equals(`${url}/${table.name}.json`).first()
+}
+
+function getByRecordUrl (table, url) {
+  debug('getByRecordUrl')
+  veryDebug('getByRecordUrl table', table)
+  veryDebug('getByRecordUrl url', url)
+  return table.where('_url').equals(url).first()
+}
+
+function updateByKey (table, archive, key, updates) {
+  debug('updateByKey')
+  veryDebug('updateByKey table', table)
+  veryDebug('updateByKey archive', archive.url)
+  veryDebug('updateByKey key', key)
+  veryDebug('updateByKey updates', updates)
+  assert(archive && typeof archive.url === 'string', ParameterError, 'Invalid parameters given to update()')
+  assert(typeof key === 'string', ParameterError, 'Invalid parameters given to update()')
+  assert(updates && typeof updates === 'object', ParameterError, 'Invalid parameters given to update()')
+  const url = archive.url + `/${table.name}/${key}.json`
+  return table.where(table.schema.primaryKey).equals(key).update(updates)
+}
+
+function updateSingular (table, archive, updates) {
+  debug('updateSingular')
+  veryDebug('updateSingular table', table)
+  veryDebug('updateSingular archive', archive.url)
+  veryDebug('updateSingular updates', updates)
+  assert(archive && typeof archive.url === 'string', ParameterError, 'Invalid parameters given to update()')
+  assert(updates && typeof updates === 'object', ParameterError, 'Invalid parameters given to update()')
+  const url = archive.url + `/${table.name}.json`
+  return table.where('_url').equals(url).update(updates)
+}
+
+function updateByUrl (table, url, updates) {
+  debug('updateByUrl')
+  veryDebug('updateByUrl table', table)
+  veryDebug('updateByUrl url', url)
+  veryDebug('updateByUrl updates', updates)
+  url = url && url.url ? url.url : url
+  assert(typeof url === 'string', ParameterError, 'Invalid parameters given to update()')
+  assert(updates && typeof updates === 'object', ParameterError, 'Invalid parameters given to update()')
+  if (url.endsWith('.json') === false) {
+    // this is probably the url of an archive - add the path
+    url += (url.endsWith('/') ? '' : '/') + table.name + '/' + updates[table.schema.primaryKey] + '.json'
+  }
+  return table.where('_url').equals(url).update(updates)
+}
+
+function updateRecord (table, record) {
+  debug('updateRecord')
+  veryDebug('updateRecord table', table)
+  veryDebug('updateRecord record', record)
+  assert(record && typeof record._url === 'string', ParameterError, 'Invalid parameters given to update()')
+  return table.where('_url').equals(record._url).update(record)
+}
+
+module.exports = InjestTable
+
+},{"./errors":55,"./indexer":57,"./record-set":58,"./util":61,"anymatch":63,"events":69}],61:[function(require,module,exports){
+/* globals window process console */
+const AwaitLock = require('await-lock')
+
+// read log level from the environment
+const LOG_LEVEL = +window.localStorage.LOG_LEVEL || 0
+const LOG_LEVEL_DEBUG = 1
+const LOG_LEVEL_VERYDEBUG = 2
+
+// debug logging
+function noop () {}
+exports.debug = (LOG_LEVEL >= LOG_LEVEL_DEBUG) ? console.log : noop
+exports.veryDebug = (LOG_LEVEL >= LOG_LEVEL_VERYDEBUG) ? console.log : noop
+
+// assert helper
+exports.assert = function (cond, ErrorConstructor = Error, msg) {
+  if (!cond) {
+    throw new ErrorConstructor(msg)
+  }
+}
+
+// helper to handle events within a promise
+// - pass the normal handler
+// - and pass the reject method from the parent promise
+exports.eventHandler = function (handler, reject) {
+  return async e => {
+    try {
+      await handler(e)
+    } catch (e) {
+      reject(e)
+    }
+  }
+}
+
+// helper to handle events within a promise
+// - if the event fires, rejects
+exports.errorHandler = function (reject) {
+  return e => {
+    e.preventDefault()
+    reject(e.target.error)
+  }
+}
+
+// helper to rebroadcast an event
+exports.eventRebroadcaster = function (emitter, name) {
+  return e => {
+    emitter.emit(name, e)
+  }
+}
+
+// provide a diff of 2 arrays
+// eg diffArrays([1,2], [2,3]) => {add: [3], remove: [1]}
+// if no difference, returns false
+exports.diffArrays = function (left, right) {
+  var diff = {add: [], remove: []}
+
+  // iterate all values in the arrays
+  var union = new Set(left.concat(right))
+  for (let index of union) {
+    // push to add/remove based on left/right membership
+    var leftHas = left.indexOf(index) !== -1
+    var rightHas = right.indexOf(index) !== -1
+    if (leftHas && !rightHas) {
+      diff.remove.push(index)
+    } else if (!leftHas && rightHas) {
+      diff.add.push(index)
+    }
+  }
+
+  if (diff.add.length === 0 && diff.remove.add === 0) {
+    return false
+  }
+  return diff
+}
+
+exports.deepClone = function (v) {
+  return JSON.parse(JSON.stringify(v))
+}
+
+// wraps await-lock in a simpler interface, with many possible locks
+// usage:
+/*
+async function foo () {
+  var release = await lock('bar')
+  // ...
+  release()
+}
+*/
+var locks = {}
+exports.lock = async function (key) {
+  if (!(key in locks)) locks[key] = new AwaitLock()
+
+  var lock = locks[key]
+  await lock.acquireAsync()
+  return lock.release.bind(lock)
+}
+
+},{"await-lock":5}],62:[function(require,module,exports){
+const {assert} = require('./util')
+const {ParameterError, QueryError} = require('./errors')
+const MAX_STRING = String.fromCharCode(65535)
+
+// exported api
+// =
+
+class InjestWhereClause {
+  constructor (recordSet, index) {
+    this._recordSet = recordSet
+    this._index = index
+    this._only = null
+    this._lowerBound = null
+    this._lowerBoundInclusive = false
+    this._upperBound = null
+    this._upperBoundInclusive = false
+  }
+
+  // (lowerBound) => InjestRecordset
+  above (lowerBound) {
+    this._lowerBound = lowerBound
+    this._lowerBoundInclusive = false
+    return this._recordSet
+  }
+
+  // (lowerBound) => InjestRecordset
+  aboveOrEqual (lowerBound) {
+    this._lowerBound = lowerBound
+    this._lowerBoundInclusive = true
+    return this._recordSet
+  }
+
+  // (Array|...args) => InjestRecordset
+  anyOf (...args) {
+    // do a between() of the min and max values
+    // then filter down to matches
+    args.sort()
+    var [lo, hi] = [args[0], args[args.length - 1]]
+    try {
+      args = toArrayOfStrings(args)
+    } catch (e) {
+      throw new QueryError('The parameters to .anyOf() must be strings or numbers')
+    }
+    return this.between(lo, hi, {includeLower: true, includeUpper: true})
+      .filter(record => {
+        return testValues(record[this._index], v => {
+          v = (v || '').toString()
+          return args.indexOf(v) !== -1
+        })
+      })
+  }
+
+  // (Array|...args) => InjestRecordset
+  anyOfIgnoreCase (...args) {
+    // just filter down to matches
+    try {
+      args = toArrayOfStrings(args, {toLowerCase: true})
+    } catch (e) {
+      throw new QueryError('The parameters to .anyOfIgnoreCase() must be strings or numbers')
+    }
+    return this._recordSet.filter(record => {
+      return testValues(record[this._index], v => {
+        v = (v || '').toString().toLowerCase()
+        return args.indexOf(v) !== -1
+      })
+    })
+  }
+
+  // (upperBound) => InjestRecordset
+  below (upperBound) {
+    this._upperBound = upperBound
+    this._upperBoundInclusive = false
+    return this._recordSet
+  }
+
+  // (upperBound) => InjestRecordset
+  belowOrEqual (upperBound) {
+    this._upperBound = upperBound
+    this._upperBoundInclusive = true
+    return this._recordSet
+  }
+
+  // (lowerBound, upperBound, opts) => InjestRecordset
+  between (lowerBound, upperBound, {includeLower, includeUpper} = {}) {
+    this._lowerBound = lowerBound
+    this._upperBound = upperBound
+    this._lowerBoundInclusive = !!includeLower
+    this._upperBoundInclusive = !!includeUpper
+    return this._recordSet
+  }
+
+  // (value) => InjestRecordset
+  equals (value) {
+    this._only = value
+    return this._recordSet
+  }
+
+  // (value) => InjestRecordset
+  equalsIgnoreCase (value) {
+    // just filter down to matches
+    assert(typeof value !== 'object', QueryError, 'The parameter to .equalsIgnoreCase() must be a string or number')
+    value = (value || '').toString().toLowerCase()
+    return this._recordSet.filter(record => {
+      return testValues(record[this._index], v => {
+        var v = (v || '').toString().toLowerCase()
+        return v === value
+      })
+    })
+  }
+
+  // (Array|...args) => InjestRecordset
+  noneOf (...args) {
+    // just filter down to matches
+    try {
+      args = toArrayOfStrings(args)
+    } catch (e) {
+      throw new QueryError('The parameters to .noneOf() must be strings or numbers')
+    }
+    return this._recordSet.filter(record => {
+      return testValues(record[this._index], v => {
+        var v = (v || '').toString()
+        return args.indexOf(v) === -1
+      })
+    })
+  }
+
+  // (value) => InjestRecordset
+  notEqual (value) {
+    // just filter down to matches
+    return this._recordSet.filter(record => {
+      return testValues(record[this._index], v => {
+        return v !== value
+      })
+    })
+  }
+
+  // (value) => InjestRecordset
+  startsWith (value) {
+    assert(typeof value === 'string', ParameterError, `First parameter or .startsWith() must be a string, got ${value}`)
+    return this.between(value, value + MAX_STRING)
+  }
+
+  // (Array|...args) => InjestRecordset
+  startsWithAnyOf (...args) {
+    // just filter down to matches
+    try {
+      args = toArrayOfStrings(args)
+    } catch (e) {
+      throw new QueryError('The parameters to .startsWithAnyOf() must be strings or numbers')
+    }
+    return this._recordSet.filter(record => {
+      return testValues(record[this._index], v => {
+        v = (v || '').toString()
+        for (let i = 0; i < args.length; i++) {
+          if (v.startsWith(args[i])) {
+            return true
+          }
+        }
+        return false
+      })
+    })
+  }
+
+  // (Array|...args) => InjestRecordset
+  startsWithAnyOfIgnoreCase (...args) {
+    // just filter down to matches
+    try {
+      args = toArrayOfStrings(args, {toLowerCase: true})
+    } catch (e) {
+      throw new QueryError('The parameters to .startsWithAnyOfIgnoreCase() must be strings or numbers')
+    }
+    return this._recordSet.filter(record => {
+      return testValues(record[this._index], v => {
+        v = (v || '').toString().toLowerCase()
+        for (let i = 0; i < args.length; i++) {
+          if (v.startsWith(args[i])) {
+            return true
+          }
+        }
+        return false
+      })
+    })
+  }
+
+  // (value) => InjestRecordset
+  startsWithIgnoreCase (value) {
+    assert(typeof value === 'string', ParameterError, `First parameter or .startsWith() must be a string, got ${value}`)
+    value = value.toLowerCase()
+    // just filter down to matches
+    return this._recordSet.filter(record => {
+      return testValues(record[this._index], v => {
+        return (v || '').toString().toLowerCase().startsWith(value)
+      })
+    })
+  }
+}
+
+module.exports = InjestWhereClause
+
+// internal methods
+// =
+
+function testValues (v, fn) {
+  if (Array.isArray(v)) {
+    return v.reduce((agg, v) => agg || fn(v), false)
+  }
+  return fn(v)
+}
+
+function toArrayOfStrings (arr, {toLowerCase} = {}) {
+  return arr.map(v => {
+    if (typeof v === 'object') {
+      throw new ParameterError()
+    }
+    v = v ? v.toString() : ''
+    if (toLowerCase) v = v.toLowerCase()
+    return v
+  })
+}
+
+},{"./errors":55,"./util":61}],63:[function(require,module,exports){
+'use strict';
+
+var micromatch = require('micromatch');
+var normalize = require('normalize-path');
+var path = require('path'); // required for tests.
+var arrify = function(a) { return a == null ? [] : (Array.isArray(a) ? a : [a]); };
+
+var anymatch = function(criteria, value, returnIndex, startIndex, endIndex) {
+  criteria = arrify(criteria);
+  value = arrify(value);
+  if (arguments.length === 1) {
+    return anymatch.bind(null, criteria.map(function(criterion) {
+      return typeof criterion === 'string' && criterion[0] !== '!' ?
+        micromatch.matcher(criterion) : criterion;
+    }));
+  }
+  startIndex = startIndex || 0;
+  var string = value[0];
+  var altString, altValue;
+  var matched = false;
+  var matchIndex = -1;
+  function testCriteria(criterion, index) {
+    var result;
+    switch (Object.prototype.toString.call(criterion)) {
+    case '[object String]':
+      result = string === criterion || altString && altString === criterion;
+      result = result || micromatch.isMatch(string, criterion);
+      break;
+    case '[object RegExp]':
+      result = criterion.test(string) || altString && criterion.test(altString);
+      break;
+    case '[object Function]':
+      result = criterion.apply(null, value);
+      result = result || altValue && criterion.apply(null, altValue);
+      break;
+    default:
+      result = false;
+    }
+    if (result) {
+      matchIndex = index + startIndex;
+    }
+    return result;
+  }
+  var crit = criteria;
+  var negGlobs = crit.reduce(function(arr, criterion, index) {
+    if (typeof criterion === 'string' && criterion[0] === '!') {
+      if (crit === criteria) {
+        // make a copy before modifying
+        crit = crit.slice();
+      }
+      crit[index] = null;
+      arr.push(criterion.substr(1));
+    }
+    return arr;
+  }, []);
+  if (!negGlobs.length || !micromatch.any(string, negGlobs)) {
+    if (path.sep === '\\' && typeof string === 'string') {
+      altString = normalize(string);
+      altString = altString === string ? null : altString;
+      if (altString) altValue = [altString].concat(value.slice(1));
+    }
+    matched = crit.slice(startIndex, endIndex).some(testCriteria);
+  }
+  return returnIndex === true ? matchIndex : matched;
+};
+
+module.exports = anymatch;
+
+},{"micromatch":30,"normalize-path":35,"path":74}],64:[function(require,module,exports){
+(function (global){
+'use strict';
+
+// compare and isBuffer taken from https://github.com/feross/buffer/blob/680e9e5e488f22aac27599a57dc844a6315928dd/index.js
+// original notice:
+
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @license  MIT
+ */
+function compare(a, b) {
+  if (a === b) {
+    return 0;
+  }
+
+  var x = a.length;
+  var y = b.length;
+
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (a[i] !== b[i]) {
+      x = a[i];
+      y = b[i];
+      break;
+    }
+  }
+
+  if (x < y) {
+    return -1;
+  }
+  if (y < x) {
+    return 1;
+  }
+  return 0;
+}
+function isBuffer(b) {
+  if (global.Buffer && typeof global.Buffer.isBuffer === 'function') {
+    return global.Buffer.isBuffer(b);
+  }
+  return !!(b != null && b._isBuffer);
+}
+
+// based on node assert, original notice:
+
+// http://wiki.commonjs.org/wiki/Unit_Testing/1.0
+//
+// THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
+//
+// Originally from narwhal.js (http://narwhaljs.org)
+// Copyright (c) 2009 Thomas Robinson <280north.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the 'Software'), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var util = require('util/');
+var hasOwn = Object.prototype.hasOwnProperty;
+var pSlice = Array.prototype.slice;
+var functionsHaveNames = (function () {
+  return function foo() {}.name === 'foo';
+}());
+function pToString (obj) {
+  return Object.prototype.toString.call(obj);
+}
+function isView(arrbuf) {
+  if (isBuffer(arrbuf)) {
+    return false;
+  }
+  if (typeof global.ArrayBuffer !== 'function') {
+    return false;
+  }
+  if (typeof ArrayBuffer.isView === 'function') {
+    return ArrayBuffer.isView(arrbuf);
+  }
+  if (!arrbuf) {
+    return false;
+  }
+  if (arrbuf instanceof DataView) {
+    return true;
+  }
+  if (arrbuf.buffer && arrbuf.buffer instanceof ArrayBuffer) {
+    return true;
+  }
+  return false;
+}
+// 1. The assert module provides functions that throw
+// AssertionError's when particular conditions are not met. The
+// assert module must conform to the following interface.
+
+var assert = module.exports = ok;
+
+// 2. The AssertionError is defined in assert.
+// new assert.AssertionError({ message: message,
+//                             actual: actual,
+//                             expected: expected })
+
+var regex = /\s*function\s+([^\(\s]*)\s*/;
+// based on https://github.com/ljharb/function.prototype.name/blob/adeeeec8bfcc6068b187d7d9fb3d5bb1d3a30899/implementation.js
+function getName(func) {
+  if (!util.isFunction(func)) {
+    return;
+  }
+  if (functionsHaveNames) {
+    return func.name;
+  }
+  var str = func.toString();
+  var match = str.match(regex);
+  return match && match[1];
+}
+assert.AssertionError = function AssertionError(options) {
+  this.name = 'AssertionError';
+  this.actual = options.actual;
+  this.expected = options.expected;
+  this.operator = options.operator;
+  if (options.message) {
+    this.message = options.message;
+    this.generatedMessage = false;
+  } else {
+    this.message = getMessage(this);
+    this.generatedMessage = true;
+  }
+  var stackStartFunction = options.stackStartFunction || fail;
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, stackStartFunction);
+  } else {
+    // non v8 browsers so we can have a stacktrace
+    var err = new Error();
+    if (err.stack) {
+      var out = err.stack;
+
+      // try to strip useless frames
+      var fn_name = getName(stackStartFunction);
+      var idx = out.indexOf('\n' + fn_name);
+      if (idx >= 0) {
+        // once we have located the function frame
+        // we need to strip out everything before it (and its line)
+        var next_line = out.indexOf('\n', idx + 1);
+        out = out.substring(next_line + 1);
+      }
+
+      this.stack = out;
+    }
+  }
+};
+
+// assert.AssertionError instanceof Error
+util.inherits(assert.AssertionError, Error);
+
+function truncate(s, n) {
+  if (typeof s === 'string') {
+    return s.length < n ? s : s.slice(0, n);
+  } else {
+    return s;
+  }
+}
+function inspect(something) {
+  if (functionsHaveNames || !util.isFunction(something)) {
+    return util.inspect(something);
+  }
+  var rawname = getName(something);
+  var name = rawname ? ': ' + rawname : '';
+  return '[Function' +  name + ']';
+}
+function getMessage(self) {
+  return truncate(inspect(self.actual), 128) + ' ' +
+         self.operator + ' ' +
+         truncate(inspect(self.expected), 128);
+}
+
+// At present only the three keys mentioned above are used and
+// understood by the spec. Implementations or sub modules can pass
+// other keys to the AssertionError's constructor - they will be
+// ignored.
+
+// 3. All of the following functions must throw an AssertionError
+// when a corresponding condition is not met, with a message that
+// may be undefined if not provided.  All assertion methods provide
+// both the actual and expected values to the assertion error for
+// display purposes.
+
+function fail(actual, expected, message, operator, stackStartFunction) {
+  throw new assert.AssertionError({
+    message: message,
+    actual: actual,
+    expected: expected,
+    operator: operator,
+    stackStartFunction: stackStartFunction
+  });
+}
+
+// EXTENSION! allows for well behaved errors defined elsewhere.
+assert.fail = fail;
+
+// 4. Pure assertion tests whether a value is truthy, as determined
+// by !!guard.
+// assert.ok(guard, message_opt);
+// This statement is equivalent to assert.equal(true, !!guard,
+// message_opt);. To test strictly for the value true, use
+// assert.strictEqual(true, guard, message_opt);.
+
+function ok(value, message) {
+  if (!value) fail(value, true, message, '==', assert.ok);
+}
+assert.ok = ok;
+
+// 5. The equality assertion tests shallow, coercive equality with
+// ==.
+// assert.equal(actual, expected, message_opt);
+
+assert.equal = function equal(actual, expected, message) {
+  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
+};
+
+// 6. The non-equality assertion tests for whether two objects are not equal
+// with != assert.notEqual(actual, expected, message_opt);
+
+assert.notEqual = function notEqual(actual, expected, message) {
+  if (actual == expected) {
+    fail(actual, expected, message, '!=', assert.notEqual);
+  }
+};
+
+// 7. The equivalence assertion tests a deep equality relation.
+// assert.deepEqual(actual, expected, message_opt);
+
+assert.deepEqual = function deepEqual(actual, expected, message) {
+  if (!_deepEqual(actual, expected, false)) {
+    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
+  }
+};
+
+assert.deepStrictEqual = function deepStrictEqual(actual, expected, message) {
+  if (!_deepEqual(actual, expected, true)) {
+    fail(actual, expected, message, 'deepStrictEqual', assert.deepStrictEqual);
+  }
+};
+
+function _deepEqual(actual, expected, strict, memos) {
+  // 7.1. All identical values are equivalent, as determined by ===.
+  if (actual === expected) {
+    return true;
+  } else if (isBuffer(actual) && isBuffer(expected)) {
+    return compare(actual, expected) === 0;
+
+  // 7.2. If the expected value is a Date object, the actual value is
+  // equivalent if it is also a Date object that refers to the same time.
+  } else if (util.isDate(actual) && util.isDate(expected)) {
+    return actual.getTime() === expected.getTime();
+
+  // 7.3 If the expected value is a RegExp object, the actual value is
+  // equivalent if it is also a RegExp object with the same source and
+  // properties (`global`, `multiline`, `lastIndex`, `ignoreCase`).
+  } else if (util.isRegExp(actual) && util.isRegExp(expected)) {
+    return actual.source === expected.source &&
+           actual.global === expected.global &&
+           actual.multiline === expected.multiline &&
+           actual.lastIndex === expected.lastIndex &&
+           actual.ignoreCase === expected.ignoreCase;
+
+  // 7.4. Other pairs that do not both pass typeof value == 'object',
+  // equivalence is determined by ==.
+  } else if ((actual === null || typeof actual !== 'object') &&
+             (expected === null || typeof expected !== 'object')) {
+    return strict ? actual === expected : actual == expected;
+
+  // If both values are instances of typed arrays, wrap their underlying
+  // ArrayBuffers in a Buffer each to increase performance
+  // This optimization requires the arrays to have the same type as checked by
+  // Object.prototype.toString (aka pToString). Never perform binary
+  // comparisons for Float*Arrays, though, since e.g. +0 === -0 but their
+  // bit patterns are not identical.
+  } else if (isView(actual) && isView(expected) &&
+             pToString(actual) === pToString(expected) &&
+             !(actual instanceof Float32Array ||
+               actual instanceof Float64Array)) {
+    return compare(new Uint8Array(actual.buffer),
+                   new Uint8Array(expected.buffer)) === 0;
+
+  // 7.5 For all other Object pairs, including Array objects, equivalence is
+  // determined by having the same number of owned properties (as verified
+  // with Object.prototype.hasOwnProperty.call), the same set of keys
+  // (although not necessarily the same order), equivalent values for every
+  // corresponding key, and an identical 'prototype' property. Note: this
+  // accounts for both named and indexed properties on Arrays.
+  } else if (isBuffer(actual) !== isBuffer(expected)) {
+    return false;
+  } else {
+    memos = memos || {actual: [], expected: []};
+
+    var actualIndex = memos.actual.indexOf(actual);
+    if (actualIndex !== -1) {
+      if (actualIndex === memos.expected.indexOf(expected)) {
+        return true;
+      }
+    }
+
+    memos.actual.push(actual);
+    memos.expected.push(expected);
+
+    return objEquiv(actual, expected, strict, memos);
+  }
+}
+
+function isArguments(object) {
+  return Object.prototype.toString.call(object) == '[object Arguments]';
+}
+
+function objEquiv(a, b, strict, actualVisitedObjects) {
+  if (a === null || a === undefined || b === null || b === undefined)
+    return false;
+  // if one is a primitive, the other must be same
+  if (util.isPrimitive(a) || util.isPrimitive(b))
+    return a === b;
+  if (strict && Object.getPrototypeOf(a) !== Object.getPrototypeOf(b))
+    return false;
+  var aIsArgs = isArguments(a);
+  var bIsArgs = isArguments(b);
+  if ((aIsArgs && !bIsArgs) || (!aIsArgs && bIsArgs))
+    return false;
+  if (aIsArgs) {
+    a = pSlice.call(a);
+    b = pSlice.call(b);
+    return _deepEqual(a, b, strict);
+  }
+  var ka = objectKeys(a);
+  var kb = objectKeys(b);
+  var key, i;
+  // having the same number of owned properties (keys incorporates
+  // hasOwnProperty)
+  if (ka.length !== kb.length)
+    return false;
+  //the same set of keys (although not necessarily the same order),
+  ka.sort();
+  kb.sort();
+  //~~~cheap key test
+  for (i = ka.length - 1; i >= 0; i--) {
+    if (ka[i] !== kb[i])
+      return false;
+  }
+  //equivalent values for every corresponding key, and
+  //~~~possibly expensive deep test
+  for (i = ka.length - 1; i >= 0; i--) {
+    key = ka[i];
+    if (!_deepEqual(a[key], b[key], strict, actualVisitedObjects))
+      return false;
+  }
+  return true;
+}
+
+// 8. The non-equivalence assertion tests for any deep inequality.
+// assert.notDeepEqual(actual, expected, message_opt);
+
+assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
+  if (_deepEqual(actual, expected, false)) {
+    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
+  }
+};
+
+assert.notDeepStrictEqual = notDeepStrictEqual;
+function notDeepStrictEqual(actual, expected, message) {
+  if (_deepEqual(actual, expected, true)) {
+    fail(actual, expected, message, 'notDeepStrictEqual', notDeepStrictEqual);
+  }
+}
+
+
+// 9. The strict equality assertion tests strict equality, as determined by ===.
+// assert.strictEqual(actual, expected, message_opt);
+
+assert.strictEqual = function strictEqual(actual, expected, message) {
+  if (actual !== expected) {
+    fail(actual, expected, message, '===', assert.strictEqual);
+  }
+};
+
+// 10. The strict non-equality assertion tests for strict inequality, as
+// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
+
+assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
+  if (actual === expected) {
+    fail(actual, expected, message, '!==', assert.notStrictEqual);
+  }
+};
+
+function expectedException(actual, expected) {
+  if (!actual || !expected) {
+    return false;
+  }
+
+  if (Object.prototype.toString.call(expected) == '[object RegExp]') {
+    return expected.test(actual);
+  }
+
+  try {
+    if (actual instanceof expected) {
+      return true;
+    }
+  } catch (e) {
+    // Ignore.  The instanceof check doesn't work for arrow functions.
+  }
+
+  if (Error.isPrototypeOf(expected)) {
+    return false;
+  }
+
+  return expected.call({}, actual) === true;
+}
+
+function _tryBlock(block) {
+  var error;
+  try {
+    block();
+  } catch (e) {
+    error = e;
+  }
+  return error;
+}
+
+function _throws(shouldThrow, block, expected, message) {
+  var actual;
+
+  if (typeof block !== 'function') {
+    throw new TypeError('"block" argument must be a function');
+  }
+
+  if (typeof expected === 'string') {
+    message = expected;
+    expected = null;
+  }
+
+  actual = _tryBlock(block);
+
+  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
+            (message ? ' ' + message : '.');
+
+  if (shouldThrow && !actual) {
+    fail(actual, expected, 'Missing expected exception' + message);
+  }
+
+  var userProvidedMessage = typeof message === 'string';
+  var isUnwantedException = !shouldThrow && util.isError(actual);
+  var isUnexpectedException = !shouldThrow && actual && !expected;
+
+  if ((isUnwantedException &&
+      userProvidedMessage &&
+      expectedException(actual, expected)) ||
+      isUnexpectedException) {
+    fail(actual, expected, 'Got unwanted exception' + message);
+  }
+
+  if ((shouldThrow && actual && expected &&
+      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
+    throw actual;
+  }
+}
+
+// 11. Expected to throw an error:
+// assert.throws(block, Error_opt, message_opt);
+
+assert.throws = function(block, /*optional*/error, /*optional*/message) {
+  _throws(true, block, error, message);
+};
+
+// EXTENSION! This is annoying to write outside this module.
+assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
+  _throws(false, block, error, message);
+};
+
+assert.ifError = function(err) { if (err) throw err; };
+
+var objectKeys = Object.keys || function (obj) {
+  var keys = [];
+  for (var key in obj) {
+    if (hasOwn.call(obj, key)) keys.push(key);
+  }
+  return keys;
+};
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"util/":102}],65:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -1419,9 +8329,9 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],9:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 
-},{}],10:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -3214,7 +10124,7 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":8,"ieee754":13,"isarray":16}],11:[function(require,module,exports){
+},{"base64-js":65,"ieee754":70,"isarray":73}],68:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -3325,7 +10235,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":15}],12:[function(require,module,exports){
+},{"../../is-buffer/index.js":72}],69:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -3629,7 +10539,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],13:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -3715,7 +10625,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],14:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -3740,37 +10650,239 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],15:[function(require,module,exports){
-/*!
- * Determine if an object is a Buffer
- *
- * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
- * @license  MIT
- */
+},{}],72:[function(require,module,exports){
+arguments[4][17][0].apply(exports,arguments)
+},{"dup":17}],73:[function(require,module,exports){
+arguments[4][26][0].apply(exports,arguments)
+},{"dup":26}],74:[function(require,module,exports){
+(function (process){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-// The _isBuffer check is for Safari 5-7 support, because it's missing
-// Object.prototype.constructor. Remove this eventually
-module.exports = function (obj) {
-  return obj != null && (isBuffer(obj) || isSlowBuffer(obj) || !!obj._isBuffer)
+// resolves . and .. elements in a path array with directory names there
+// must be no slashes, empty elements, or device names (c:\) in the array
+// (so also no leading and trailing slashes - it does not distinguish
+// relative and absolute paths)
+function normalizeArray(parts, allowAboveRoot) {
+  // if the path tries to go above the root, `up` ends up > 0
+  var up = 0;
+  for (var i = parts.length - 1; i >= 0; i--) {
+    var last = parts[i];
+    if (last === '.') {
+      parts.splice(i, 1);
+    } else if (last === '..') {
+      parts.splice(i, 1);
+      up++;
+    } else if (up) {
+      parts.splice(i, 1);
+      up--;
+    }
+  }
+
+  // if the path is allowed to go above the root, restore leading ..s
+  if (allowAboveRoot) {
+    for (; up--; up) {
+      parts.unshift('..');
+    }
+  }
+
+  return parts;
 }
 
-function isBuffer (obj) {
-  return !!obj.constructor && typeof obj.constructor.isBuffer === 'function' && obj.constructor.isBuffer(obj)
-}
-
-// For Node v0.10 support. Remove this eventually.
-function isSlowBuffer (obj) {
-  return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
-}
-
-},{}],16:[function(require,module,exports){
-var toString = {}.toString;
-
-module.exports = Array.isArray || function (arr) {
-  return toString.call(arr) == '[object Array]';
+// Split a filename into [root, dir, basename, ext], unix version
+// 'root' is just a slash, or nothing.
+var splitPathRe =
+    /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
+var splitPath = function(filename) {
+  return splitPathRe.exec(filename).slice(1);
 };
 
-},{}],17:[function(require,module,exports){
+// path.resolve([from ...], to)
+// posix version
+exports.resolve = function() {
+  var resolvedPath = '',
+      resolvedAbsolute = false;
+
+  for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+    var path = (i >= 0) ? arguments[i] : process.cwd();
+
+    // Skip empty and invalid entries
+    if (typeof path !== 'string') {
+      throw new TypeError('Arguments to path.resolve must be strings');
+    } else if (!path) {
+      continue;
+    }
+
+    resolvedPath = path + '/' + resolvedPath;
+    resolvedAbsolute = path.charAt(0) === '/';
+  }
+
+  // At this point the path should be resolved to a full absolute path, but
+  // handle relative paths to be safe (might happen when process.cwd() fails)
+
+  // Normalize the path
+  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
+    return !!p;
+  }), !resolvedAbsolute).join('/');
+
+  return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
+};
+
+// path.normalize(path)
+// posix version
+exports.normalize = function(path) {
+  var isAbsolute = exports.isAbsolute(path),
+      trailingSlash = substr(path, -1) === '/';
+
+  // Normalize the path
+  path = normalizeArray(filter(path.split('/'), function(p) {
+    return !!p;
+  }), !isAbsolute).join('/');
+
+  if (!path && !isAbsolute) {
+    path = '.';
+  }
+  if (path && trailingSlash) {
+    path += '/';
+  }
+
+  return (isAbsolute ? '/' : '') + path;
+};
+
+// posix version
+exports.isAbsolute = function(path) {
+  return path.charAt(0) === '/';
+};
+
+// posix version
+exports.join = function() {
+  var paths = Array.prototype.slice.call(arguments, 0);
+  return exports.normalize(filter(paths, function(p, index) {
+    if (typeof p !== 'string') {
+      throw new TypeError('Arguments to path.join must be strings');
+    }
+    return p;
+  }).join('/'));
+};
+
+
+// path.relative(from, to)
+// posix version
+exports.relative = function(from, to) {
+  from = exports.resolve(from).substr(1);
+  to = exports.resolve(to).substr(1);
+
+  function trim(arr) {
+    var start = 0;
+    for (; start < arr.length; start++) {
+      if (arr[start] !== '') break;
+    }
+
+    var end = arr.length - 1;
+    for (; end >= 0; end--) {
+      if (arr[end] !== '') break;
+    }
+
+    if (start > end) return [];
+    return arr.slice(start, end - start + 1);
+  }
+
+  var fromParts = trim(from.split('/'));
+  var toParts = trim(to.split('/'));
+
+  var length = Math.min(fromParts.length, toParts.length);
+  var samePartsLength = length;
+  for (var i = 0; i < length; i++) {
+    if (fromParts[i] !== toParts[i]) {
+      samePartsLength = i;
+      break;
+    }
+  }
+
+  var outputParts = [];
+  for (var i = samePartsLength; i < fromParts.length; i++) {
+    outputParts.push('..');
+  }
+
+  outputParts = outputParts.concat(toParts.slice(samePartsLength));
+
+  return outputParts.join('/');
+};
+
+exports.sep = '/';
+exports.delimiter = ':';
+
+exports.dirname = function(path) {
+  var result = splitPath(path),
+      root = result[0],
+      dir = result[1];
+
+  if (!root && !dir) {
+    // No dirname whatsoever
+    return '.';
+  }
+
+  if (dir) {
+    // It has a dirname, strip trailing slash
+    dir = dir.substr(0, dir.length - 1);
+  }
+
+  return root + dir;
+};
+
+
+exports.basename = function(path, ext) {
+  var f = splitPath(path)[2];
+  // TODO: make this comparison case-insensitive on windows?
+  if (ext && f.substr(-1 * ext.length) === ext) {
+    f = f.substr(0, f.length - ext.length);
+  }
+  return f;
+};
+
+
+exports.extname = function(path) {
+  return splitPath(path)[3];
+};
+
+function filter (xs, f) {
+    if (xs.filter) return xs.filter(f);
+    var res = [];
+    for (var i = 0; i < xs.length; i++) {
+        if (f(xs[i], i, xs)) res.push(xs[i]);
+    }
+    return res;
+}
+
+// String.prototype.substr - negative index don't work in IE8
+var substr = 'ab'.substr(-1) === 'b'
+    ? function (str, start, len) { return str.substr(start, len) }
+    : function (str, start, len) {
+        if (start < 0) start = str.length + start;
+        return str.substr(start, len);
+    }
+;
+
+}).call(this,require('_process'))
+},{"_process":76}],75:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -3817,7 +10929,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":18}],18:[function(require,module,exports){
+},{"_process":76}],76:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -4003,7 +11115,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],19:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/punycode v1.4.1 by @mathias */
 ;(function(root) {
@@ -4540,7 +11652,7 @@ process.umask = function() { return 0; };
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],20:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4626,7 +11738,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],21:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4713,16 +11825,16 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],22:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":20,"./encode":21}],23:[function(require,module,exports){
+},{"./decode":78,"./encode":79}],81:[function(require,module,exports){
 module.exports = require('./lib/_stream_duplex.js');
 
-},{"./lib/_stream_duplex.js":24}],24:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":82}],82:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4847,7 +11959,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":26,"./_stream_writable":28,"core-util-is":11,"inherits":14,"process-nextick-args":17}],25:[function(require,module,exports){
+},{"./_stream_readable":84,"./_stream_writable":86,"core-util-is":68,"inherits":71,"process-nextick-args":75}],83:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4895,7 +12007,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":27,"core-util-is":11,"inherits":14}],26:[function(require,module,exports){
+},{"./_stream_transform":85,"core-util-is":68,"inherits":71}],84:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -5905,7 +13017,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":24,"./internal/streams/BufferList":29,"./internal/streams/destroy":30,"./internal/streams/stream":31,"_process":18,"core-util-is":11,"events":12,"inherits":14,"isarray":16,"process-nextick-args":17,"safe-buffer":36,"string_decoder/":38,"util":9}],27:[function(require,module,exports){
+},{"./_stream_duplex":82,"./internal/streams/BufferList":87,"./internal/streams/destroy":88,"./internal/streams/stream":89,"_process":76,"core-util-is":68,"events":69,"inherits":71,"isarray":73,"process-nextick-args":75,"safe-buffer":94,"string_decoder/":96,"util":66}],85:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -6120,7 +13232,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":24,"core-util-is":11,"inherits":14}],28:[function(require,module,exports){
+},{"./_stream_duplex":82,"core-util-is":68,"inherits":71}],86:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -6787,7 +13899,7 @@ Writable.prototype._destroy = function (err, cb) {
   cb(err);
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":24,"./internal/streams/destroy":30,"./internal/streams/stream":31,"_process":18,"core-util-is":11,"inherits":14,"process-nextick-args":17,"safe-buffer":36,"util-deprecate":41}],29:[function(require,module,exports){
+},{"./_stream_duplex":82,"./internal/streams/destroy":88,"./internal/streams/stream":89,"_process":76,"core-util-is":68,"inherits":71,"process-nextick-args":75,"safe-buffer":94,"util-deprecate":99}],87:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -6862,7 +13974,7 @@ module.exports = function () {
 
   return BufferList;
 }();
-},{"safe-buffer":36}],30:[function(require,module,exports){
+},{"safe-buffer":94}],88:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -6935,13 +14047,13 @@ module.exports = {
   destroy: destroy,
   undestroy: undestroy
 };
-},{"process-nextick-args":17}],31:[function(require,module,exports){
+},{"process-nextick-args":75}],89:[function(require,module,exports){
 module.exports = require('events').EventEmitter;
 
-},{"events":12}],32:[function(require,module,exports){
+},{"events":69}],90:[function(require,module,exports){
 module.exports = require('./readable').PassThrough
 
-},{"./readable":33}],33:[function(require,module,exports){
+},{"./readable":91}],91:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = exports;
 exports.Readable = exports;
@@ -6950,13 +14062,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":24,"./lib/_stream_passthrough.js":25,"./lib/_stream_readable.js":26,"./lib/_stream_transform.js":27,"./lib/_stream_writable.js":28}],34:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":82,"./lib/_stream_passthrough.js":83,"./lib/_stream_readable.js":84,"./lib/_stream_transform.js":85,"./lib/_stream_writable.js":86}],92:[function(require,module,exports){
 module.exports = require('./readable').Transform
 
-},{"./readable":33}],35:[function(require,module,exports){
+},{"./readable":91}],93:[function(require,module,exports){
 module.exports = require('./lib/_stream_writable.js');
 
-},{"./lib/_stream_writable.js":28}],36:[function(require,module,exports){
+},{"./lib/_stream_writable.js":86}],94:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -7020,7 +14132,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":10}],37:[function(require,module,exports){
+},{"buffer":67}],95:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -7149,7 +14261,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":12,"inherits":14,"readable-stream/duplex.js":23,"readable-stream/passthrough.js":32,"readable-stream/readable.js":33,"readable-stream/transform.js":34,"readable-stream/writable.js":35}],38:[function(require,module,exports){
+},{"events":69,"inherits":71,"readable-stream/duplex.js":81,"readable-stream/passthrough.js":90,"readable-stream/readable.js":91,"readable-stream/transform.js":92,"readable-stream/writable.js":93}],96:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('safe-buffer').Buffer;
@@ -7422,7 +14534,7 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":36}],39:[function(require,module,exports){
+},{"safe-buffer":94}],97:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -8156,7 +15268,7 @@ Url.prototype.parseHost = function() {
   if (host) this.hostname = host;
 };
 
-},{"./util":40,"punycode":19,"querystring":22}],40:[function(require,module,exports){
+},{"./util":98,"punycode":77,"querystring":80}],98:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -8174,7 +15286,7 @@ module.exports = {
   }
 };
 
-},{}],41:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 (function (global){
 
 /**
@@ -8245,4 +15357,603 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[1]);
+},{}],100:[function(require,module,exports){
+arguments[4][71][0].apply(exports,arguments)
+},{"dup":71}],101:[function(require,module,exports){
+module.exports = function isBuffer(arg) {
+  return arg && typeof arg === 'object'
+    && typeof arg.copy === 'function'
+    && typeof arg.fill === 'function'
+    && typeof arg.readUInt8 === 'function';
+}
+},{}],102:[function(require,module,exports){
+(function (process,global){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var formatRegExp = /%[sdj%]/g;
+exports.format = function(f) {
+  if (!isString(f)) {
+    var objects = [];
+    for (var i = 0; i < arguments.length; i++) {
+      objects.push(inspect(arguments[i]));
+    }
+    return objects.join(' ');
+  }
+
+  var i = 1;
+  var args = arguments;
+  var len = args.length;
+  var str = String(f).replace(formatRegExp, function(x) {
+    if (x === '%%') return '%';
+    if (i >= len) return x;
+    switch (x) {
+      case '%s': return String(args[i++]);
+      case '%d': return Number(args[i++]);
+      case '%j':
+        try {
+          return JSON.stringify(args[i++]);
+        } catch (_) {
+          return '[Circular]';
+        }
+      default:
+        return x;
+    }
+  });
+  for (var x = args[i]; i < len; x = args[++i]) {
+    if (isNull(x) || !isObject(x)) {
+      str += ' ' + x;
+    } else {
+      str += ' ' + inspect(x);
+    }
+  }
+  return str;
+};
+
+
+// Mark that a method should not be used.
+// Returns a modified function which warns once by default.
+// If --no-deprecation is set, then it is a no-op.
+exports.deprecate = function(fn, msg) {
+  // Allow for deprecating things in the process of starting up.
+  if (isUndefined(global.process)) {
+    return function() {
+      return exports.deprecate(fn, msg).apply(this, arguments);
+    };
+  }
+
+  if (process.noDeprecation === true) {
+    return fn;
+  }
+
+  var warned = false;
+  function deprecated() {
+    if (!warned) {
+      if (process.throwDeprecation) {
+        throw new Error(msg);
+      } else if (process.traceDeprecation) {
+        console.trace(msg);
+      } else {
+        console.error(msg);
+      }
+      warned = true;
+    }
+    return fn.apply(this, arguments);
+  }
+
+  return deprecated;
+};
+
+
+var debugs = {};
+var debugEnviron;
+exports.debuglog = function(set) {
+  if (isUndefined(debugEnviron))
+    debugEnviron = process.env.NODE_DEBUG || '';
+  set = set.toUpperCase();
+  if (!debugs[set]) {
+    if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
+      var pid = process.pid;
+      debugs[set] = function() {
+        var msg = exports.format.apply(exports, arguments);
+        console.error('%s %d: %s', set, pid, msg);
+      };
+    } else {
+      debugs[set] = function() {};
+    }
+  }
+  return debugs[set];
+};
+
+
+/**
+ * Echos the value of a value. Trys to print the value out
+ * in the best way possible given the different types.
+ *
+ * @param {Object} obj The object to print out.
+ * @param {Object} opts Optional options object that alters the output.
+ */
+/* legacy: obj, showHidden, depth, colors*/
+function inspect(obj, opts) {
+  // default options
+  var ctx = {
+    seen: [],
+    stylize: stylizeNoColor
+  };
+  // legacy...
+  if (arguments.length >= 3) ctx.depth = arguments[2];
+  if (arguments.length >= 4) ctx.colors = arguments[3];
+  if (isBoolean(opts)) {
+    // legacy...
+    ctx.showHidden = opts;
+  } else if (opts) {
+    // got an "options" object
+    exports._extend(ctx, opts);
+  }
+  // set default options
+  if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
+  if (isUndefined(ctx.depth)) ctx.depth = 2;
+  if (isUndefined(ctx.colors)) ctx.colors = false;
+  if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
+  if (ctx.colors) ctx.stylize = stylizeWithColor;
+  return formatValue(ctx, obj, ctx.depth);
+}
+exports.inspect = inspect;
+
+
+// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+inspect.colors = {
+  'bold' : [1, 22],
+  'italic' : [3, 23],
+  'underline' : [4, 24],
+  'inverse' : [7, 27],
+  'white' : [37, 39],
+  'grey' : [90, 39],
+  'black' : [30, 39],
+  'blue' : [34, 39],
+  'cyan' : [36, 39],
+  'green' : [32, 39],
+  'magenta' : [35, 39],
+  'red' : [31, 39],
+  'yellow' : [33, 39]
+};
+
+// Don't use 'blue' not visible on cmd.exe
+inspect.styles = {
+  'special': 'cyan',
+  'number': 'yellow',
+  'boolean': 'yellow',
+  'undefined': 'grey',
+  'null': 'bold',
+  'string': 'green',
+  'date': 'magenta',
+  // "name": intentionally not styling
+  'regexp': 'red'
+};
+
+
+function stylizeWithColor(str, styleType) {
+  var style = inspect.styles[styleType];
+
+  if (style) {
+    return '\u001b[' + inspect.colors[style][0] + 'm' + str +
+           '\u001b[' + inspect.colors[style][1] + 'm';
+  } else {
+    return str;
+  }
+}
+
+
+function stylizeNoColor(str, styleType) {
+  return str;
+}
+
+
+function arrayToHash(array) {
+  var hash = {};
+
+  array.forEach(function(val, idx) {
+    hash[val] = true;
+  });
+
+  return hash;
+}
+
+
+function formatValue(ctx, value, recurseTimes) {
+  // Provide a hook for user-specified inspect functions.
+  // Check that value is an object with an inspect function on it
+  if (ctx.customInspect &&
+      value &&
+      isFunction(value.inspect) &&
+      // Filter out the util module, it's inspect function is special
+      value.inspect !== exports.inspect &&
+      // Also filter out any prototype objects using the circular check.
+      !(value.constructor && value.constructor.prototype === value)) {
+    var ret = value.inspect(recurseTimes, ctx);
+    if (!isString(ret)) {
+      ret = formatValue(ctx, ret, recurseTimes);
+    }
+    return ret;
+  }
+
+  // Primitive types cannot have properties
+  var primitive = formatPrimitive(ctx, value);
+  if (primitive) {
+    return primitive;
+  }
+
+  // Look up the keys of the object.
+  var keys = Object.keys(value);
+  var visibleKeys = arrayToHash(keys);
+
+  if (ctx.showHidden) {
+    keys = Object.getOwnPropertyNames(value);
+  }
+
+  // IE doesn't make error fields non-enumerable
+  // http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
+  if (isError(value)
+      && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
+    return formatError(value);
+  }
+
+  // Some type of object without properties can be shortcutted.
+  if (keys.length === 0) {
+    if (isFunction(value)) {
+      var name = value.name ? ': ' + value.name : '';
+      return ctx.stylize('[Function' + name + ']', 'special');
+    }
+    if (isRegExp(value)) {
+      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
+    }
+    if (isDate(value)) {
+      return ctx.stylize(Date.prototype.toString.call(value), 'date');
+    }
+    if (isError(value)) {
+      return formatError(value);
+    }
+  }
+
+  var base = '', array = false, braces = ['{', '}'];
+
+  // Make Array say that they are Array
+  if (isArray(value)) {
+    array = true;
+    braces = ['[', ']'];
+  }
+
+  // Make functions say that they are functions
+  if (isFunction(value)) {
+    var n = value.name ? ': ' + value.name : '';
+    base = ' [Function' + n + ']';
+  }
+
+  // Make RegExps say that they are RegExps
+  if (isRegExp(value)) {
+    base = ' ' + RegExp.prototype.toString.call(value);
+  }
+
+  // Make dates with properties first say the date
+  if (isDate(value)) {
+    base = ' ' + Date.prototype.toUTCString.call(value);
+  }
+
+  // Make error with message first say the error
+  if (isError(value)) {
+    base = ' ' + formatError(value);
+  }
+
+  if (keys.length === 0 && (!array || value.length == 0)) {
+    return braces[0] + base + braces[1];
+  }
+
+  if (recurseTimes < 0) {
+    if (isRegExp(value)) {
+      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
+    } else {
+      return ctx.stylize('[Object]', 'special');
+    }
+  }
+
+  ctx.seen.push(value);
+
+  var output;
+  if (array) {
+    output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
+  } else {
+    output = keys.map(function(key) {
+      return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
+    });
+  }
+
+  ctx.seen.pop();
+
+  return reduceToSingleString(output, base, braces);
+}
+
+
+function formatPrimitive(ctx, value) {
+  if (isUndefined(value))
+    return ctx.stylize('undefined', 'undefined');
+  if (isString(value)) {
+    var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
+                                             .replace(/'/g, "\\'")
+                                             .replace(/\\"/g, '"') + '\'';
+    return ctx.stylize(simple, 'string');
+  }
+  if (isNumber(value))
+    return ctx.stylize('' + value, 'number');
+  if (isBoolean(value))
+    return ctx.stylize('' + value, 'boolean');
+  // For some reason typeof null is "object", so special case here.
+  if (isNull(value))
+    return ctx.stylize('null', 'null');
+}
+
+
+function formatError(value) {
+  return '[' + Error.prototype.toString.call(value) + ']';
+}
+
+
+function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
+  var output = [];
+  for (var i = 0, l = value.length; i < l; ++i) {
+    if (hasOwnProperty(value, String(i))) {
+      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
+          String(i), true));
+    } else {
+      output.push('');
+    }
+  }
+  keys.forEach(function(key) {
+    if (!key.match(/^\d+$/)) {
+      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
+          key, true));
+    }
+  });
+  return output;
+}
+
+
+function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
+  var name, str, desc;
+  desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
+  if (desc.get) {
+    if (desc.set) {
+      str = ctx.stylize('[Getter/Setter]', 'special');
+    } else {
+      str = ctx.stylize('[Getter]', 'special');
+    }
+  } else {
+    if (desc.set) {
+      str = ctx.stylize('[Setter]', 'special');
+    }
+  }
+  if (!hasOwnProperty(visibleKeys, key)) {
+    name = '[' + key + ']';
+  }
+  if (!str) {
+    if (ctx.seen.indexOf(desc.value) < 0) {
+      if (isNull(recurseTimes)) {
+        str = formatValue(ctx, desc.value, null);
+      } else {
+        str = formatValue(ctx, desc.value, recurseTimes - 1);
+      }
+      if (str.indexOf('\n') > -1) {
+        if (array) {
+          str = str.split('\n').map(function(line) {
+            return '  ' + line;
+          }).join('\n').substr(2);
+        } else {
+          str = '\n' + str.split('\n').map(function(line) {
+            return '   ' + line;
+          }).join('\n');
+        }
+      }
+    } else {
+      str = ctx.stylize('[Circular]', 'special');
+    }
+  }
+  if (isUndefined(name)) {
+    if (array && key.match(/^\d+$/)) {
+      return str;
+    }
+    name = JSON.stringify('' + key);
+    if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
+      name = name.substr(1, name.length - 2);
+      name = ctx.stylize(name, 'name');
+    } else {
+      name = name.replace(/'/g, "\\'")
+                 .replace(/\\"/g, '"')
+                 .replace(/(^"|"$)/g, "'");
+      name = ctx.stylize(name, 'string');
+    }
+  }
+
+  return name + ': ' + str;
+}
+
+
+function reduceToSingleString(output, base, braces) {
+  var numLinesEst = 0;
+  var length = output.reduce(function(prev, cur) {
+    numLinesEst++;
+    if (cur.indexOf('\n') >= 0) numLinesEst++;
+    return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
+  }, 0);
+
+  if (length > 60) {
+    return braces[0] +
+           (base === '' ? '' : base + '\n ') +
+           ' ' +
+           output.join(',\n  ') +
+           ' ' +
+           braces[1];
+  }
+
+  return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
+}
+
+
+// NOTE: These type checking functions intentionally don't use `instanceof`
+// because it is fragile and can be easily faked with `Object.create()`.
+function isArray(ar) {
+  return Array.isArray(ar);
+}
+exports.isArray = isArray;
+
+function isBoolean(arg) {
+  return typeof arg === 'boolean';
+}
+exports.isBoolean = isBoolean;
+
+function isNull(arg) {
+  return arg === null;
+}
+exports.isNull = isNull;
+
+function isNullOrUndefined(arg) {
+  return arg == null;
+}
+exports.isNullOrUndefined = isNullOrUndefined;
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+exports.isNumber = isNumber;
+
+function isString(arg) {
+  return typeof arg === 'string';
+}
+exports.isString = isString;
+
+function isSymbol(arg) {
+  return typeof arg === 'symbol';
+}
+exports.isSymbol = isSymbol;
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+exports.isUndefined = isUndefined;
+
+function isRegExp(re) {
+  return isObject(re) && objectToString(re) === '[object RegExp]';
+}
+exports.isRegExp = isRegExp;
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+exports.isObject = isObject;
+
+function isDate(d) {
+  return isObject(d) && objectToString(d) === '[object Date]';
+}
+exports.isDate = isDate;
+
+function isError(e) {
+  return isObject(e) &&
+      (objectToString(e) === '[object Error]' || e instanceof Error);
+}
+exports.isError = isError;
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+exports.isFunction = isFunction;
+
+function isPrimitive(arg) {
+  return arg === null ||
+         typeof arg === 'boolean' ||
+         typeof arg === 'number' ||
+         typeof arg === 'string' ||
+         typeof arg === 'symbol' ||  // ES6 symbol
+         typeof arg === 'undefined';
+}
+exports.isPrimitive = isPrimitive;
+
+exports.isBuffer = require('./support/isBuffer');
+
+function objectToString(o) {
+  return Object.prototype.toString.call(o);
+}
+
+
+function pad(n) {
+  return n < 10 ? '0' + n.toString(10) : n.toString(10);
+}
+
+
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+              'Oct', 'Nov', 'Dec'];
+
+// 26 Feb 16:19:34
+function timestamp() {
+  var d = new Date();
+  var time = [pad(d.getHours()),
+              pad(d.getMinutes()),
+              pad(d.getSeconds())].join(':');
+  return [d.getDate(), months[d.getMonth()], time].join(' ');
+}
+
+
+// log is just a thin wrapper to console.log that prepends a timestamp
+exports.log = function() {
+  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
+};
+
+
+/**
+ * Inherit the prototype methods from one constructor into another.
+ *
+ * The Function.prototype.inherits from lang.js rewritten as a standalone
+ * function (not on Function.prototype). NOTE: If this file is to be loaded
+ * during bootstrapping this function needs to be rewritten using some native
+ * functions as prototype setup using normal JavaScript does not work as
+ * expected during bootstrapping (see mirror.js in r114903).
+ *
+ * @param {function} ctor Constructor function which needs to inherit the
+ *     prototype.
+ * @param {function} superCtor Constructor function to inherit prototype from.
+ */
+exports.inherits = require('inherits');
+
+exports._extend = function(origin, add) {
+  // Don't do anything if add isn't an object
+  if (!add || !isObject(add)) return origin;
+
+  var keys = Object.keys(add);
+  var i = keys.length;
+  while (i--) {
+    origin[keys[i]] = add[keys[i]];
+  }
+  return origin;
+};
+
+function hasOwnProperty(obj, prop) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./support/isBuffer":101,"_process":76,"inherits":100}]},{},[1]);

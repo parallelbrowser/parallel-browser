@@ -1,15 +1,15 @@
-import { ipcRenderer } from 'electron'
+/* globals DatArchive */
 
+import { ipcRenderer } from 'electron'
+import ParallelAPI from 'parallel-scratch-api'
 // TCW CHANGES -- injects scripts into the webview DOM
 
 export function setup () {
   // listens for the 'inject-scripts' ipc event called in the
   // onDomReady function in shell-window/pages.js
+  window.postscriptListener = postscriptListener
 
   ipcRenderer.on('inject-scripts', (event, prescriptJS, prescriptCSS) => {
-    console.log('event', event)
-    console.log('data in setup', prescriptJS, prescriptCSS)
-    console.log('type', typeof jsString)
     if (prescriptJS) {
       prescriptJS = prescriptJS.toString()
     }
@@ -23,7 +23,6 @@ export function setup () {
 function inject (jsString, cssString) {
   // define SECURITY_POLICY constant to inject into the page, to allow
   // parallel scripts to run without compromising security
-  console.log('data in inject', jsString, cssString)
 
   const SECURITY_POLICY = `<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'self';\">`
 
@@ -53,6 +52,14 @@ function inject (jsString, cssString) {
     cssElement.appendChild(document.createTextNode(cssString))
     head.appendChild(cssElement)
   }
+}
+
+async function postscriptListener (postscript) {
+  console.log('hi!')
+  console.log('postscript', postscript)
+  const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4'
+  const userDB = await ParallelAPI.open(new DatArchive(userURL))
+  console.log('db in inject', userDB)
 }
 
 // TCW -- END

@@ -37,8 +37,8 @@ if (window.location.protocol === 'beaker:') {
 setupLocationbar()
 setupPrompt()
 
-//TCW CHANGES -- call inject scripts from webview-preload/inject-scripts
+// TCW CHANGES -- call inject scripts from webview-preload/inject-scripts
 
 setupInjectScripts()
 
-//TCW -- END
+// TCW -- END
