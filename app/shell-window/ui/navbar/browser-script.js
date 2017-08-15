@@ -3,7 +3,7 @@ import ParallelAPI from 'parallel-scratch-api'
 import * as yo from 'yo-yo'
 import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
-import prescriptList from './parallel/prescript-list'
+import subscriptList from './parallel/subscript-list'
 import postscriptList from './parallel/postscript-list'
 // import { ipcRenderer } from 'electron'
 
@@ -11,24 +11,19 @@ export class BrowserScriptNavbarBtn {
   constructor () {
     this.isDropdownOpen = false
     this.showPre = false
-    this.prescripts = null
+    this.subscripts = null
     this.postscripts = null
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
-    this.loadPrescripts()
+    this.loadSubscripts()
   }
-  async loadPrescripts () {
-    const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4'
+  async loadSubscripts () {
+    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
     console.log('userDB', userDB)
     const profile = await userDB.getProfile(userURL)
     console.log('current user profile', profile)
-    this.prescripts = await userDB.listPrescripts({
-      fetchAuthor: true,
-      countVotes: true,
-      reverse: true,
-      author: 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4'
-    })
-    console.log('these prescripts', this.prescripts)
+    this.subscripts = profile.subscripts
+    console.log('these subscripts', this.subscripts)
   }
   render () {
     var dropdownEl = ''
@@ -50,10 +45,10 @@ export class BrowserScriptNavbarBtn {
             </div>
 
 
-            ${this.showPre ? prescriptList(this.prescripts) : postscriptList(this.postscripts)}
+            ${this.showPre ? subscriptList(this.subscripts) : postscriptList(this.postscripts)}
 
             <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'dat://87be7e6edfae1bbfb848271fdf0c3a48f310ebd29a36c255b6453483d52f107b')}>
+              <a onclick=${e => this.onOpenPage(e, 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a')}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
@@ -70,20 +65,6 @@ export class BrowserScriptNavbarBtn {
           <span class="fa fa-code"></span>
         </button>
         ${dropdownEl}
-      </div>`
-  }
-
-  renderPreOrPost () {
-    return yo`
-      <div>
-        <div class="section-header">
-          <h3>
-            ${this.showPre ? 'Gizmos' : 'Widgets'}
-          </h3>
-        </div>
-        <ul>
-          ${this.showPre ? this.scriptsList(this.preScripts) : this.scriptsList(this.postScripts)}
-        </ul>
       </div>`
   }
 

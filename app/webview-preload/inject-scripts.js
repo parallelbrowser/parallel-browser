@@ -1,4 +1,4 @@
-/* globals DatArchive prescriptCredentials */
+/* globals DatArchive subscriptCredentials */
 
 import { ipcRenderer } from 'electron'
 import ParallelAPI from 'parallel-scratch-api'
@@ -9,28 +9,28 @@ export function setup () {
   // onDomReady function in shell-window/pages.js
   window.postscriptListener = postscriptListener
 
-  ipcRenderer.on('inject-scripts', (event, prescript) => {
-    console.log('prescript in inject', prescript)
-    const prescriptCredentials = {
-      prescriptName: prescript.prescriptName,
-      prescriptInfo: prescript.prescriptInfo,
-      prescriptOrigin: prescript._origin,
-      prescriptURL: prescript._url
+  ipcRenderer.on('inject-scripts', (event, subscript) => {
+    console.log('subscript in inject', subscript)
+    const subscriptCredentials = {
+      subscriptName: subscript.prescriptName,
+      subscriptInfo: subscript.prescriptInfo,
+      subscriptOrigin: subscript._origin,
+      subscriptURL: subscript._url
     }
-    window.prescriptCredentials = prescriptCredentials
-    let prescriptJS
-    let prescriptCSS
-    if (prescript.prescriptJS) {
-      prescriptJS = prescript.prescriptJS.toString()
+    window.subscriptCredentials = subscriptCredentials
+    let subscriptJS
+    let subscriptCSS
+    if (subscript.subscriptJS) {
+      subscriptJS = subscript.subscriptJS.toString()
     }
-    if (prescript.prescriptCSS) {
-      prescriptCSS = prescript.prescriptCSS.toString()
+    if (subscript.subscriptCSS) {
+      subscriptCSS = subscript.subscriptCSS.toString()
     }
-    inject(prescriptJS, prescriptCSS)
+    inject(subscriptJS, subscriptCSS)
   })
 }
 
-function inject (jsString, cssString) {
+function inject (subscriptJS, subscriptCSS) {
   // define SECURITY_POLICY constant to inject into the page, to allow
   // parallel scripts to run without compromising security
 
@@ -47,19 +47,19 @@ function inject (jsString, cssString) {
 
   // appends javascript to the <body>
 
-  if (jsString) {
+  if (subscriptJS) {
     const jsElement = document.createElement('script')
     console.log('jsElement', jsElement)
-    jsElement.appendChild(document.createTextNode(jsString))
+    jsElement.appendChild(document.createTextNode(subscriptJS))
     body.appendChild(jsElement)
   }
 
   // appends css to the <head>
 
-  if (cssString) {
+  if (subscriptCSS) {
     const cssElement = document.createElement('style')
     cssElement.type = 'text/css'
-    cssElement.appendChild(document.createTextNode(cssString))
+    cssElement.appendChild(document.createTextNode(subscriptCSS))
     head.appendChild(cssElement)
   }
 }
@@ -67,11 +67,12 @@ function inject (jsString, cssString) {
 async function postscriptListener (postscriptJS) {
   console.log('hi!')
   console.log('postscript', postscriptJS.toString())
-  console.log('postscriptCredentials', prescriptCredentials)
-  const postscript = Object.assign(prescriptCredentials, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href})
+  console.log('subscriptCredentials', subscriptCredentials)
+  const postscript = Object.assign(subscriptCredentials, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href})
   console.log('postscript obj', postscript)
-  const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4'
+  const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a'
   const userDB = await ParallelAPI.open(new DatArchive(userURL))
+  await userDB.postscript(userURL, postscript)
   console.log('db in inject', userDB)
 }
 

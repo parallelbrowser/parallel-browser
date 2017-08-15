@@ -476,7 +476,6 @@ function setup () {
     window.locationbar.closeMenus = closeMenus;
     window.locationbar.toggleLiveReloading = toggleLiveReloading;
   } else {
-
     // TCW CHANGES - this sends an asynchronous message to the listener at
     // background-process/ui/windows.js with the href of the new window.
 
@@ -533,7 +532,7 @@ var setupRedirectHackfix = function () {
   });
 };
 
-/* globals DatArchive prescriptCredentials */
+/* globals DatArchive subscriptCredentials */
 
 // TCW CHANGES -- injects scripts into the webview DOM
 
@@ -542,28 +541,28 @@ function setup$2 () {
   // onDomReady function in shell-window/pages.js
   window.postscriptListener = postscriptListener;
 
-  electron.ipcRenderer.on('inject-scripts', (event, prescript) => {
-    console.log('prescript in inject', prescript);
-    const prescriptCredentials = {
-      prescriptName: prescript.prescriptName,
-      prescriptInfo: prescript.prescriptInfo,
-      prescriptOrigin: prescript._origin,
-      prescriptURL: prescript._url
+  electron.ipcRenderer.on('inject-scripts', (event, subscript) => {
+    console.log('subscript in inject', subscript);
+    const subscriptCredentials = {
+      subscriptName: subscript.prescriptName,
+      subscriptInfo: subscript.prescriptInfo,
+      subscriptOrigin: subscript._origin,
+      subscriptURL: subscript._url
     };
-    window.prescriptCredentials = prescriptCredentials;
-    let prescriptJS;
-    let prescriptCSS;
-    if (prescript.prescriptJS) {
-      prescriptJS = prescript.prescriptJS.toString();
+    window.subscriptCredentials = subscriptCredentials;
+    let subscriptJS;
+    let subscriptCSS;
+    if (subscript.subscriptJS) {
+      subscriptJS = subscript.subscriptJS.toString();
     }
-    if (prescript.prescriptCSS) {
-      prescriptCSS = prescript.prescriptCSS.toString();
+    if (subscript.subscriptCSS) {
+      subscriptCSS = subscript.subscriptCSS.toString();
     }
-    inject(prescriptJS, prescriptCSS);
+    inject(subscriptJS, subscriptCSS);
   });
 }
 
-function inject (jsString, cssString) {
+function inject (subscriptJS, subscriptCSS) {
   // define SECURITY_POLICY constant to inject into the page, to allow
   // parallel scripts to run without compromising security
 
@@ -580,19 +579,19 @@ function inject (jsString, cssString) {
 
   // appends javascript to the <body>
 
-  if (jsString) {
+  if (subscriptJS) {
     const jsElement = document.createElement('script');
     console.log('jsElement', jsElement);
-    jsElement.appendChild(document.createTextNode(jsString));
+    jsElement.appendChild(document.createTextNode(subscriptJS));
     body.appendChild(jsElement);
   }
 
   // appends css to the <head>
 
-  if (cssString) {
+  if (subscriptCSS) {
     const cssElement = document.createElement('style');
     cssElement.type = 'text/css';
-    cssElement.appendChild(document.createTextNode(cssString));
+    cssElement.appendChild(document.createTextNode(subscriptCSS));
     head.appendChild(cssElement);
   }
 }
@@ -600,11 +599,12 @@ function inject (jsString, cssString) {
 async function postscriptListener (postscriptJS) {
   console.log('hi!');
   console.log('postscript', postscriptJS.toString());
-  console.log('postscriptCredentials', prescriptCredentials);
-  const postscript = Object.assign(prescriptCredentials, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href});
+  console.log('subscriptCredentials', subscriptCredentials);
+  const postscript = Object.assign(subscriptCredentials, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href});
   console.log('postscript obj', postscript);
-  const userURL = 'dat://127ba27d39e656cd88ea2c81b060903de33bbaa4b0a1f71e05eb3a1661a78bd4';
+  const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
   const userDB = await ParallelAPI.open(new DatArchive(userURL));
+  await userDB.postscript(userURL, postscript);
   console.log('db in inject', userDB);
 }
 
@@ -4208,6 +4208,21 @@ exports.open = async function (userArchive) {
         createdAt: coerce.number(record.createdAt, {required: true}),
         receivedAt: Date.now()
       })
+    },
+
+    postscripts: {
+      primaryKey: 'createdAt',
+      index: ['createdAt', '_origin+createdAt'],
+      validator: record => ({
+        postscriptJS: coerce.string(record.postscriptJS),
+        postscriptCSS: coerce.string(record.postscriptCSS),
+        subscriptURL: coerce.string(record.subscriptURL),
+        subscriptOrigin: coerce.string(record.subscriptOrigin),
+        subscriptName: coerce.string(record.subscriptName),
+        subscriptInfo: coerce.string(record.subscriptInfo),
+        createdAt: coerce.number(record.createdAt, {required: true}),
+        receivedAt: Date.now()
+      })
     }
     // TCW -- END
 
@@ -4612,6 +4627,96 @@ exports.open = async function (userArchive) {
       }
       // unindex the target
       await db.removeArchive(target)
+    },
+
+    // TCW -- postscripts api
+
+    postscript (archive, {
+      postscriptJS,
+      postscriptHTTP,
+      subscriptURL,
+      subscriptOrigin,
+      subscriptName,
+      subscriptInfo
+    }) {
+      postscriptJS = coerce.string(postscriptJS)
+      postscriptHTTP = coerce.string(postscriptHTTP)
+      subscriptURL = coerce.string(subscriptURL)
+      subscriptOrigin = coerce.string(subscriptOrigin)
+      subscriptName = coerce.string(subscriptName)
+      subscriptInfo = coerce.string(subscriptInfo)
+      const createdAt = Date.now()
+
+      return db.postscripts.add(archive, {
+        postscriptJS,
+        postscriptHTTP,
+        subscriptURL,
+        subscriptOrigin,
+        subscriptName,
+        subscriptInfo,
+        createdAt
+      })
+    },
+
+    getPostscriptsQuery ({author, after, before, offset, limit, reverse} = {}) {
+      var query = db.postscripts
+      if (author) {
+        author = coerce.archiveUrl(author)
+        after = after || 0
+        before = before || Infinity
+        query = query.where('_origin+createdAt').between([author, after], [author, before])
+      } else if (after || before) {
+        after = after || 0
+        before = before || Infinity
+        query = query.where('createdAt').between(after, before)
+      } else {
+        query = query.orderBy('createdAt')
+      }
+      if (offset) query = query.offset(offset)
+      if (limit) query = query.limit(limit)
+      if (reverse) query = query.reverse()
+      return query
+    },
+
+    async listPostscripts (opts = {}, query) {
+      var promises = []
+      query = query || this.getPostscriptsQuery(opts)
+      var postscripts = await query.toArray()
+
+      // fetch author profile
+      if (opts.fetchAuthor) {
+        let profiles = {}
+        promises = promises.concat(postscripts.map(async b => {
+          if (!profiles[b._origin]) {
+            profiles[b._origin] = this.getProfile(b._origin)
+          }
+          b.author = await profiles[b._origin]
+        }))
+      }
+
+      // tabulate votes
+      if (opts.countVotes) {
+        promises = promises.concat(postscripts.map(async b => {
+          b.votes = await this.countVotes(b._url)
+        }))
+      }
+
+      await Promise.all(promises)
+      return postscripts
+    },
+
+    countPostscripts (opts, query) {
+      query = query || this.getPostscriptsQuery(opts)
+      return query.count()
+    },
+
+    async getPostscript (record) {
+      console.log('record', record)
+      const recordUrl = coerce.recordUrl(record)
+      record = await db.postscripts.get(recordUrl)
+      record.author = await this.getProfile(record._origin)
+      record.votes = await this.countVotes(recordUrl)
+      return record
     }
   }
 }
