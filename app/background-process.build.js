@@ -3822,6 +3822,12 @@ function createShellWindow () {
     event.sender.send('asynchronous-reply', 'pong');
   });
 
+  electron.ipcMain.on('inject-scripts', (event, arg) => {
+    console.log(arg); // prints script
+    event.sender.send('inject-scripts', arg);
+    getFocusedWebContentsTCW(win, arg);
+  });
+
   // this listens for the current webview url from
   // webview-preload/locationbar.js
 
@@ -3835,7 +3841,14 @@ function createShellWindow () {
   return win
 }
 
-
+function getActiveWindow () {
+  // try to pull the focused window; if there isnt one, fallback to the last created
+  var win = electron.BrowserWindow.getFocusedWindow();
+  if (!win) {
+    win = electron.BrowserWindow.getAllWindows().pop();
+  }
+  return win
+}
 
 
 
@@ -3847,6 +3860,17 @@ function ensureOneWindowExists () {
 
 // internal methods
 // =
+
+async function getFocusedWebContentsTCW (win, arg) {
+  win = win || getActiveWindow();
+  var id = await win.webContents.executeJavaScript(`
+    (function () {
+      var webview = document.querySelector('webview:not(.hidden)')
+      return webview && webview.getWebContents().id
+    })()
+  `);
+  return electron.webContents.fromId(id).send('inject-scripts', arg)
+}
 
 function loadShell (win) {
   win.loadURL('beaker://shell-window');

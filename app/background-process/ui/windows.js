@@ -91,6 +91,12 @@ export function createShellWindow () {
     event.sender.send('asynchronous-reply', 'pong')
   })
 
+  ipcMain.on('inject-scripts', (event, arg) => {
+    console.log(arg) // prints script
+    event.sender.send('inject-scripts', arg)
+    getFocusedWebContentsTCW(win, arg)
+  })
+
   // this listens for the current webview url from
   // webview-preload/locationbar.js
 
@@ -134,6 +140,17 @@ export function ensureOneWindowExists () {
 
 // internal methods
 // =
+
+async function getFocusedWebContentsTCW (win, arg) {
+  win = win || getActiveWindow()
+  var id = await win.webContents.executeJavaScript(`
+    (function () {
+      var webview = document.querySelector('webview:not(.hidden)')
+      return webview && webview.getWebContents().id
+    })()
+  `)
+  return webContents.fromId(id).send('inject-scripts', arg)
+}
 
 function loadShell (win) {
   win.loadURL('beaker://shell-window')

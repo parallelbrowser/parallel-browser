@@ -314,13 +314,6 @@ export function create (opts) {
   page.webviewEl.addEventListener('plugin-crashed', onCrashed)
   page.webviewEl.addEventListener('ipc-message', onIPCMessage)
 
-  //TCW CHANGES -- adds custom event listener for script reply
-
-  page.webviewEl.addEventListener('script-reply', onScriptReply)
-
-  //TCW -- END
-
-
   // rebroadcasts
   page.webviewEl.addEventListener('did-start-loading', rebroadcastEvent)
   page.webviewEl.addEventListener('did-stop-loading', rebroadcastEvent)
@@ -506,15 +499,6 @@ export function savePinnedToDB () {
 function onDomReady (e) {
   var page = getByWebview(e.target)
   if (page) {
-
-    // TCW CHANGES -- messages webview-preload/inject-scripts.js that the
-    // DOM is ready to recieve injected scripts from DAT
-
-    console.log('Dom ready, fetching scripts!');
-    e.target.getWebContents().send('inject-scripts', 'this is a test')
-
-    // TCW -- END
-
     page.isWebviewReady = true
     if (!page.wcID) {
       page.wcID = e.target.getWebContents().id // NOTE: this is a sync op
@@ -524,15 +508,6 @@ function onDomReady (e) {
     }
   }
 }
-
-// TCW CHANGES - function called on script reply
-
-function onScriptReply (e) {
-  console.log('here in script reply');
-  console.log('event', e);
-}
-
-// TCW -- END
 
 function onNewWindow (e) {
   var page = getByWebview(e.target)
@@ -866,7 +841,9 @@ function onCrashed (e) {
 }
 
 export function onIPCMessage (e) {
+  console.log('event on ipc', e)
   var page = getByWebview(e.target)
+  console.log('webview', page)
   switch (e.channel) {
     case 'site-info-override:set':
       if (page) {
