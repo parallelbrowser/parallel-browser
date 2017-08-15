@@ -604,6 +604,94 @@ class BrowserMenuNavbarBtn {
   }
 }
 
+var loadingView = function () {
+  return yo`
+      <div><p><i class="fa fa-spinner"></i>Loading...</p></div>
+  `
+};
+
+// Render the list of scripts in the dropdown
+var renderPrescript = function (prescript) {
+  return yo`
+    <li>
+      <div class="list-item" onclick=${() => hi(prescript)}>
+          <div style="display: inline-block" title=${prescript.prescriptName}>
+            <span><b>${prescript.prescriptName}</b></span>
+          </div>
+          <br>
+          <div style="display: inline-block">
+            <span>${prescript.prescriptInfo}</span>
+          </div>
+      </div>
+    </li>
+  `
+};
+
+function hi (prescript) {
+  console.log('prescript in button', prescript);
+  electron.ipcRenderer.send('inject-scripts', prescript.prescriptJS);
+}
+
+var prescriptList = function (prescripts) {
+  if (!prescripts) {
+    return loadingView()
+  }
+  if (prescripts.length === 0) {
+    return yo`
+      <ul>
+        <li>
+          <div class="list-item">
+            You are not using any gizmos!
+          </div>
+        </li>
+      </ul>
+    `
+  }
+
+  return yo`
+    <ul>
+      ${prescripts.map(p => renderPrescript(p))}
+    </ul>
+  `
+};
+
+// Render the list of scripts in the dropdown
+var renderPostscript = function (postscript) {
+  return yo`
+    <li>
+      <div class="list-item">
+          <div style="display: inline-block" title=${postscript.postscriptName}}></div>
+          <div style="display: inline-block">
+            <span> <b>${postscript.postscriptInfo}</b></span>
+          </div>
+      </div>
+    </li>
+  `
+};
+
+var postscriptList = function (postscripts) {
+  if (!postscripts) {
+    return loadingView()
+  }
+  if (postscripts.length === 0) {
+    return yo`
+      <ul>
+        <li>
+          <div class="list-item">
+            No widgets for this page.
+          </div>
+        </li>
+      </ul>
+    `
+  }
+
+  return yo`
+    <ul>
+      ${postscripts.map(p => renderPostscript(p))}
+    </ul>
+  `
+};
+
 /* globals DatArchive */
 // import { ipcRenderer } from 'electron'
 
@@ -611,23 +699,27 @@ class BrowserScriptNavbarBtn {
   constructor () {
     this.isDropdownOpen = false;
     this.showPre = false;
-    this.preScripts = null;
-    this.postScripts = null;
+    this.prescripts = null;
+    this.postscripts = null;
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
     this.loadPrescripts();
   }
   async loadPrescripts () {
-    const userURL = 'dat://9349f5ff0c0a05332d9002eefc82d8ca935b9bc58e3be8e6967eb29b9615b491';
+    const userURL = 'dat://4e37e54d1c638750614bcf2cc314d855c320415d02088a6a4d924c22abdca747';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
     console.log('userDB', userDB);
-    this.preScripts = await userDB.listPrescripts();
-    console.log('these prescripts 1', this.preScripts);
+    this.prescripts = await userDB.listPrescripts({
+      fetchAuthor: true,
+      countVotes: true,
+      reverse: true,
+      author: 'dat://4e37e54d1c638750614bcf2cc314d855c320415d02088a6a4d924c22abdca747'
+    });
+    console.log('these prescripts', this.prescripts);
   }
   render () {
-    console.log('these prescripts', this.preScripts);
     var dropdownEl = '';
     if (this.isDropdownOpen) {
-      //TODO: change the "view all scripts" and "discover" links
+      // TODO: change the "view all scripts" and "discover" links
       dropdownEl = yo`
         <div class="script-dropdown dropdown toolbar-dropdown-menu-dropdown">
           <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
@@ -635,25 +727,21 @@ class BrowserScriptNavbarBtn {
             <div class="grid default">
               <div class="grid-item" onclick=${() => this.prePostClick(true)}>
                 <i class="fa fa-file-code-o"></i>
-                Pre-Scripts
+                Gizmos
               </div>
               <div class="grid-item" onclick=${() => this.prePostClick(false)}>
                 <i class="fa fa-file-text-o"></i>
-                Post-Scripts
+                Widgets
               </div>
             </div>
 
 
-            ${this.renderPreOrPost()}
+            ${this.showPre ? prescriptList(this.prescripts) : postscriptList(this.postscripts)}
 
             <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')}>
-                <i class="fa fa-eye"></i>
-                <span>View All Scripts</span>
-              </a>
-              <a onclick=${e => this.onOpenPage(e, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')}>
-                <i class="fa fa-user-plus"></i>
-                <span>Discover</span>
+              <a onclick=${e => this.onOpenPage(e, 'dat://87be7e6edfae1bbfb848271fdf0c3a48f310ebd29a36c255b6453483d52f107b')}>
+                <i class="fa fa-home"></i>
+                <span>Home</span>
               </a>
             </div>
 
@@ -672,36 +760,11 @@ class BrowserScriptNavbarBtn {
   }
 
   renderPreOrPost () {
-    let title = '';
-
-    //TODO: remove after testing, actually retrieve the scripts from somewhere
-    //TODO: need to query this from backend instead
-
-    let a = new Date(Date.now());
-    let preScripts = [{prescriptName: 'Dummy 1', prescriptInfo: 'Description of Script 1', clicked: false},
-                      {prescriptName: 'Dummy 2', prescriptInfo: 'Description of Script 2', clicked: false}];
-    let postScripts = [{name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Patrick', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false},
-                      {name: 'POST', desc: 'Description of Script', time: a.toDateString(), author: 'Squidward', pubKey: 'IAMTHEONETHEONEDONTNEEDAGUNTOGETRESPECTUPONTHESESTREETS', clicked: false}];
-
-
-    // If the user is viewing prescripts, show them. Otherwise, show postscripts for this site
-    if(this.showPre) {
-      title = 'Your Pre-Scripts';
-      if(!this.preScripts){
-        this.preScripts = preScripts; // TODO: should be this.preScripts || preScriptsQuery
-      }
-    } else {
-      title = 'Your Post-Scripts';
-      if(!this.postScripts){
-        this.postScripts = postScripts; //TODO: should be this.postScripts || postScriptsQuery
-      }
-    }
-
     return yo`
       <div>
         <div class="section-header">
           <h3>
-            ${title}
+            ${this.showPre ? 'Gizmos' : 'Widgets'}
           </h3>
         </div>
         <ul>
@@ -710,86 +773,16 @@ class BrowserScriptNavbarBtn {
       </div>`
   }
 
-  // Render the list of scripts in the dropdown
-  scriptsList (scripts) {
-    //TODO: programatically get the name of the current user (for comparison against the author of the script)
-    let userName = 'Patrick';
-
-    var scriptsList = [];
-
-    // Check if there are any scripts. If not, let the user know
-    if(scripts.length === 0){
-      scriptsList.push(
-        yo`
-        <li>
-          <div class="list-item">
-            No scripts for this page
-          </div>
-        </li>`
-      );
-    } else {
-      scriptsList = scripts.map((scriptObj, index) => {
-        // For every script, add the properly formatted li
-        console.log('script obj', scriptObj);
-        return yo`
-          <li>
-            <div class="list-item ${scriptObj.clicked ? 'enabled' : ''}">
-
-                <div style="display: inline-block" title=${scriptObj.author} onClick=${() => this.clickedAuthor(scriptObj)}>
-                  <i class="fa ${userName === scriptObj.author ? 'fa-user' : 'fa-users'}"></i>
-                </div>
-                <a onclick=${() => this.toggleActivated(scripts, index)}>
-                <div style="display: inline-block">
-                  <div>
-                    <span> <b>${scriptObj.prescriptName}</b></span>
-                    <span> <i>${scriptObj.time}</i></span>
-                  </div>
-                  <div>
-                    <span> ${scriptObj.prescriptInfo}</span>
-                    <span> <i> By: ${scriptObj.author}</i></span>
-                  </div>
-                </div>
-                </a>
-            </div>
-          </li>`
-      });
-    }
-
-    // The last button is an add new scrips button
-    scriptsList = scriptsList.concat(
-      //TODO: change the "add new script" link
-      yo`
-        <li>
-          <div class="list-item">
-            <a onclick=${e => this.onOpenPage(e, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')}>
-              <i class="fa fa-plus"></i>
-              <span> Add New Script</span>
-            </a>
-          </div>
-        </li>`
-    );
-
-    return scriptsList;
-  }
-
   // Manages the redirect to other scripts from the clicked author
   clickedAuthor (scriptObj) {
       // TODO: send an ipc request for the rest of the scripts from this author
       //       and find a way to display them
-      this.updateActives();
-  }
-
-  // Manages the toggling of each script on click
-  // TODO: this should also send out an ipc message to inject-scripts notifying
-  //       a new list of enabled and disabled scripts
-  toggleActivated (arr, index) {
-    arr[index].clicked = !arr[index].clicked;
     this.updateActives();
   }
 
   // Toggles whether the user is viewing prescripts or post scripts on the current site
   prePostClick (isPre) {
-    if(isPre) {
+    if (isPre) {
       this.showPre = true;
     } else {
       this.showPre = false;
@@ -3560,13 +3553,6 @@ function create (opts) {
   page.webviewEl.addEventListener('plugin-crashed', onCrashed);
   page.webviewEl.addEventListener('ipc-message', onIPCMessage);
 
-  //TCW CHANGES -- adds custom event listener for script reply
-
-  page.webviewEl.addEventListener('script-reply', onScriptReply);
-
-  //TCW -- END
-
-
   // rebroadcasts
   page.webviewEl.addEventListener('did-start-loading', rebroadcastEvent);
   page.webviewEl.addEventListener('did-stop-loading', rebroadcastEvent);
@@ -3752,15 +3738,6 @@ function savePinnedToDB () {
 function onDomReady (e) {
   var page = getByWebview(e.target);
   if (page) {
-
-    // TCW CHANGES -- messages webview-preload/inject-scripts.js that the
-    // DOM is ready to recieve injected scripts from DAT
-
-    console.log('Dom ready, fetching scripts!');
-    e.target.getWebContents().send('inject-scripts', 'this is a test');
-
-    // TCW -- END
-
     page.isWebviewReady = true;
     if (!page.wcID) {
       page.wcID = e.target.getWebContents().id; // NOTE: this is a sync op
@@ -3770,15 +3747,6 @@ function onDomReady (e) {
     }
   }
 }
-
-// TCW CHANGES - function called on script reply
-
-function onScriptReply (e) {
-  console.log('here in script reply');
-  console.log('event', e);
-}
-
-// TCW -- END
 
 function onNewWindow (e) {
   var page = getByWebview(e.target);
@@ -4112,7 +4080,9 @@ function onCrashed (e) {
 }
 
 function onIPCMessage (e) {
+  console.log('event on ipc', e);
   var page = getByWebview(e.target);
+  console.log('webview', page);
   switch (e.channel) {
     case 'site-info-override:set':
       if (page) {
@@ -12747,7 +12717,7 @@ async function unindexFile (db, archive, filepath) {
 
 function newDatArchive (url) {
   console.log('dat archive in injest', DatArchive)
-  console.log('window', window);
+  console.log('window', window)
   console.log('dat class', window.DatArchive)
   if (!DatArchive) {
     return new window.DatArchive(url)
