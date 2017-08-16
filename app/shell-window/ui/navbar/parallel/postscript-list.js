@@ -2,7 +2,7 @@ import * as yo from 'yo-yo'
 import loadingView from './loading'
 import renderPostscript from './postscript'
 
-export default function (postscripts) {
+export default function (postscripts, updatePostscripts) {
   if (!postscripts) {
     return loadingView()
   }
@@ -20,7 +20,7 @@ export default function (postscripts) {
 
   return yo`
     <ul>
-      ${postscripts.map(p => renderPostscript(p))}
+      ${postscripts.map(p => renderPostscript(p, updatePostscripts))}
     </ul>
   `
 }
