@@ -91,8 +91,12 @@ export function createShellWindow () {
     event.sender.send('asynchronous-reply', 'pong')
   })
 
-  ipcMain.on('inject-scripts', (event, prescript) => {
-    getFocusedWebContentsTCW(win, prescript)
+  ipcMain.on('inject-subscript', (event, subscript) => {
+    promptInjectSubscript(win, subscript)
+  })
+
+  ipcMain.on('inject-widget', (event, widget) => {
+    promptInjectWidget(win, widget)
   })
 
   // this listens for the current webview url from
@@ -103,7 +107,7 @@ export function createShellWindow () {
     event.sender.send('new-url', arg) // sends to shell-window/ui/navbar/browser-script.js
   })
 
-  // TCW CHANGES -- END
+  // end
 
   return win
 }
@@ -139,7 +143,10 @@ export function ensureOneWindowExists () {
 // internal methods
 // =
 
-async function getFocusedWebContentsTCW (win, prescript) {
+// TCW -- these send the prompts to inject either the subscript or widget
+// into the currently focused webview
+
+async function promptInjectSubscript (win, subscript) {
   win = win || getActiveWindow()
   var id = await win.webContents.executeJavaScript(`
     (function () {
@@ -147,8 +154,21 @@ async function getFocusedWebContentsTCW (win, prescript) {
       return webview && webview.getWebContents().id
     })()
   `)
-  return webContents.fromId(id).send('inject-scripts', prescript)
+  return webContents.fromId(id).send('inject-subscript', subscript)
 }
+
+async function promptInjectWidget (win, widget) {
+  win = win || getActiveWindow()
+  var id = await win.webContents.executeJavaScript(`
+    (function () {
+      var webview = document.querySelector('webview:not(.hidden)')
+      return webview && webview.getWebContents().id
+    })()
+  `)
+  return webContents.fromId(id).send('inject-widget', widget)
+}
+
+// end
 
 function loadShell (win) {
   win.loadURL('beaker://shell-window')

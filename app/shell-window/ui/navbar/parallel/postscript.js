@@ -1,10 +1,10 @@
 import { ipcRenderer } from 'electron'
 import * as yo from 'yo-yo'
 // Render the list of scripts in the dropdown
-export default function (postscript, updatePostscripts) {
+export default function (postscript) {
   return yo`
     <li>
-      <div class="list-item" onclick=${() => injectPostscript(postscript, updatePostscripts)}>
+      <div class="list-item" onclick=${() => injectPostscript(postscript)}>
           <div style="display: inline-block" title=${postscript.subscriptName}>
             <span><b>${postscript.subscriptName}</b></span>
           </div>
@@ -17,8 +17,7 @@ export default function (postscript, updatePostscripts) {
   `
 }
 
-function injectPostscript (postscript, updatePostscripts) {
+function injectPostscript (postscript) {
   console.log('postscript in button', postscript)
-  ipcRenderer.send('inject-scripts', postscript)
-  setTimeout(() => updatePostscripts, 1000)
+  ipcRenderer.send('inject-widget', postscript)
 }

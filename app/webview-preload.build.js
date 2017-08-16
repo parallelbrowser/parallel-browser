@@ -534,14 +534,11 @@ var setupRedirectHackfix = function () {
 
 /* globals DatArchive localStorage */
 
-// TCW CHANGES -- injects scripts into the webview DOM
-
 function setup$2 () {
-  // listens for the 'inject-scripts' ipc event called in the
-  // onDomReady function in shell-window/pages.js
-  window.postscriptListener = postscriptListener;
+  window.savePostscript = savePostscript;
 
-  electron.ipcRenderer.on('inject-scripts', (event, subscript) => {
+  electron.ipcRenderer.on('inject-subscript', (event, subscript) => {
+    console.log('here');
     let subscriptCredentials = {
       subscriptName: subscript.subscriptName,
       subscriptInfo: subscript.subscriptInfo,
@@ -549,6 +546,7 @@ function setup$2 () {
       subscriptURL: subscript.subscriptURL
     };
     subscriptCredentials = JSON.stringify(subscriptCredentials);
+    console.log('creds', subscriptCredentials);
     localStorage.setItem('subscriptCredentials', subscriptCredentials);
     let subscriptJS;
     let subscriptCSS;
@@ -564,66 +562,77 @@ function setup$2 () {
     }
     inject(subscriptJS, subscriptCSS, subscriptURL);
   });
+
+  electron.ipcRenderer.on('inject-widget', (event, widget) => {
+    toggleWidget(widget);
+  });
 }
 
-function inject (subscriptJS, subscriptCSS, subscriptURL) {
-  // define SECURITY_POLICY constant to inject into the page, to allow
-  // parallel scripts to run without compromising security
-
-  const SECURITY_POLICY = `<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'self';\">`;
-
-  // define body and head of underlying webview DOM
+function inject (scriptJS, scriptCSS, scriptURL) {
+  // defines body and head of underlying webview DOM
 
   const body = document.body || document.getElementsByTagName('body')[0];
   const head = document.head || document.getElementsByTagName('head')[0];
 
-  // add custom security policy
+  // HACK defines SECURITY_POLICY constant to inject into the page. (surely
+  // there's a better way...)
 
+  const SECURITY_POLICY = `<meta http-equiv="Content-Security-Policy" content="script-src 'self';">`;
   head.prepend(SECURITY_POLICY);
 
   // appends javascript to the <body>
 
-  if (subscriptJS && subscriptURL) {
-    const jsElement = document.createElement('script');
-    jsElement.setAttribute('id', subscriptURL);
-    console.log('jsElement', jsElement);
-    jsElement.appendChild(document.createTextNode(subscriptJS));
-    body.appendChild(jsElement);
-    console.log('new body', body);
-    console.log('curr doc', document.documentElement);
+  if (scriptJS && scriptURL) {
+    const scriptElement = document.createElement('script');
+    scriptElement.setAttribute('id', scriptURL);
+    scriptElement.appendChild(document.createTextNode(scriptJS));
+    body.appendChild(scriptElement);
   }
 
-  // appends css to the <head>
-
-  if (subscriptCSS) {
+  if (scriptCSS) {
     const cssElement = document.createElement('style');
     cssElement.type = 'text/css';
-    cssElement.appendChild(document.createTextNode(subscriptCSS));
+    cssElement.appendChild(document.createTextNode(scriptCSS));
     head.appendChild(cssElement);
   }
 }
 
-async function postscriptListener (postscriptJS) {
+// important! savePostscript is attached to the window and must be defined in
+// the prescript. the function gets credentials from localStorage, removes
+// the injected script from the dom, then writes the postscript to the user's
+// injestdb
+
+async function savePostscript (postscriptJS) {
+  console.log('here in save');
   const subscriptCredentials = JSON.parse(localStorage.getItem('subscriptCredentials'));
   if (postscriptJS && subscriptCredentials && subscriptCredentials.subscriptURL) {
-    console.log('doc before', document.documentElement);
-    console.log('window before', window);
-    const script = document.getElementById(subscriptCredentials.subscriptURL);
-    const parent = script.parentNode;
-    console.log('parent before', parent);
-    console.log('grabbed script', script);
-    script.parentNode.removeChild(script);
-    console.log('doc after', document.documentElement);
-    console.log('parent after', parent);
+    removeScript(subscriptCredentials.subscriptURL);
     localStorage.removeItem('subscriptCredentials');
-    const postscript = Object.assign({}, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href}, subscriptCredentials);
-    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
+    const postscript = Object.assign({}, {postscriptJS, postscriptHTTP: window.location.href}, subscriptCredentials);
+    console.log('postscript', postscript);
+    const userURL = 'dat://f1c8d1f6c3698f45b0bcf081054265b6844ecde6d40a92ea07c51c85cee0884a';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
+    console.log('db', userDB);
     await userDB.postscript(userURL, postscript);
   }
 }
 
-// TCW -- END
+function toggleWidget (widget) {
+  var element = document.getElementById(widget.subscriptURL);
+  if (typeof (element) !== 'undefined' && element !== null) {
+    removeScript(widget.subscriptURL);
+  } else {
+    inject(widget.postscriptJS, null, widget.subscriptURL);
+  }
+}
+
+function removeScript (id) {
+  console.log('removing');
+  const scriptElement = document.getElementById(id);
+  scriptElement.parentNode.removeChild(scriptElement);
+}
+
+// end
 
 // TCW CHANGES --- import inject scripts
 
@@ -4226,12 +4235,14 @@ exports.open = async function (userArchive) {
       })
     },
 
+    // added postscript schema
+
     postscripts: {
       primaryKey: 'createdAt',
       index: ['createdAt', '_origin+createdAt'],
       validator: record => ({
         postscriptJS: coerce.string(record.postscriptJS),
-        postscriptCSS: coerce.string(record.postscriptCSS),
+        postscriptHTTP: coerce.string(record.postscriptHTTP),
         subscriptURL: coerce.string(record.subscriptURL),
         subscriptOrigin: coerce.string(record.subscriptOrigin),
         subscriptName: coerce.string(record.subscriptName),
@@ -4241,7 +4252,6 @@ exports.open = async function (userArchive) {
       })
     }
     // TCW -- END
-
   })
   await db.open()
 

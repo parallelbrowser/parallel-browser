@@ -629,7 +629,7 @@ var renderSubscript = function (subscript) {
 
 function injectSubscript (subscript) {
   console.log('subscript in button', subscript);
-  electron.ipcRenderer.send('inject-scripts', subscript);
+  electron.ipcRenderer.send('inject-subscript', subscript);
 }
 
 var subscriptList = function (subscripts) {
@@ -656,10 +656,10 @@ var subscriptList = function (subscripts) {
 };
 
 // Render the list of scripts in the dropdown
-var renderPostscript = function (postscript, updatePostscripts) {
+var renderPostscript = function (postscript) {
   return yo`
     <li>
-      <div class="list-item" onclick=${() => injectPostscript(postscript, updatePostscripts)}>
+      <div class="list-item" onclick=${() => injectPostscript(postscript)}>
           <div style="display: inline-block" title=${postscript.subscriptName}>
             <span><b>${postscript.subscriptName}</b></span>
           </div>
@@ -672,10 +672,9 @@ var renderPostscript = function (postscript, updatePostscripts) {
   `
 };
 
-function injectPostscript (postscript, updatePostscripts) {
+function injectPostscript (postscript) {
   console.log('postscript in button', postscript);
-  electron.ipcRenderer.send('inject-scripts', postscript);
-  setTimeout(() => updatePostscripts, 1000);
+  electron.ipcRenderer.send('inject-widget', postscript);
 }
 
 var postscriptList = function (postscripts, updatePostscripts) {
@@ -716,7 +715,7 @@ class ParallelBtn {
   }
 
   async loadSubscripts () {
-    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
+    const userURL = 'dat://f1c8d1f6c3698f45b0bcf081054265b6844ecde6d40a92ea07c51c85cee0884a';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
     console.log('userDB', userDB);
     const profile = await userDB.getProfile(userURL);
@@ -726,7 +725,7 @@ class ParallelBtn {
   }
 
   async loadPostscripts () {
-    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
+    const userURL = 'dat://f1c8d1f6c3698f45b0bcf081054265b6844ecde6d40a92ea07c51c85cee0884a';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
     console.log('userDB', userDB);
     this.postscripts = await userDB.listPostscripts();
@@ -753,7 +752,7 @@ class ParallelBtn {
             </div>
 
 
-            ${this.showSubscripts ? subscriptList(this.subscripts) : postscriptList(this.postscripts, this.loadPostscripts.bind(this))}
+            ${this.showSubscripts ? subscriptList(this.subscripts) : postscriptList(this.postscripts)}
 
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a')}>
@@ -10266,12 +10265,14 @@ exports.open = async function (userArchive) {
       })
     },
 
+    // added postscript schema
+
     postscripts: {
       primaryKey: 'createdAt',
       index: ['createdAt', '_origin+createdAt'],
       validator: record => ({
         postscriptJS: coerce.string(record.postscriptJS),
-        postscriptCSS: coerce.string(record.postscriptCSS),
+        postscriptHTTP: coerce.string(record.postscriptHTTP),
         subscriptURL: coerce.string(record.subscriptURL),
         subscriptOrigin: coerce.string(record.subscriptOrigin),
         subscriptName: coerce.string(record.subscriptName),
@@ -10281,7 +10282,6 @@ exports.open = async function (userArchive) {
       })
     }
     // TCW -- END
-
   })
   await db.open()
 

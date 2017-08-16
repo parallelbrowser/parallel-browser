@@ -19,7 +19,7 @@ export class ParallelBtn {
   }
 
   async loadSubscripts () {
-    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a'
+    const userURL = 'dat://f1c8d1f6c3698f45b0bcf081054265b6844ecde6d40a92ea07c51c85cee0884a'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
     console.log('userDB', userDB)
     const profile = await userDB.getProfile(userURL)
@@ -29,7 +29,7 @@ export class ParallelBtn {
   }
 
   async loadPostscripts () {
-    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a'
+    const userURL = 'dat://f1c8d1f6c3698f45b0bcf081054265b6844ecde6d40a92ea07c51c85cee0884a'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
     console.log('userDB', userDB)
     this.postscripts = await userDB.listPostscripts()
@@ -56,7 +56,7 @@ export class ParallelBtn {
             </div>
 
 
-            ${this.showSubscripts ? subscriptList(this.subscripts) : postscriptList(this.postscripts, this.loadPostscripts.bind(this))}
+            ${this.showSubscripts ? subscriptList(this.subscripts) : postscriptList(this.postscripts)}
 
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a')}>

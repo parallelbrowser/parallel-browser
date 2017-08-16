@@ -19,5 +19,5 @@ export default function (subscript) {
 
 function injectSubscript (subscript) {
   console.log('subscript in button', subscript)
-  ipcRenderer.send('inject-scripts', subscript)
+  ipcRenderer.send('inject-subscript', subscript)
 }
