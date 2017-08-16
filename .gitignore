@@ -79,5 +79,5 @@ start.build.js
 swarm-debugger.build.js
 view-source.build.js
 renderer.build.js
-app/shell-window.build.js
-app/webview-preload.build.js
+shell-window.build.js
+webview-preload.build.js
