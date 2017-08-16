@@ -552,17 +552,21 @@ function setup$2 () {
     localStorage.setItem('subscriptCredentials', subscriptCredentials);
     let subscriptJS;
     let subscriptCSS;
+    let subscriptURL;
     if (subscript.subscriptJS) {
       subscriptJS = subscript.subscriptJS.toString();
     }
     if (subscript.subscriptCSS) {
       subscriptCSS = subscript.subscriptCSS.toString();
     }
-    inject(subscriptJS, subscriptCSS);
+    if (subscript.subscriptURL) {
+      subscriptURL = subscript.subscriptURL.toString();
+    }
+    inject(subscriptJS, subscriptCSS, subscriptURL);
   });
 }
 
-function inject (subscriptJS, subscriptCSS) {
+function inject (subscriptJS, subscriptCSS, subscriptURL) {
   // define SECURITY_POLICY constant to inject into the page, to allow
   // parallel scripts to run without compromising security
 
@@ -579,11 +583,14 @@ function inject (subscriptJS, subscriptCSS) {
 
   // appends javascript to the <body>
 
-  if (subscriptJS) {
+  if (subscriptJS && subscriptURL) {
     const jsElement = document.createElement('script');
+    jsElement.setAttribute('id', subscriptURL);
     console.log('jsElement', jsElement);
     jsElement.appendChild(document.createTextNode(subscriptJS));
     body.appendChild(jsElement);
+    console.log('new body', body);
+    console.log('curr doc', document.documentElement);
   }
 
   // appends css to the <head>
@@ -598,11 +605,22 @@ function inject (subscriptJS, subscriptCSS) {
 
 async function postscriptListener (postscriptJS) {
   const subscriptCredentials = JSON.parse(localStorage.getItem('subscriptCredentials'));
-  localStorage.removeItem('subscriptCredentials');
-  const postscript = Object.assign({}, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href}, subscriptCredentials);
-  const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
-  const userDB = await ParallelAPI.open(new DatArchive(userURL));
-  await userDB.postscript(userURL, postscript);
+  if (postscriptJS && subscriptCredentials && subscriptCredentials.subscriptURL) {
+    console.log('doc before', document.documentElement);
+    console.log('window before', window);
+    const script = document.getElementById(subscriptCredentials.subscriptURL);
+    const parent = script.parentNode;
+    console.log('parent before', parent);
+    console.log('grabbed script', script);
+    script.parentNode.removeChild(script);
+    console.log('doc after', document.documentElement);
+    console.log('parent after', parent);
+    localStorage.removeItem('subscriptCredentials');
+    const postscript = Object.assign({}, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href}, subscriptCredentials);
+    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
+    const userDB = await ParallelAPI.open(new DatArchive(userURL));
+    await userDB.postscript(userURL, postscript);
+  }
 }
 
 // TCW -- END

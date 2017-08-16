@@ -656,20 +656,29 @@ var subscriptList = function (subscripts) {
 };
 
 // Render the list of scripts in the dropdown
-var renderPostscript = function (postscript) {
+var renderPostscript = function (postscript, updatePostscripts) {
   return yo`
     <li>
-      <div class="list-item">
-          <div style="display: inline-block" title=${postscript.postscriptName}}></div>
+      <div class="list-item" onclick=${() => injectPostscript(postscript, updatePostscripts)}>
+          <div style="display: inline-block" title=${postscript.subscriptName}>
+            <span><b>${postscript.subscriptName}</b></span>
+          </div>
+          <br>
           <div style="display: inline-block">
-            <span> <b>${postscript.postscriptInfo}</b></span>
+            <span>${postscript.subscriptInfo}</span>
           </div>
       </div>
     </li>
   `
 };
 
-var postscriptList = function (postscripts) {
+function injectPostscript (postscript, updatePostscripts) {
+  console.log('postscript in button', postscript);
+  electron.ipcRenderer.send('inject-scripts', postscript);
+  setTimeout(() => updatePostscripts, 1000);
+}
+
+var postscriptList = function (postscripts, updatePostscripts) {
   if (!postscripts) {
     return loadingView()
   }
@@ -687,7 +696,7 @@ var postscriptList = function (postscripts) {
 
   return yo`
     <ul>
-      ${postscripts.map(p => renderPostscript(p))}
+      ${postscripts.map(p => renderPostscript(p, updatePostscripts))}
     </ul>
   `
 };
@@ -698,12 +707,14 @@ var postscriptList = function (postscripts) {
 class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false;
-    this.showPre = false;
+    this.showSubscripts = true;
     this.subscripts = null;
     this.postscripts = null;
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
     this.loadSubscripts();
+    this.loadPostscripts();
   }
+
   async loadSubscripts () {
     const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
@@ -713,6 +724,15 @@ class ParallelBtn {
     this.subscripts = profile.subscripts;
     console.log('these subscripts', this.subscripts);
   }
+
+  async loadPostscripts () {
+    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
+    const userDB = await ParallelAPI.open(new DatArchive(userURL));
+    console.log('userDB', userDB);
+    this.postscripts = await userDB.listPostscripts();
+    console.log('these postscripts', this.postscripts);
+  }
+
   render () {
     var dropdownEl = '';
     if (this.isDropdownOpen) {
@@ -722,18 +742,18 @@ class ParallelBtn {
           <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
 
             <div class="grid default">
-              <div class="grid-item" onclick=${() => this.prePostClick(true)}>
+              <div class="grid-item" onclick=${() => this.onToggleClick(true)}>
                 <i class="fa fa-file-code-o"></i>
                 Gizmos
               </div>
-              <div class="grid-item" onclick=${() => this.prePostClick(false)}>
+              <div class="grid-item" onclick=${() => this.onToggleClick(false)}>
                 <i class="fa fa-file-text-o"></i>
                 Widgets
               </div>
             </div>
 
 
-            ${this.showPre ? subscriptList(this.subscripts) : postscriptList(this.postscripts)}
+            ${this.showSubscripts ? subscriptList(this.subscripts) : postscriptList(this.postscripts, this.loadPostscripts.bind(this))}
 
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a')}>
@@ -764,11 +784,12 @@ class ParallelBtn {
   }
 
   // Toggles whether the user is viewing prescripts or post scripts on the current site
-  prePostClick (isPre) {
-    if (isPre) {
-      this.showPre = true;
+  onToggleClick (showSubscripts) {
+    this.showSubscripts = showSubscripts;
+    if (showSubscripts) {
+      this.loadSubscripts();
     } else {
-      this.showPre = false;
+      this.loadPostscripts();
     }
     this.updateActives();
   }
