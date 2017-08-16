@@ -91,10 +91,8 @@ export function createShellWindow () {
     event.sender.send('asynchronous-reply', 'pong')
   })
 
-  ipcMain.on('inject-scripts', (event, arg) => {
-    console.log(arg) // prints script
-    event.sender.send('inject-scripts', arg)
-    getFocusedWebContentsTCW(win, arg)
+  ipcMain.on('inject-scripts', (event, prescript) => {
+    getFocusedWebContentsTCW(win, prescript)
   })
 
   // this listens for the current webview url from
@@ -141,7 +139,7 @@ export function ensureOneWindowExists () {
 // internal methods
 // =
 
-async function getFocusedWebContentsTCW (win, arg) {
+async function getFocusedWebContentsTCW (win, prescript) {
   win = win || getActiveWindow()
   var id = await win.webContents.executeJavaScript(`
     (function () {
@@ -149,7 +147,7 @@ async function getFocusedWebContentsTCW (win, arg) {
       return webview && webview.getWebContents().id
     })()
   `)
-  return webContents.fromId(id).send('inject-scripts', arg)
+  return webContents.fromId(id).send('inject-scripts', prescript)
 }
 
 function loadShell (win) {

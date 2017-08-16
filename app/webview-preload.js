@@ -15,7 +15,6 @@ import {setup as setupInjectScripts} from './webview-preload/inject-scripts'
 // HACKS
 setupRedirectHackfix()
 
-
 // register protocol behaviors
 /* This marks the scheme as:
  - Secure
@@ -34,11 +33,12 @@ if (['beaker:', 'dat:', 'https:'].includes(window.location.protocol) ||
 if (window.location.protocol === 'beaker:') {
   window.beaker = beaker
 }
+window.subscriptCredentials = {}
 setupLocationbar()
 setupPrompt()
 
-//TCW CHANGES -- call inject scripts from webview-preload/inject-scripts
+// TCW CHANGES -- call inject scripts from webview-preload/inject-scripts
 
 setupInjectScripts()
 
-//TCW -- END
+// TCW -- END

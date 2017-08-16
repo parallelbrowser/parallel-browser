@@ -611,32 +611,32 @@ var loadingView = function () {
 };
 
 // Render the list of scripts in the dropdown
-var renderPrescript = function (prescript) {
+var renderSubscript = function (subscript) {
   return yo`
     <li>
-      <div class="list-item" onclick=${() => hi(prescript)}>
-          <div style="display: inline-block" title=${prescript.prescriptName}>
-            <span><b>${prescript.prescriptName}</b></span>
+      <div class="list-item" onclick=${() => injectSubscript(subscript)}>
+          <div style="display: inline-block" title=${subscript.subscriptName}>
+            <span><b>${subscript.subscriptName}</b></span>
           </div>
           <br>
           <div style="display: inline-block">
-            <span>${prescript.prescriptInfo}</span>
+            <span>${subscript.subscriptInfo}</span>
           </div>
       </div>
     </li>
   `
 };
 
-function hi (prescript) {
-  console.log('prescript in button', prescript);
-  electron.ipcRenderer.send('inject-scripts', prescript.prescriptJS);
+function injectSubscript (subscript) {
+  console.log('subscript in button', subscript);
+  electron.ipcRenderer.send('inject-scripts', subscript);
 }
 
-var prescriptList = function (prescripts) {
-  if (!prescripts) {
+var subscriptList = function (subscripts) {
+  if (!subscripts) {
     return loadingView()
   }
-  if (prescripts.length === 0) {
+  if (subscripts.length === 0) {
     return yo`
       <ul>
         <li>
@@ -650,7 +650,7 @@ var prescriptList = function (prescripts) {
 
   return yo`
     <ul>
-      ${prescripts.map(p => renderPrescript(p))}
+      ${subscripts.map(p => renderSubscript(p))}
     </ul>
   `
 };
@@ -695,26 +695,23 @@ var postscriptList = function (postscripts) {
 /* globals DatArchive */
 // import { ipcRenderer } from 'electron'
 
-class BrowserScriptNavbarBtn {
+class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false;
     this.showPre = false;
-    this.prescripts = null;
+    this.subscripts = null;
     this.postscripts = null;
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
-    this.loadPrescripts();
+    this.loadSubscripts();
   }
-  async loadPrescripts () {
-    const userURL = 'dat://4e37e54d1c638750614bcf2cc314d855c320415d02088a6a4d924c22abdca747';
+  async loadSubscripts () {
+    const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
     console.log('userDB', userDB);
-    this.prescripts = await userDB.listPrescripts({
-      fetchAuthor: true,
-      countVotes: true,
-      reverse: true,
-      author: 'dat://4e37e54d1c638750614bcf2cc314d855c320415d02088a6a4d924c22abdca747'
-    });
-    console.log('these prescripts', this.prescripts);
+    const profile = await userDB.getProfile(userURL);
+    console.log('current user profile', profile);
+    this.subscripts = profile.subscripts;
+    console.log('these subscripts', this.subscripts);
   }
   render () {
     var dropdownEl = '';
@@ -736,10 +733,10 @@ class BrowserScriptNavbarBtn {
             </div>
 
 
-            ${this.showPre ? prescriptList(this.prescripts) : postscriptList(this.postscripts)}
+            ${this.showPre ? subscriptList(this.subscripts) : postscriptList(this.postscripts)}
 
             <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'dat://87be7e6edfae1bbfb848271fdf0c3a48f310ebd29a36c255b6453483d52f107b')}>
+              <a onclick=${e => this.onOpenPage(e, 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a')}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
@@ -756,20 +753,6 @@ class BrowserScriptNavbarBtn {
           <span class="fa fa-code"></span>
         </button>
         ${dropdownEl}
-      </div>`
-  }
-
-  renderPreOrPost () {
-    return yo`
-      <div>
-        <div class="section-header">
-          <h3>
-            ${this.showPre ? 'Gizmos' : 'Widgets'}
-          </h3>
-        </div>
-        <ul>
-          ${this.showPre ? this.scriptsList(this.preScripts) : this.scriptsList(this.postScripts)}
-        </ul>
       </div>`
   }
 
@@ -1389,7 +1372,7 @@ var toolbarNavDiv = document.getElementById('toolbar-nav');
 var updatesNavbarBtn = null;
 var datSidebarBtn = null;
 var browserMenuNavbarBtn = null;
-var browserScriptNavbarBtn = null;
+var parallelBtn = null;
 var pageMenuNavbarBtn = null;
 var siteInfoNavbarBtn = null;
 
@@ -1406,7 +1389,7 @@ function setup$3 () {
   updatesNavbarBtn = new UpdatesNavbarBtn();
   datSidebarBtn = new DatSidebarBtn();
   browserMenuNavbarBtn = new BrowserMenuNavbarBtn();
-  browserScriptNavbarBtn = new BrowserScriptNavbarBtn();
+  parallelBtn = new ParallelBtn();
   pageMenuNavbarBtn = new PageMenuNavbarBtn();
   siteInfoNavbarBtn = new SiteInfoNavbarBtn();
 }
@@ -1495,7 +1478,7 @@ function closeMenus () {
   browserMenuNavbarBtn.isDropdownOpen = false;
   browserMenuNavbarBtn.updateActives();
 
-  browserScriptNavbarBtn.isDropdownOpen = false;
+  parallelBtn.isDropdownOpen = false;
 
   pageMenuNavbarBtn.close();
 }
@@ -1702,7 +1685,7 @@ function render (id, page) {
       </div>
       <div class="toolbar-group">
         ${datSidebarBtn.render(addrValue)}
-        ${browserScriptNavbarBtn.render()}
+        ${parallelBtn.render()}
         ${browserMenuNavbarBtn.render()}
         ${updatesNavbarBtn.render()}
       </div>
@@ -3553,6 +3536,10 @@ function create (opts) {
   page.webviewEl.addEventListener('plugin-crashed', onCrashed);
   page.webviewEl.addEventListener('ipc-message', onIPCMessage);
 
+  // TCW
+
+  page.webviewEl.addEventListener('postscript-submit', onPostscriptSubmit);
+
   // rebroadcasts
   page.webviewEl.addEventListener('did-start-loading', rebroadcastEvent);
   page.webviewEl.addEventListener('did-stop-loading', rebroadcastEvent);
@@ -3734,6 +3721,10 @@ function savePinnedToDB () {
 
 // event handlers
 // =
+
+function onPostscriptSubmit (e) {
+  console.log('event in postscript submit', e);
+}
 
 function onDomReady (e) {
   var page = getByWebview(e.target);
@@ -10252,6 +10243,21 @@ exports.open = async function (userArchive) {
         createdAt: coerce.number(record.createdAt, {required: true}),
         receivedAt: Date.now()
       })
+    },
+
+    postscripts: {
+      primaryKey: 'createdAt',
+      index: ['createdAt', '_origin+createdAt'],
+      validator: record => ({
+        postscriptJS: coerce.string(record.postscriptJS),
+        postscriptCSS: coerce.string(record.postscriptCSS),
+        subscriptURL: coerce.string(record.subscriptURL),
+        subscriptOrigin: coerce.string(record.subscriptOrigin),
+        subscriptName: coerce.string(record.subscriptName),
+        subscriptInfo: coerce.string(record.subscriptInfo),
+        createdAt: coerce.number(record.createdAt, {required: true}),
+        receivedAt: Date.now()
+      })
     }
     // TCW -- END
 
@@ -10656,6 +10662,96 @@ exports.open = async function (userArchive) {
       }
       // unindex the target
       await db.removeArchive(target)
+    },
+
+    // TCW -- postscripts api
+
+    postscript (archive, {
+      postscriptJS,
+      postscriptHTTP,
+      subscriptURL,
+      subscriptOrigin,
+      subscriptName,
+      subscriptInfo
+    }) {
+      postscriptJS = coerce.string(postscriptJS)
+      postscriptHTTP = coerce.string(postscriptHTTP)
+      subscriptURL = coerce.string(subscriptURL)
+      subscriptOrigin = coerce.string(subscriptOrigin)
+      subscriptName = coerce.string(subscriptName)
+      subscriptInfo = coerce.string(subscriptInfo)
+      const createdAt = Date.now()
+
+      return db.postscripts.add(archive, {
+        postscriptJS,
+        postscriptHTTP,
+        subscriptURL,
+        subscriptOrigin,
+        subscriptName,
+        subscriptInfo,
+        createdAt
+      })
+    },
+
+    getPostscriptsQuery ({author, after, before, offset, limit, reverse} = {}) {
+      var query = db.postscripts
+      if (author) {
+        author = coerce.archiveUrl(author)
+        after = after || 0
+        before = before || Infinity
+        query = query.where('_origin+createdAt').between([author, after], [author, before])
+      } else if (after || before) {
+        after = after || 0
+        before = before || Infinity
+        query = query.where('createdAt').between(after, before)
+      } else {
+        query = query.orderBy('createdAt')
+      }
+      if (offset) query = query.offset(offset)
+      if (limit) query = query.limit(limit)
+      if (reverse) query = query.reverse()
+      return query
+    },
+
+    async listPostscripts (opts = {}, query) {
+      var promises = []
+      query = query || this.getPostscriptsQuery(opts)
+      var postscripts = await query.toArray()
+
+      // fetch author profile
+      if (opts.fetchAuthor) {
+        let profiles = {}
+        promises = promises.concat(postscripts.map(async b => {
+          if (!profiles[b._origin]) {
+            profiles[b._origin] = this.getProfile(b._origin)
+          }
+          b.author = await profiles[b._origin]
+        }))
+      }
+
+      // tabulate votes
+      if (opts.countVotes) {
+        promises = promises.concat(postscripts.map(async b => {
+          b.votes = await this.countVotes(b._url)
+        }))
+      }
+
+      await Promise.all(promises)
+      return postscripts
+    },
+
+    countPostscripts (opts, query) {
+      query = query || this.getPostscriptsQuery(opts)
+      return query.count()
+    },
+
+    async getPostscript (record) {
+      console.log('record', record)
+      const recordUrl = coerce.recordUrl(record)
+      record = await db.postscripts.get(recordUrl)
+      record.author = await this.getProfile(record._origin)
+      record.votes = await this.countVotes(recordUrl)
+      return record
     }
   }
 }

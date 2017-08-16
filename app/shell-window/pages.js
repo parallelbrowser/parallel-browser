@@ -314,6 +314,10 @@ export function create (opts) {
   page.webviewEl.addEventListener('plugin-crashed', onCrashed)
   page.webviewEl.addEventListener('ipc-message', onIPCMessage)
 
+  // TCW
+
+  page.webviewEl.addEventListener('postscript-submit', onPostscriptSubmit)
+
   // rebroadcasts
   page.webviewEl.addEventListener('did-start-loading', rebroadcastEvent)
   page.webviewEl.addEventListener('did-stop-loading', rebroadcastEvent)
@@ -495,6 +499,10 @@ export function savePinnedToDB () {
 
 // event handlers
 // =
+
+function onPostscriptSubmit (e) {
+  console.log('event in postscript submit', e)
+}
 
 function onDomReady (e) {
   var page = getByWebview(e.target)

@@ -13,7 +13,6 @@ export function setup () {
     window.locationbar.closeMenus = closeMenus
     window.locationbar.toggleLiveReloading = toggleLiveReloading
   } else {
-
     // TCW CHANGES - this sends an asynchronous message to the listener at
     // background-process/ui/windows.js with the href of the new window.
 

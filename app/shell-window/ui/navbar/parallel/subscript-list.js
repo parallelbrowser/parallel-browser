@@ -1,12 +1,12 @@
 import * as yo from 'yo-yo'
 import loadingView from './loading'
-import renderPrescript from './prescript'
+import renderSubscript from './subscript'
 
-export default function (prescripts) {
-  if (!prescripts) {
+export default function (subscripts) {
+  if (!subscripts) {
     return loadingView()
   }
-  if (prescripts.length === 0) {
+  if (subscripts.length === 0) {
     return yo`
       <ul>
         <li>
@@ -20,7 +20,7 @@ export default function (prescripts) {
 
   return yo`
     <ul>
-      ${prescripts.map(p => renderPrescript(p))}
+      ${subscripts.map(p => renderSubscript(p))}
     </ul>
   `
 }
