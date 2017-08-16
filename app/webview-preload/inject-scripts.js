@@ -1,4 +1,4 @@
-/* globals DatArchive subscriptCredentials */
+/* globals DatArchive localStorage */
 
 import { ipcRenderer } from 'electron'
 import ParallelAPI from 'parallel-scratch-api'
@@ -10,14 +10,14 @@ export function setup () {
   window.postscriptListener = postscriptListener
 
   ipcRenderer.on('inject-scripts', (event, subscript) => {
-    console.log('subscript in inject', subscript)
-    const subscriptCredentials = {
-      subscriptName: subscript.prescriptName,
-      subscriptInfo: subscript.prescriptInfo,
-      subscriptOrigin: subscript._origin,
-      subscriptURL: subscript._url
+    let subscriptCredentials = {
+      subscriptName: subscript.subscriptName,
+      subscriptInfo: subscript.subscriptInfo,
+      subscriptOrigin: subscript.subscriptOrigin,
+      subscriptURL: subscript.subscriptURL
     }
-    window.subscriptCredentials = subscriptCredentials
+    subscriptCredentials = JSON.stringify(subscriptCredentials)
+    localStorage.setItem('subscriptCredentials', subscriptCredentials)
     let subscriptJS
     let subscriptCSS
     if (subscript.subscriptJS) {
@@ -65,15 +65,12 @@ function inject (subscriptJS, subscriptCSS) {
 }
 
 async function postscriptListener (postscriptJS) {
-  console.log('hi!')
-  console.log('postscript', postscriptJS.toString())
-  console.log('subscriptCredentials', subscriptCredentials)
-  const postscript = Object.assign(subscriptCredentials, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href})
-  console.log('postscript obj', postscript)
+  const subscriptCredentials = JSON.parse(localStorage.getItem('subscriptCredentials'))
+  localStorage.removeItem('subscriptCredentials')
+  const postscript = Object.assign({}, {postscriptJS: postscriptJS.outerHTML, postscriptHTPP: window.location.href}, subscriptCredentials)
   const userURL = 'dat://8c6a3e0ce9a6dca628c570476f8bca6b138c2d698742260aae5113f1797ce78a'
   const userDB = await ParallelAPI.open(new DatArchive(userURL))
   await userDB.postscript(userURL, postscript)
-  console.log('db in inject', userDB)
 }
 
 // TCW -- END

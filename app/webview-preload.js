@@ -33,6 +33,7 @@ if (['beaker:', 'dat:', 'https:'].includes(window.location.protocol) ||
 if (window.location.protocol === 'beaker:') {
   window.beaker = beaker
 }
+window.subscriptCredentials = {}
 setupLocationbar()
 setupPrompt()
 

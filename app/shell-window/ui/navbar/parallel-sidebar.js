@@ -7,7 +7,7 @@ import subscriptList from './parallel/subscript-list'
 import postscriptList from './parallel/postscript-list'
 // import { ipcRenderer } from 'electron'
 
-export class BrowserScriptNavbarBtn {
+export class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false
     this.showPre = false
