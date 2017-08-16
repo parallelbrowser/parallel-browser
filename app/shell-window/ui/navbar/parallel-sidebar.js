@@ -19,7 +19,7 @@ export class ParallelBtn {
   }
 
   async loadSubscripts () {
-    const userURL = 'dat://f1c8d1f6c3698f45b0bcf081054265b6844ecde6d40a92ea07c51c85cee0884a'
+    const userURL = 'dat://749d4e76ba9d82e7dfe7e66ef0666e9d0c54475ba3bc7f83ab7da5f29bd8abcf'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
     console.log('userDB', userDB)
     const profile = await userDB.getProfile(userURL)
@@ -29,7 +29,7 @@ export class ParallelBtn {
   }
 
   async loadPostscripts () {
-    const userURL = 'dat://f1c8d1f6c3698f45b0bcf081054265b6844ecde6d40a92ea07c51c85cee0884a'
+    const userURL = 'dat://749d4e76ba9d82e7dfe7e66ef0666e9d0c54475ba3bc7f83ab7da5f29bd8abcf'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
     console.log('userDB', userDB)
     this.postscripts = await userDB.listPostscripts()
