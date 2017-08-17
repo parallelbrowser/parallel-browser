@@ -16,12 +16,13 @@ export default function (postscript) {
 }
 
 async function getProfile (postscript) {
-  const userURL = 'dat://749d4e76ba9d82e7dfe7e66ef0666e9d0c54475ba3bc7f83ab7da5f29bd8abcf'
+  const userURL = 'dat://cd0af79469028edf210d4205a5d7b54527b8d6fa53e063ddb006576d03200b64'
   const userDB = await ParallelAPI.open(new DatArchive(userURL))
-  postscript.profile = await userDB.getProfile(postscript.subscriptOrigin)
+  postscript.profile = await userDB.getProfile(postscript._origin)
+  console.log('profile', postscript.profile)
   yo.update(document.getElementById(postscript.createdAt), yo`
       <li>
-        <div class="list-item" onclick=${() => injectPostscript(postscript)}>
+        <div class="list-item sidebarscripts" onclick=${() => injectPostscript(postscript)}>
             <div style="display: inline-block" title=${postscript.subscriptName}>
               <span><b>${postscript.subscriptName}</b></span>
             </div>
