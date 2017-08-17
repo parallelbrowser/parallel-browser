@@ -45,11 +45,11 @@ export class ParallelBtn {
           <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
 
             <div class="grid default">
-              <div class="grid-item" onclick=${() => this.onToggleClick(true)}>
+              <div id="gizmo" class="grid-item ${this.showSubscripts ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
                 <i class="fa fa-file-code-o"></i>
                 Gizmos
               </div>
-              <div class="grid-item" onclick=${() => this.onToggleClick(false)}>
+              <div id="widget" class="grid-item ${this.showSubscripts ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
                 <i class="fa fa-file-text-o"></i>
                 Widgets
               </div>
@@ -89,7 +89,7 @@ export class ParallelBtn {
   // Toggles whether the user is viewing prescripts or post scripts on the current site
   onToggleClick (showSubscripts) {
     this.showSubscripts = showSubscripts
-    if (showSubscripts) {
+    if (showSubscripts) {     //gizmo clicked
       this.loadSubscripts()
     } else {
       this.loadPostscripts()

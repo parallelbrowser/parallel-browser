@@ -1256,6 +1256,9 @@ body.darwin #toolbar {
 .script-dropdown .list-item:hover {
   background: #f2f2f2;
 }
+.script-dropdown .sidebarscripts {
+  padding: 2px 20px 2px 20px;
+}
 .script-dropdown .enabled {
   background: #f2f2f2;
 }
@@ -1300,6 +1303,9 @@ body.darwin #toolbar {
   color: #b8b8b8;
   background: transparent;
   border: 1px solid transparent;
+}
+.script-dropdown .grid-item.clicked {
+  background: #d9d9d9;
 }
 .toolbar-dropdown h2 {
   font-size: 12px;

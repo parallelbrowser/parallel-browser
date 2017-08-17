@@ -4,7 +4,7 @@ import * as yo from 'yo-yo'
 export default function (postscript) {
   return yo`
     <li>
-      <div class="list-item" onclick=${() => injectPostscript(postscript)}>
+      <div class="list-item sidebarscripts" onclick=${() => injectPostscript(postscript)}>
           <div style="display: inline-block" title=${postscript.subscriptName}>
             <span><b>${postscript.subscriptName}</b></span>
           </div>

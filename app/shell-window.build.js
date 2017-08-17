@@ -614,7 +614,7 @@ var loadingView = function () {
 var renderSubscript = function (subscript) {
   return yo`
     <li>
-      <div class="list-item" onclick=${() => injectSubscript(subscript)}>
+      <div class="list-item sidebarscripts" onclick=${() => injectSubscript(subscript)}>
           <div style="display: inline-block" title=${subscript.subscriptName}>
             <span><b>${subscript.subscriptName}</b></span>
           </div>
@@ -640,7 +640,7 @@ var subscriptList = function (subscripts) {
     return yo`
       <ul>
         <li>
-          <div class="list-item">
+          <div class="list-item sidebarscripts">
             You are not using any gizmos!
           </div>
         </li>
@@ -659,7 +659,7 @@ var subscriptList = function (subscripts) {
 var renderPostscript = function (postscript) {
   return yo`
     <li>
-      <div class="list-item" onclick=${() => injectPostscript(postscript)}>
+      <div class="list-item sidebarscripts" onclick=${() => injectPostscript(postscript)}>
           <div style="display: inline-block" title=${postscript.subscriptName}>
             <span><b>${postscript.subscriptName}</b></span>
           </div>
@@ -685,7 +685,7 @@ var postscriptList = function (postscripts, updatePostscripts) {
     return yo`
       <ul>
         <li>
-          <div class="list-item">
+          <div class="list-item sidebarscripts">
             No widgets for this page.
           </div>
         </li>
@@ -741,11 +741,11 @@ class ParallelBtn {
           <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
 
             <div class="grid default">
-              <div class="grid-item" onclick=${() => this.onToggleClick(true)}>
+              <div id="gizmo" class="grid-item ${this.showSubscripts ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
                 <i class="fa fa-file-code-o"></i>
                 Gizmos
               </div>
-              <div class="grid-item" onclick=${() => this.onToggleClick(false)}>
+              <div id="widget" class="grid-item ${this.showSubscripts ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
                 <i class="fa fa-file-text-o"></i>
                 Widgets
               </div>
@@ -785,7 +785,7 @@ class ParallelBtn {
   // Toggles whether the user is viewing prescripts or post scripts on the current site
   onToggleClick (showSubscripts) {
     this.showSubscripts = showSubscripts;
-    if (showSubscripts) {
+    if (showSubscripts) {     //gizmo clicked
       this.loadSubscripts();
     } else {
       this.loadPostscripts();
@@ -10265,14 +10265,12 @@ exports.open = async function (userArchive) {
       })
     },
 
-    // added postscript schema
-
     postscripts: {
       primaryKey: 'createdAt',
       index: ['createdAt', '_origin+createdAt'],
       validator: record => ({
         postscriptJS: coerce.string(record.postscriptJS),
-        postscriptHTTP: coerce.string(record.postscriptHTTP),
+        postscriptCSS: coerce.string(record.postscriptCSS),
         subscriptURL: coerce.string(record.subscriptURL),
         subscriptOrigin: coerce.string(record.subscriptOrigin),
         subscriptName: coerce.string(record.subscriptName),
@@ -10282,6 +10280,7 @@ exports.open = async function (userArchive) {
       })
     }
     // TCW -- END
+
   })
   await db.open()
 
