@@ -10,7 +10,7 @@ export default function (subscripts) {
     return yo`
       <ul>
         <li>
-          <div class="list-item">
+          <div class="list-item sidebarscripts">
             You are not using any gizmos!
           </div>
         </li>

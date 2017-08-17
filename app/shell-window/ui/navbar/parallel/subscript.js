@@ -4,7 +4,7 @@ import * as yo from 'yo-yo'
 export default function (subscript) {
   return yo`
     <li>
-      <div class="list-item" onclick=${() => injectSubscript(subscript)}>
+      <div class="list-item sidebarscripts" onclick=${() => injectSubscript(subscript)}>
           <div style="display: inline-block" title=${subscript.subscriptName}>
             <span><b>${subscript.subscriptName}</b></span>
           </div>

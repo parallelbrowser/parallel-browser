@@ -10,7 +10,7 @@ export default function (postscripts, updatePostscripts) {
     return yo`
       <ul>
         <li>
-          <div class="list-item">
+          <div class="list-item sidebarscripts">
             No widgets for this page.
           </div>
         </li>

@@ -3833,9 +3833,10 @@ function createShellWindow () {
   // this listens for the current webview url from
   // webview-preload/locationbar.js
 
-  electron.ipcMain.on('get-webview-url', (event, arg) => {
-    console.log(arg); // prints url
-    event.sender.send('new-url', arg); // sends to shell-window/ui/navbar/browser-script.js
+  electron.ipcMain.on('get-webview-url', (event, url$$1) => {
+    console.log(url$$1); // prints url
+    console.log('windooow', getActiveWindow());
+    getActiveWindow().send('new-url', url$$1); // sends to shell-window/ui/navbar/browser-script.js
   });
 
   // end
