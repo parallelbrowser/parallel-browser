@@ -5,7 +5,6 @@ import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
 import subscriptList from './parallel/subscript-list'
 import postscriptList from './parallel/postscript-list'
-// import { ipcRenderer } from 'electron'
 
 export class ParallelBtn {
   constructor () {
@@ -21,22 +20,34 @@ export class ParallelBtn {
   async loadSubscripts () {
     const userURL = 'dat://749d4e76ba9d82e7dfe7e66ef0666e9d0c54475ba3bc7f83ab7da5f29bd8abcf'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
-    console.log('userDB', userDB)
     const profile = await userDB.getProfile(userURL)
-    console.log('current user profile', profile)
     this.subscripts = profile.subscripts
-    console.log('these subscripts', this.subscripts)
   }
 
   async loadPostscripts () {
     const userURL = 'dat://749d4e76ba9d82e7dfe7e66ef0666e9d0c54475ba3bc7f83ab7da5f29bd8abcf'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
-    console.log('userDB', userDB)
     this.postscripts = await userDB.listPostscripts()
-    console.log('these postscripts', this.postscripts)
+    const currentURL = this.getCurrentURL()
+    this.postscripts = this.postscripts.filter(p => {
+      return p.postscriptHTTP === currentURL
+    })
+  }
+
+  getCurrentURL () {
+    var webviews = document.getElementById('webviews').children
+    var currentURL
+    for (var i = 0; i < webviews.length; i++) {
+      var webview = webviews[i]
+      if (!webview.className.includes('hidden')) {
+        currentURL = webview.src
+      }
+    }
+    return currentURL
   }
 
   render () {
+    this.loadPostscripts()
     var dropdownEl = ''
     if (this.isDropdownOpen) {
       // TODO: change the "view all scripts" and "discover" links

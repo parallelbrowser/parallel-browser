@@ -577,7 +577,11 @@ function inject (scriptJS, scriptCSS, scriptURL) {
   // HACK defines SECURITY_POLICY constant to inject into the page. (surely
   // there's a better way...)
 
-  const SECURITY_POLICY = `<meta http-equiv="Content-Security-Policy" content="script-src 'self';">`;
+  // const SECURITY_POLICY = `<meta http-equiv="Content-Security-Policy" content="script-src 'self';">`
+  // <meta http-equiv="Content-Security-Policy" content="connect-src 'self' file: data: blob: filesystem:; default-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"/>
+  const SECURITY_POLICY = `<meta http-equiv="Content-Security-Policy" content="default-src *;
+   img-src * 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' *;
+   style-src  'self' 'unsafe-inline' *">`;
   head.prepend(SECURITY_POLICY);
 
   // appends javascript to the <body>

@@ -655,22 +655,43 @@ var subscriptList = function (subscripts) {
   `
 };
 
+/* globals DatArchive */
+
 // Render the list of scripts in the dropdown
 var renderPostscript = function (postscript) {
+  console.log('window loc', document.location.href);
+  getProfile(postscript);
+  console.log('post with profile', postscript);
   return yo`
-    <li>
-      <div class="list-item" onclick=${() => injectPostscript(postscript)}>
-          <div style="display: inline-block" title=${postscript.subscriptName}>
-            <span><b>${postscript.subscriptName}</b></span>
-          </div>
-          <br>
-          <div style="display: inline-block">
-            <span>${postscript.subscriptInfo}</span>
-          </div>
-      </div>
+    <li id=${postscript.createdAt}>
+      <div><p><i class="fa fa-spinner"></i>Loading...</p></div>
     </li>
   `
 };
+
+async function getProfile (postscript) {
+  const userURL = 'dat://749d4e76ba9d82e7dfe7e66ef0666e9d0c54475ba3bc7f83ab7da5f29bd8abcf';
+  const userDB = await ParallelAPI.open(new DatArchive(userURL));
+  postscript.profile = await userDB.getProfile(postscript.subscriptOrigin);
+  yo.update(document.getElementById(postscript.createdAt), yo`
+      <li>
+        <div class="list-item" onclick=${() => injectPostscript(postscript)}>
+            <div style="display: inline-block" title=${postscript.subscriptName}>
+              <span><b>${postscript.subscriptName}</b></span>
+            </div>
+            <br>
+            <div style="display: inline-block">
+              <span>${postscript.subscriptInfo}</span>
+            </div>
+            <br>
+            <div style="display: inline-block">
+              <span>By ${postscript.profile.name}</span>
+            </div>
+        </div>
+      </li>
+    `
+  );
+}
 
 function injectPostscript (postscript) {
   console.log('postscript in button', postscript);
@@ -701,8 +722,6 @@ var postscriptList = function (postscripts, updatePostscripts) {
 };
 
 /* globals DatArchive */
-// import { ipcRenderer } from 'electron'
-
 class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false;
@@ -717,22 +736,34 @@ class ParallelBtn {
   async loadSubscripts () {
     const userURL = 'dat://749d4e76ba9d82e7dfe7e66ef0666e9d0c54475ba3bc7f83ab7da5f29bd8abcf';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
-    console.log('userDB', userDB);
     const profile = await userDB.getProfile(userURL);
-    console.log('current user profile', profile);
     this.subscripts = profile.subscripts;
-    console.log('these subscripts', this.subscripts);
   }
 
   async loadPostscripts () {
     const userURL = 'dat://749d4e76ba9d82e7dfe7e66ef0666e9d0c54475ba3bc7f83ab7da5f29bd8abcf';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
-    console.log('userDB', userDB);
     this.postscripts = await userDB.listPostscripts();
-    console.log('these postscripts', this.postscripts);
+    const currentURL = this.getCurrentURL();
+    this.postscripts = this.postscripts.filter(p => {
+      return p.postscriptHTTP === currentURL
+    });
+  }
+
+  getCurrentURL () {
+    var webviews = document.getElementById('webviews').children;
+    var currentURL;
+    for (var i = 0; i < webviews.length; i++) {
+      var webview = webviews[i];
+      if (!webview.className.includes('hidden')) {
+        currentURL = webview.src;
+      }
+    }
+    return currentURL
   }
 
   render () {
+    this.loadPostscripts();
     var dropdownEl = '';
     if (this.isDropdownOpen) {
       // TODO: change the "view all scripts" and "discover" links

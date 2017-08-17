@@ -102,9 +102,10 @@ export function createShellWindow () {
   // this listens for the current webview url from
   // webview-preload/locationbar.js
 
-  ipcMain.on('get-webview-url', (event, arg) => {
-    console.log(arg) // prints url
-    event.sender.send('new-url', arg) // sends to shell-window/ui/navbar/browser-script.js
+  ipcMain.on('get-webview-url', (event, url) => {
+    console.log(url) // prints url
+    console.log('windooow', getActiveWindow())
+    getActiveWindow().send('new-url', url) // sends to shell-window/ui/navbar/browser-script.js
   })
 
   // end
