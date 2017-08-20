@@ -18,14 +18,14 @@ export class ParallelBtn {
   }
 
   async loadSubscripts () {
-    const userURL = 'dat://cd0af79469028edf210d4205a5d7b54527b8d6fa53e063ddb006576d03200b64'
+    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
     const profile = await userDB.getProfile(userURL)
     this.subscripts = profile.subscripts
   }
 
   async loadPostscripts () {
-    const userURL = 'dat://cd0af79469028edf210d4205a5d7b54527b8d6fa53e063ddb006576d03200b64'
+    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
     this.postscripts = await userDB.listPostscripts()
     const currentURL = this.getCurrentURL()
@@ -70,7 +70,7 @@ export class ParallelBtn {
             ${this.showSubscripts ? subscriptList(this.subscripts) : postscriptList(this.postscripts)}
 
             <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'dat://44cdb7775c43753900e07a36be75b5a4b89a26a7d8a4c7f84ca5b4a34ee2c476')}>
+              <a onclick=${e => this.onOpenPage(e, 'dat://82624ee9b33acc96b9fd0360c28f81107385293e56fec66b7c871b5622a32fcc')}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>

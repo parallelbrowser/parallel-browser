@@ -62,9 +62,8 @@ background-process.build.js
 dat-sidebar.build.js
 shell-window.build.js
 webview-preload.build.js
-
 background-process.build.js
-markdown-rendere.build.js
+markdown-renderer.build.js
 package-lock.json
 webview-preload.build.js
 bundle.js
@@ -81,3 +80,5 @@ view-source.build.js
 renderer.build.js
 shell-window.build.js
 webview-preload.build.js
+app/shell-window.build.js
+app/webview-preload.build.js
