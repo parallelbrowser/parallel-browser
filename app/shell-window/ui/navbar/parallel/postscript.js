@@ -16,7 +16,7 @@ export default function (postscript) {
 }
 
 async function getProfile (postscript) {
-  const userURL = 'dat://cd0af79469028edf210d4205a5d7b54527b8d6fa53e063ddb006576d03200b64'
+  const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11'
   const userDB = await ParallelAPI.open(new DatArchive(userURL))
   postscript.profile = await userDB.getProfile(postscript._origin)
   console.log('profile', postscript.profile)

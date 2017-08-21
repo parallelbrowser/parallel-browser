@@ -612,7 +612,10 @@ async function savePostscript (postscriptJS) {
     removeScript(subscriptCredentials.subscriptURL);
     localStorage.removeItem('subscriptCredentials');
     const postscript = Object.assign({}, {postscriptJS, postscriptHTTP: window.location.href}, subscriptCredentials);
-    const userURL = 'dat://2d13045a6f250ff50bd98fe0db2cd57924b59d4d0a4225ea5d040141c55f3b68';
+    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11';
+    if (!DatArchive) {
+      DatArchive = window.DatArchive;
+    }
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
     console.log('db', userDB);
     await userDB.postscript(userURL, postscript);
