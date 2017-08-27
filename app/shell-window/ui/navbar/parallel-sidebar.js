@@ -3,32 +3,33 @@ import ParallelAPI from 'parallel-scratch-api'
 import * as yo from 'yo-yo'
 import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
-import subscriptList from './parallel/subscript-list'
+import gizmoList from './parallel/gizmo-list'
 import postscriptList from './parallel/postscript-list'
 
 export class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false
-    this.showSubscripts = true
+    this.showGizmos = true
     this.subscripts = null
     this.postscripts = null
+    this.userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6'
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
-    this.loadSubscripts()
-    this.loadPostscripts()
+    this.loadGizmos()
   }
 
-  async loadSubscripts () {
-    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11'
-    const userDB = await ParallelAPI.open(new DatArchive(userURL))
-    const profile = await userDB.getProfile(userURL)
-    this.subscripts = profile.subscripts
+  async loadGizmos () {
+    const userDB = await ParallelAPI.open(new DatArchive(this.userURL))
+    this.gizmos = await userDB.listGizmos({
+      fetchAuthor: true,
+      reverse: true,
+      subscriber: this.userURL
+    })
   }
 
-  async loadPostscripts () {
-    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11'
-    const userDB = await ParallelAPI.open(new DatArchive(userURL))
-    this.postscripts = await userDB.listPostscripts()
+  async loadPosts () {
     const currentURL = this.getCurrentURL()
+    const userDB = await ParallelAPI.open(new DatArchive(this.userURL))
+    this.postscripts = await userDB.listPosts()
     this.postscripts = this.postscripts.filter(p => {
       return p.postscriptHTTP === currentURL
     })
@@ -47,7 +48,6 @@ export class ParallelBtn {
   }
 
   render () {
-    this.loadPostscripts()
     var dropdownEl = ''
     if (this.isDropdownOpen) {
       // TODO: change the "view all scripts" and "discover" links
@@ -56,21 +56,21 @@ export class ParallelBtn {
           <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
 
             <div class="grid default">
-              <div id="gizmo" class="grid-item ${this.showSubscripts ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
+              <div id="gizmo" class="grid-item ${this.showGizmos ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
                 <i class="fa fa-file-code-o"></i>
                 Gizmos
               </div>
-              <div id="widget" class="grid-item ${this.showSubscripts ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
+              <div id="widget" class="grid-item ${this.showGizmos ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
                 <i class="fa fa-file-text-o"></i>
                 Widgets
               </div>
             </div>
 
 
-            ${this.showSubscripts ? subscriptList(this.subscripts) : postscriptList(this.postscripts)}
+            ${this.showGizmos ? gizmoList(this.gizmos) : postscriptList(this.postscripts)}
 
             <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'dat://82624ee9b33acc96b9fd0360c28f81107385293e56fec66b7c871b5622a32fcc')}>
+              <a onclick=${e => this.onOpenPage(e, 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2')}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
@@ -98,10 +98,10 @@ export class ParallelBtn {
   }
 
   // Toggles whether the user is viewing prescripts or post scripts on the current site
-  onToggleClick (showSubscripts) {
-    this.showSubscripts = showSubscripts
-    if (showSubscripts) {
-      this.loadSubscripts()
+  onToggleClick (showGizmos) {
+    this.showGizmos = showGizmos
+    if (showGizmos) {
+      this.loadGizmos()
     } else {
       this.loadPostscripts()
     }

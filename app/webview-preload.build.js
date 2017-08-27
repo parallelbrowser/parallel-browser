@@ -535,32 +535,12 @@ var setupRedirectHackfix = function () {
 /* globals DatArchive localStorage */
 
 function setup$2 () {
-  window.savePostscript = savePostscript;
+  window.savePost = savePost;
 
-  electron.ipcRenderer.on('inject-subscript', (event, subscript) => {
-    console.log('here');
-    let subscriptCredentials = {
-      subscriptName: subscript.subscriptName,
-      subscriptInfo: subscript.subscriptInfo,
-      subscriptOrigin: subscript.subscriptOrigin,
-      subscriptURL: subscript.subscriptURL
-    };
-    subscriptCredentials = JSON.stringify(subscriptCredentials);
-    console.log('creds', subscriptCredentials);
-    localStorage.setItem('subscriptCredentials', subscriptCredentials);
-    let subscriptJS;
-    let subscriptCSS;
-    let subscriptURL;
-    if (subscript.subscriptJS) {
-      subscriptJS = subscript.subscriptJS.toString();
-    }
-    if (subscript.subscriptCSS) {
-      subscriptCSS = subscript.subscriptCSS.toString();
-    }
-    if (subscript.subscriptURL) {
-      subscriptURL = subscript.subscriptURL.toString();
-    }
-    inject(subscriptJS, subscriptCSS, subscriptURL);
+  electron.ipcRenderer.on('inject-gizmo', (event, gizmo) => {
+    console.log('gizmo in inject-gizmo', gizmo);
+    localStorage.setItem('activeGizmoURL', gizmo._url);
+    inject(gizmo.gizmoJS, gizmo._url);
   });
 
   electron.ipcRenderer.on('inject-widget', (event, widget) => {
@@ -568,7 +548,7 @@ function setup$2 () {
   });
 }
 
-function inject (scriptJS, scriptCSS, scriptURL) {
+function inject (js, gizmoURL) {
   // defines body and head of underlying webview DOM
 
   const body = document.body || document.getElementsByTagName('body')[0];
@@ -586,18 +566,11 @@ function inject (scriptJS, scriptCSS, scriptURL) {
 
   // appends javascript to the <body>
 
-  if (scriptJS && scriptURL) {
+  if (js && gizmoURL) {
     const scriptElement = document.createElement('script');
-    scriptElement.setAttribute('id', scriptURL);
-    scriptElement.appendChild(document.createTextNode(scriptJS));
+    scriptElement.setAttribute('id', gizmoURL);
+    scriptElement.appendChild(document.createTextNode(js));
     body.appendChild(scriptElement);
-  }
-
-  if (scriptCSS) {
-    const cssElement = document.createElement('style');
-    cssElement.type = 'text/css';
-    cssElement.appendChild(document.createTextNode(scriptCSS));
-    head.appendChild(cssElement);
   }
 }
 
@@ -606,19 +579,23 @@ function inject (scriptJS, scriptCSS, scriptURL) {
 // the injected script from the dom, then writes the postscript to the user's
 // injestdb
 
-async function savePostscript (postscriptJS) {
-  const subscriptCredentials = JSON.parse(localStorage.getItem('subscriptCredentials'));
-  if (postscriptJS && subscriptCredentials && subscriptCredentials.subscriptURL) {
-    removeScript(subscriptCredentials.subscriptURL);
-    localStorage.removeItem('subscriptCredentials');
-    const postscript = Object.assign({}, {postscriptJS, postscriptHTTP: window.location.href}, subscriptCredentials);
-    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11';
-    if (!DatArchive) {
-      DatArchive = window.DatArchive;
-    }
+async function savePost (postJS) {
+  const gizmoURL = localStorage.getItem('activeGizmoURL');
+  localStorage.removeItem('activeGizmoURL');
+  const postHTTP = window.location.href;
+  const postText = window.prompt('Enter a description of your post.');
+  if (postJS && gizmoURL && postHTTP) {
+    const post = {
+      postJS,
+      postHTTP,
+      postText,
+      gizmoURL
+    };
+    const userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
-    console.log('db', userDB);
-    await userDB.postscript(userURL, postscript);
+    console.log('post before saving', post);
+    console.log('db in savePost', userDB);
+    await userDB.post(userURL, post);
   }
 }
 
@@ -4187,7 +4164,7 @@ const coerce = require('./lib/coerce')
 
 exports.open = async function (userArchive) {
   // setup the archive
-  var db = new InjestDB('nexus:' + (userArchive ? userArchive.url : 'cache'))
+  var db = new InjestDB('parallel:' + (userArchive ? userArchive.url : 'cache'))
   db.schema({
     version: 1,
     profile: {
@@ -4199,10 +4176,10 @@ exports.open = async function (userArchive) {
         avatar: coerce.path(record.avatar),
         follows: coerce.arrayOfFollows(record.follows),
         followUrls: coerce.arrayOfFollows(record.follows).map(f => f.url),
-        subscripts: coerce.arrayOfSubscripts(record.subscripts),
-        subscriptURLs: coerce.arrayOfSubscripts(record.subscripts).map(s => s.subscriptURL)
+        subgizmos: coerce.arrayOfSubgizmos(record.subgizmos)
       })
     },
+
     broadcasts: {
       primaryKey: 'createdAt',
       index: ['createdAt', '_origin+createdAt', 'threadRoot', 'threadParent'],
@@ -4214,6 +4191,7 @@ exports.open = async function (userArchive) {
         receivedAt: Date.now()
       })
     },
+
     votes: {
       primaryKey: 'subject',
       index: ['subject'],
@@ -4224,38 +4202,31 @@ exports.open = async function (userArchive) {
       })
     },
 
-    // TCW -- added prescript schema
-
-    prescripts: {
+    gizmos: {
       primaryKey: 'createdAt',
       index: ['createdAt', '_origin+createdAt'],
       validator: record => ({
-        prescriptName: coerce.string(record.prescriptName),
-        prescriptInfo: coerce.string(record.prescriptInfo),
-        prescriptJS: coerce.string(record.prescriptJS),
-        prescriptCSS: coerce.string(record.prescriptCSS),
+        gizmoName: coerce.string(record.gizmoName),
+        gizmoDescription: coerce.string(record.gizmoDescription),
+        gizmoDocs: coerce.string(record.gizmoDocs),
+        gizmoJS: coerce.string(record.gizmoJS),
         createdAt: coerce.number(record.createdAt, {required: true}),
         receivedAt: Date.now()
       })
     },
 
-    // added postscript schema
-
-    postscripts: {
+    posts: {
       primaryKey: 'createdAt',
       index: ['createdAt', '_origin+createdAt'],
       validator: record => ({
-        postscriptJS: coerce.string(record.postscriptJS),
-        postscriptHTTP: coerce.string(record.postscriptHTTP),
-        subscriptURL: coerce.string(record.subscriptURL),
-        subscriptOrigin: coerce.string(record.subscriptOrigin),
-        subscriptName: coerce.string(record.subscriptName),
-        subscriptInfo: coerce.string(record.subscriptInfo),
+        postJS: coerce.string(record.postJS),
+        postHTTP: coerce.string(record.postHTTP),
+        postText: coerce.string(record.postText),
+        gizmoURL: coerce.string(record.gizmoURL),
         createdAt: coerce.number(record.createdAt, {required: true}),
         receivedAt: Date.now()
       })
     }
-    // TCW -- END
   })
   await db.open()
 
@@ -4523,31 +4494,30 @@ exports.open = async function (userArchive) {
       return res
     },
 
-    // TCW -- prescript api
+    // TCW -- gizmo api
 
-    prescript (archive, {
-      prescriptName,
-      prescriptInfo,
-      prescriptJS,
-      prescriptCSS
+    async gizmo (archive, {
+      gizmoName,
+      gizmoDescription,
+      gizmoDocs,
+      gizmoJS
     }) {
-      prescriptName = coerce.string(prescriptName)
-      prescriptInfo = coerce.string(prescriptInfo)
-      prescriptJS = coerce.string(prescriptJS)
-      prescriptCSS = coerce.string(prescriptCSS)
+      gizmoName = coerce.string(gizmoName)
+      gizmoDescription = coerce.string(gizmoDescription)
+      gizmoDocs = coerce.string(gizmoDocs)
+      gizmoJS = coerce.string(gizmoJS)
       const createdAt = Date.now()
-
-      return db.prescripts.add(archive, {
-        prescriptName,
-        prescriptInfo,
-        prescriptJS,
-        prescriptCSS,
+      return db.gizmos.add(archive, {
+        gizmoName,
+        gizmoDescription,
+        gizmoDocs,
+        gizmoJS,
         createdAt
       })
     },
 
-    getPrescriptsQuery ({author, after, before, offset, limit, reverse} = {}) {
-      var query = db.prescripts
+    getGizmosQuery ({author, after, before, offset, limit, reverse} = {}) {
+      var query = db.gizmos
       if (author) {
         author = coerce.archiveUrl(author)
         after = after || 0
@@ -4566,130 +4536,132 @@ exports.open = async function (userArchive) {
       return query
     },
 
-    async listPrescripts (opts = {}, query) {
+    async listGizmos (opts = {}, query) {
       var promises = []
-      query = query || this.getPrescriptsQuery(opts)
-      var prescripts = await query.toArray()
+      query = query || this.getGizmosQuery(opts)
+      var gizmos = await query.toArray()
 
-      // fetch author profile
+      if (opts.subscriber) {
+        let subscriber = await this.getProfile(opts.subscriber)
+        gizmos = gizmos.filter(g => {
+          return !!subscriber.subgizmos.find(sg => sg.url === g._url)
+        })
+      }
+
+      if (opts.loadShop) {
+        if (!opts.author) {
+          throw new Error('An author must be provided when loading the Shop.')
+        } else {
+          let author = coerce.archiveUrl(opts.author)
+          gizmos = gizmos.filter(g => {
+            return g._origin === author
+          })
+        }
+      }
+
       if (opts.fetchAuthor) {
         let profiles = {}
-        promises = promises.concat(prescripts.map(async b => {
-          if (!profiles[b._origin]) {
-            profiles[b._origin] = this.getProfile(b._origin)
+        promises = promises.concat(gizmos.map(async g => {
+          if (!profiles[g._origin]) {
+            profiles[g._origin] = await this.getProfile(g._origin)
           }
-          b.author = await profiles[b._origin]
+          g.author = await profiles[g._origin]
         }))
       }
 
-      // tabulate votes
       if (opts.countVotes) {
-        promises = promises.concat(prescripts.map(async b => {
-          b.votes = await this.countVotes(b._url)
+        promises = promises.concat(gizmos.map(async g => {
+          g.votes = await this.countVotes(g._url)
+        }))
+      }
+
+      if (opts.checkIfSubscribed) {
+        promises = promises.concat(gizmos.map(async g => {
+          g.isSubscribed = await this.isSubscribed(opts.checkIfSubscribed, g)
         }))
       }
 
       await Promise.all(promises)
-      return prescripts
+      return gizmos
     },
 
-    countPrescripts (opts, query) {
-      query = query || this.getPrescriptsQuery(opts)
+    countGizmos (opts, query) {
+      query = query || this.getGizmosQuery(opts)
       return query.count()
     },
 
-    async getPrescript (record) {
-      console.log('record', record)
+    async getGizmo (archive, record) {
       const recordUrl = coerce.recordUrl(record)
-      record = await db.prescripts.get(recordUrl)
+      record = await db.gizmos.get(recordUrl)
       record.author = await this.getProfile(record._origin)
       record.votes = await this.countVotes(recordUrl)
+      record.isSubscribed = await this.isSubscribed(archive, record)
       return record
     },
 
-    // TCW -- subscripts api
-
-    async subscribe (
-      archive,
-      target,
-      subscriptOrigin,
-      subscriptName,
-      subscriptInfo,
-      subscriptJS,
-      subscriptCSS
-    ) {
-      // update the follow record
+    async subscribe (archive, gizmo) {
       var archiveUrl = coerce.archiveUrl(archive)
-      var subscriptURL = coerce.archiveUrl(target)
       var changes = await db.profile.where('_origin').equals(archiveUrl).update(record => {
-        record.subscripts = record.subscripts || []
-        if (!record.subscripts.find(s => s.subscriptURL === subscriptURL)) {
-          record.subscripts.push({
-            subscriptURL,
-            subscriptOrigin,
-            subscriptName,
-            subscriptInfo,
-            subscriptJS,
-            subscriptCSS
+        record.subgizmos = record.subgizmos || []
+        if (!record.subgizmos.find(sg => sg.url === gizmo._url)) {
+          record.subgizmos.push({
+            url: gizmo._url,
+            origin: gizmo._origin,
+            author: gizmo.author.name,
+            name: gizmo.gizmoName
           })
         }
         return record
       })
       if (changes === 0) {
-        throw new Error('Failed to follow: no profile record exists. Run setProfile() before follow().')
+        throw new Error('Failed to subscribe: gizmo record already exists.')
       }
-
-      // index the target
-      await db.addArchive(target)
     },
 
-    async unsubscribe (archive, target) {
-      // update the follow record
+    async unsubscribe (archive, gizmo) {
       var archiveUrl = coerce.archiveUrl(archive)
-      var targetUrl = coerce.archiveUrl(target)
       var changes = await db.profile.where('_origin').equals(archiveUrl).update(record => {
-        record.subscripts = record.subscripts || []
-        record.subscripts = record.subscripts.filter(s => s.subscriptURL !== targetUrl)
+        record.subgizmos = record.subgizmos || []
+        record.subgizmos = record.subgizmos.filter(sg => sg.url !== gizmo._url)
         return record
       })
       if (changes === 0) {
-        throw new Error('Failed to unfollow: no profile record exists. Run setProfile() before unfollow().')
+        throw new Error('Failed to unsubscribe: no gizmo record exists.')
       }
-      // unindex the target
-      await db.removeArchive(target)
     },
 
-    // TCW -- postscripts api
+    async isSubscribed (archive, gizmo) {
+      var archiveURL = coerce.archiveUrl(archive)
+      var gizmoURL = coerce.recordUrl(gizmo._url)
+      var profile = await db.profile.get(archiveURL)
+      return !!profile.subgizmos.find(sg => sg.url === gizmoURL)
+    },
 
-    postscript (archive, {
-      postscriptJS,
-      postscriptHTTP,
-      subscriptURL,
-      subscriptOrigin,
-      subscriptName,
-      subscriptInfo
+    // TCW -- posts api
+
+    post (archive, {
+      postJS,
+      postHTTP,
+      postText,
+      gizmoURL
     }) {
-      postscriptJS = coerce.string(postscriptJS)
-      postscriptHTTP = coerce.string(postscriptHTTP)
-      subscriptURL = coerce.string(subscriptURL)
-      subscriptOrigin = coerce.string(subscriptOrigin)
-      subscriptName = coerce.string(subscriptName)
-      subscriptInfo = coerce.string(subscriptInfo)
+      postJS = coerce.string(postJS)
+      postHTTP = coerce.string(postHTTP)
+      postText = coerce.string(postText)
+      gizmoURL = coerce.string(gizmoURL)
       const createdAt = Date.now()
 
-      return db.postscripts.add(archive, {
-        postscriptJS,
-        postscriptHTTP,
-        subscriptURL,
-        subscriptOrigin,
-        subscriptName,
-        subscriptInfo,
+      return db.posts.add(archive, {
+        postJS,
+        postHTTP,
+        postText,
+        gizmoURL,
         createdAt
       })
     },
 
-    getPostscriptsQuery ({author, after, before, offset, limit, reverse} = {}) {
-      var query = db.postscripts
+    getPostsQuery ({author, after, before, offset, limit, reverse} = {}) {
+      var query = db.posts
       if (author) {
         author = coerce.archiveUrl(author)
         after = after || 0
@@ -4708,44 +4680,56 @@ exports.open = async function (userArchive) {
       return query
     },
 
-    async listPostscripts (opts = {}, query) {
+    async listPosts (opts = {}, query) {
       var promises = []
-      query = query || this.getPostscriptsQuery(opts)
-      var postscripts = await query.toArray()
+      query = query || this.getPostsQuery(opts)
+      var posts = await query.toArray()
+
+      if (opts.currentURL) {
+        posts = posts.filter(p => {
+          return p.postHTTP === opts.currentURL
+        })
+      }
 
       // fetch author profile
       if (opts.fetchAuthor) {
         let profiles = {}
-        promises = promises.concat(postscripts.map(async b => {
-          if (!profiles[b._origin]) {
-            profiles[b._origin] = this.getProfile(b._origin)
+        promises = promises.concat(posts.map(async p => {
+          if (!profiles[p._origin]) {
+            profiles[p._origin] = await this.getProfile(p._origin)
           }
-          b.author = await profiles[b._origin]
+          p.author = await profiles[p._origin]
+        }))
+      }
+
+      if (opts.fetchGizmo) {
+        promises = promises.concat(posts.map(async p => {
+          p.gizmo = await this.getGizmo(opts.requester, p.gizmoURL)
         }))
       }
 
       // tabulate votes
       if (opts.countVotes) {
-        promises = promises.concat(postscripts.map(async b => {
-          b.votes = await this.countVotes(b._url)
+        promises = promises.concat(posts.map(async p => {
+          p.votes = await this.countVotes(p._url)
         }))
       }
 
       await Promise.all(promises)
-      return postscripts
+      return posts
     },
 
-    countPostscripts (opts, query) {
-      query = query || this.getPostscriptsQuery(opts)
+    countPosts (opts, query) {
+      query = query || this.getPostsQuery(opts)
       return query.count()
     },
 
-    async getPostscript (record) {
-      console.log('record', record)
+    async getPost (record) {
       const recordUrl = coerce.recordUrl(record)
-      record = await db.postscripts.get(recordUrl)
+      record = await db.posts.get(recordUrl)
       record.author = await this.getProfile(record._origin)
       record.votes = await this.countVotes(recordUrl)
+      record.gizmo = await this.getGizmo(record.gizmoURL)
       return record
     }
   }
@@ -4777,29 +4761,20 @@ exports.arrayOfFollows = function (arr) {
   }).filter(Boolean)
 }
 
-// TCW -- add coerce for subscripts
-
-exports.arrayOfSubscripts = function (arr) {
+exports.arrayOfSubgizmos = function (arr) {
   arr = Array.isArray(arr) ? arr : [arr]
   return arr.map(v => {
     if (!v) return false
-    if (typeof v === 'string') {
-      return {subscriptURL: exports.datUrl(v)}
-    }
-    if (v.subscriptURL && typeof v.subscriptURL === 'string') {
+    if (v.url && typeof v.url === 'string') {
       return {
-        subscriptURL: exports.datUrl(v.subscriptURL),
-        subscriptOrigin: exports.datUrl(v.subscriptOrigin),
-        subscriptName: exports.string(v.subscriptName),
-        subscriptInfo: exports.string(v.subscriptInfo),
-        subscriptJS: exports.string(v.subscriptJS),
-        subscriptCSS: exports.string(v.subscriptCSS)
+        url: exports.recordUrl(v.url),
+        origin: exports.datUrl(v.origin),
+        author: exports.string(v.author),
+        name: exports.string(v.name)
       }
     }
   }).filter(Boolean)
 }
-
-// TCW -- END
 
 exports.datUrl = function (v) {
   if (v && typeof v === 'string') {

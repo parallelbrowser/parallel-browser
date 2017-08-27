@@ -1,12 +1,13 @@
 import * as yo from 'yo-yo'
 import loadingView from './loading'
-import renderSubscript from './subscript'
+import renderGizmo from './gizmo'
 
-export default function (subscripts) {
-  if (!subscripts) {
+export default function (gizmos) {
+  console.log('gizmos', gizmos)
+  if (!gizmos) {
     return loadingView()
   }
-  if (subscripts.length === 0) {
+  if (gizmos.length === 0) {
     return yo`
       <ul>
         <li>
@@ -20,7 +21,7 @@ export default function (subscripts) {
 
   return yo`
     <ul>
-      ${subscripts.map(p => renderSubscript(p))}
+      ${gizmos.map(g => renderGizmo(g))}
     </ul>
   `
 }

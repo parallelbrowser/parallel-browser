@@ -4,32 +4,12 @@ import { ipcRenderer } from 'electron'
 import ParallelAPI from 'parallel-scratch-api'
 
 export function setup () {
-  window.savePostscript = savePostscript
+  window.savePost = savePost
 
-  ipcRenderer.on('inject-subscript', (event, subscript) => {
-    console.log('here')
-    let subscriptCredentials = {
-      subscriptName: subscript.subscriptName,
-      subscriptInfo: subscript.subscriptInfo,
-      subscriptOrigin: subscript.subscriptOrigin,
-      subscriptURL: subscript.subscriptURL
-    }
-    subscriptCredentials = JSON.stringify(subscriptCredentials)
-    console.log('creds', subscriptCredentials)
-    localStorage.setItem('subscriptCredentials', subscriptCredentials)
-    let subscriptJS
-    let subscriptCSS
-    let subscriptURL
-    if (subscript.subscriptJS) {
-      subscriptJS = subscript.subscriptJS.toString()
-    }
-    if (subscript.subscriptCSS) {
-      subscriptCSS = subscript.subscriptCSS.toString()
-    }
-    if (subscript.subscriptURL) {
-      subscriptURL = subscript.subscriptURL.toString()
-    }
-    inject(subscriptJS, subscriptCSS, subscriptURL)
+  ipcRenderer.on('inject-gizmo', (event, gizmo) => {
+    console.log('gizmo in inject-gizmo', gizmo)
+    localStorage.setItem('activeGizmoURL', gizmo._url)
+    inject(gizmo.gizmoJS, gizmo._url)
   })
 
   ipcRenderer.on('inject-widget', (event, widget) => {
@@ -37,7 +17,7 @@ export function setup () {
   })
 }
 
-function inject (scriptJS, scriptCSS, scriptURL) {
+function inject (js, gizmoURL) {
   // defines body and head of underlying webview DOM
 
   const body = document.body || document.getElementsByTagName('body')[0]
@@ -55,18 +35,11 @@ function inject (scriptJS, scriptCSS, scriptURL) {
 
   // appends javascript to the <body>
 
-  if (scriptJS && scriptURL) {
+  if (js && gizmoURL) {
     const scriptElement = document.createElement('script')
-    scriptElement.setAttribute('id', scriptURL)
-    scriptElement.appendChild(document.createTextNode(scriptJS))
+    scriptElement.setAttribute('id', gizmoURL)
+    scriptElement.appendChild(document.createTextNode(js))
     body.appendChild(scriptElement)
-  }
-
-  if (scriptCSS) {
-    const cssElement = document.createElement('style')
-    cssElement.type = 'text/css'
-    cssElement.appendChild(document.createTextNode(scriptCSS))
-    head.appendChild(cssElement)
   }
 }
 
@@ -75,19 +48,23 @@ function inject (scriptJS, scriptCSS, scriptURL) {
 // the injected script from the dom, then writes the postscript to the user's
 // injestdb
 
-async function savePostscript (postscriptJS) {
-  const subscriptCredentials = JSON.parse(localStorage.getItem('subscriptCredentials'))
-  if (postscriptJS && subscriptCredentials && subscriptCredentials.subscriptURL) {
-    removeScript(subscriptCredentials.subscriptURL)
-    localStorage.removeItem('subscriptCredentials')
-    const postscript = Object.assign({}, {postscriptJS, postscriptHTTP: window.location.href}, subscriptCredentials)
-    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11'
-    if (!DatArchive) {
-      DatArchive = window.DatArchive
+async function savePost (postJS) {
+  const gizmoURL = localStorage.getItem('activeGizmoURL')
+  localStorage.removeItem('activeGizmoURL')
+  const postHTTP = window.location.href
+  const postText = window.prompt('Enter a description of your post.')
+  if (postJS && gizmoURL && postHTTP) {
+    const post = {
+      postJS,
+      postHTTP,
+      postText,
+      gizmoURL
     }
+    const userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6'
     const userDB = await ParallelAPI.open(new DatArchive(userURL))
-    console.log('db', userDB)
-    await userDB.postscript(userURL, postscript)
+    console.log('post before saving', post)
+    console.log('db in savePost', userDB)
+    await userDB.post(userURL, post)
   }
 }
 
