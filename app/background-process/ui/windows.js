@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, ipcMain, webContents, ipcRenderer } from 'electron'
+import { app, BrowserWindow, screen, ipcMain, webContents } from 'electron'
 import { register as registerShortcut, unregisterAll as unregisterAllShortcuts } from 'electron-localshortcut'
 import jetpack from 'fs-jetpack'
 import path from 'path'
@@ -96,8 +96,8 @@ export function createShellWindow () {
     promptInjectGizmo(win, gizmo)
   })
 
-  ipcMain.on('inject-widget', (event, widget) => {
-    promptInjectWidget(win, widget)
+  ipcMain.on('inject-post', (event, post) => {
+    promptInjectPost(win, post)
   })
 
   // this listens for the current webview url from
@@ -158,7 +158,7 @@ async function promptInjectGizmo (win, gizmo) {
   return webContents.fromId(id).send('inject-gizmo', gizmo)
 }
 
-async function promptInjectWidget (win, widget) {
+async function promptInjectPost (win, post) {
   win = win || getActiveWindow()
   var id = await win.webContents.executeJavaScript(`
     (function () {
@@ -166,7 +166,7 @@ async function promptInjectWidget (win, widget) {
       return webview && webview.getWebContents().id
     })()
   `)
-  return webContents.fromId(id).send('inject-widget', widget)
+  return webContents.fromId(id).send('inject-post', post)
 }
 
 // end

@@ -12,8 +12,8 @@ export function setup () {
     inject(gizmo.gizmoJS, gizmo._url)
   })
 
-  ipcRenderer.on('inject-widget', (event, widget) => {
-    toggleWidget(widget)
+  ipcRenderer.on('inject-post', (event, post) => {
+    togglePost(post)
   })
 }
 
@@ -66,20 +66,22 @@ async function savePost (postJS) {
     console.log('db in savePost', userDB)
     await userDB.post(userURL, post)
   }
+  ipcRenderer.sendToHost('reload-posts', window.location.href)
 }
 
-function toggleWidget (widget) {
-  var element = document.getElementById(widget.subscriptURL)
-  if (typeof (element) !== 'undefined' && element !== null) {
-    removeScript(widget.subscriptURL)
-  } else {
-    inject(widget.postscriptJS, null, widget.subscriptURL)
-  }
+function togglePost (post) {
+  inject(post.postJS, post.gizmoURL)
+  // var element = document.getElementById(widget.subscriptURL)
+  // if (typeof (element) !== 'undefined' && element !== null) {
+  //   removeScript(widget.subscriptURL)
+  // } else {
+  //   inject(widget.postscriptJS, null, widget.subscriptURL)
+  // }
 }
 
-function removeScript (id) {
-  const scriptElement = document.getElementById(id)
-  scriptElement.parentNode.removeChild(scriptElement)
-}
+// function removeScript (id) {
+//   const scriptElement = document.getElementById(id)
+//   scriptElement.parentNode.removeChild(scriptElement)
+// }
 
 // end

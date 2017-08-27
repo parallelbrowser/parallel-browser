@@ -4,16 +4,17 @@ import * as yo from 'yo-yo'
 import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
 import gizmoList from './parallel/gizmo-list'
-import postscriptList from './parallel/postscript-list'
+import postList from './parallel/post-list'
 
 export class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false
     this.showGizmos = true
-    this.subscripts = null
-    this.postscripts = null
+    this.gizmos = null
+    this.posts = []
     this.userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6'
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
+    this.setup()
     this.loadGizmos()
   }
 
@@ -26,25 +27,37 @@ export class ParallelBtn {
     })
   }
 
-  async loadPosts () {
-    const currentURL = this.getCurrentURL()
-    const userDB = await ParallelAPI.open(new DatArchive(this.userURL))
-    this.postscripts = await userDB.listPosts()
-    this.postscripts = this.postscripts.filter(p => {
-      return p.postscriptHTTP === currentURL
-    })
+  setup () {
+    pages.on('set-active', this.onSetActive.bind(this))
+    pages.on('hash-change', this.onHashChange.bind(this))
+    pages.on('reload-posts', this.onReloadPosts.bind(this))
   }
 
-  getCurrentURL () {
-    var webviews = document.getElementById('webviews').children
-    var currentURL
-    for (var i = 0; i < webviews.length; i++) {
-      var webview = webviews[i]
-      if (!webview.className.includes('hidden')) {
-        currentURL = webview.src
-      }
+  onSetActive (page) {
+    this.loadPosts(page.url)
+  }
+
+  onHashChange (url) {
+    this.loadPosts(url)
+  }
+
+  onReloadPosts (url) {
+    this.loadPosts(url)
+  }
+
+  async loadPosts (currentURL) {
+    if (currentURL) {
+      const userDB = await ParallelAPI.open(new DatArchive(this.userURL))
+      this.posts = await userDB.listPosts({
+        fetchAuthor: true,
+        fetchReplies: true,
+        countVotes: true,
+        reverse: true,
+        fetchGizmo: true,
+        requester: this.userURL,
+        currentURL
+      })
     }
-    return currentURL
   }
 
   render () {
@@ -67,7 +80,7 @@ export class ParallelBtn {
             </div>
 
 
-            ${this.showGizmos ? gizmoList(this.gizmos) : postscriptList(this.postscripts)}
+            ${this.showGizmos ? gizmoList(this.gizmos) : postList(this.posts)}
 
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2')}>
@@ -100,11 +113,6 @@ export class ParallelBtn {
   // Toggles whether the user is viewing prescripts or post scripts on the current site
   onToggleClick (showGizmos) {
     this.showGizmos = showGizmos
-    if (showGizmos) {
-      this.loadGizmos()
-    } else {
-      this.loadPostscripts()
-    }
     this.updateActives()
   }
 

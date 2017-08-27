@@ -589,6 +589,7 @@ function onLoadCommit (e) {
     // set title in tabs
     page.title = e.target.getTitle() // NOTE sync operation
     navbar.update(page)
+    events.emit('hash-change', page.url)
   }
 }
 
@@ -878,6 +879,10 @@ export function onIPCMessage (e) {
       break
     case 'close-menus':
       navbar.closeMenus()
+      break
+    case 'reload-posts':
+      var currentURL = e.args[0]
+      events.emit('reload-posts', currentURL)
       break
     case 'toggle-live-reloading':
       if (activePage) {

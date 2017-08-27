@@ -656,60 +656,43 @@ var gizmoList = function (gizmos) {
   `
 };
 
-/* globals DatArchive */
-
 // Render the list of scripts in the dropdown
-var renderPostscript = function (postscript) {
-  console.log('window loc', document.location.href);
-  getProfile(postscript);
-  console.log('post with profile', postscript);
+var renderPost = function (post) {
+  console.log('post in renderPost', post);
   return yo`
-    <li id=${postscript.createdAt}>
-      <div><p><i class="fa fa-spinner"></i>Loading...</p></div>
+    <li>
+      <div class="list-item sidebarscripts" onclick=${() => injectPost(post)}>
+          <div style="display: inline-block" title=${post.gizmo.gizmoName}>
+            <span><b>${post.gizmo.gizmoName}</b></span>
+          </div>
+          <br>
+          <div style="display: inline-block">
+            <span>${post.gizmo.gizmoDescription}</span>
+          </div>
+          <br>
+          <div style="display: inline-block">
+            <span>By ${post.author.name}</span>
+          </div>
+      </div>
     </li>
   `
 };
 
-async function getProfile (postscript) {
-  const userURL = 'dat://cd0af79469028edf210d4205a5d7b54527b8d6fa53e063ddb006576d03200b64';
-  const userDB = await ParallelAPI.open(new DatArchive(userURL));
-  postscript.profile = await userDB.getProfile(postscript._origin);
-  console.log('profile', postscript.profile);
-  yo.update(document.getElementById(postscript.createdAt), yo`
-      <li>
-        <div class="list-item sidebarscripts" onclick=${() => injectPostscript(postscript)}>
-            <div style="display: inline-block" title=${postscript.subscriptName}>
-              <span><b>${postscript.subscriptName}</b></span>
-            </div>
-            <br>
-            <div style="display: inline-block">
-              <span>${postscript.subscriptInfo}</span>
-            </div>
-            <br>
-            <div style="display: inline-block">
-              <span>By ${postscript.profile.name}</span>
-            </div>
-        </div>
-      </li>
-    `
-  );
+function injectPost (post) {
+  console.log('post in button', post);
+  electron.ipcRenderer.send('inject-post', post);
 }
 
-function injectPostscript (postscript) {
-  console.log('postscript in button', postscript);
-  electron.ipcRenderer.send('inject-widget', postscript);
-}
-
-var postscriptList = function (postscripts, updatePostscripts) {
-  if (!postscripts) {
+var postList = function (posts, updatePostscripts) {
+  if (!posts) {
     return loadingView()
   }
-  if (postscripts.length === 0) {
+  if (posts.length === 0) {
     return yo`
       <ul>
         <li>
           <div class="list-item sidebarscripts">
-            No widgets for this page.
+            No posts for this page.
           </div>
         </li>
       </ul>
@@ -718,7 +701,7 @@ var postscriptList = function (postscripts, updatePostscripts) {
 
   return yo`
     <ul>
-      ${postscripts.map(p => renderPostscript(p, updatePostscripts))}
+      ${posts.map(p => renderPost(p, updatePostscripts))}
     </ul>
   `
 };
@@ -728,10 +711,11 @@ class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false;
     this.showGizmos = true;
-    this.subscripts = null;
-    this.postscripts = null;
+    this.gizmos = null;
+    this.posts = [];
     this.userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6';
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
+    this.setup();
     this.loadGizmos();
   }
 
@@ -744,25 +728,42 @@ class ParallelBtn {
     });
   }
 
-  async loadPosts () {
-    const currentURL = this.getCurrentURL();
-    const userDB = await ParallelAPI.open(new DatArchive(this.userURL));
-    this.postscripts = await userDB.listPosts();
-    this.postscripts = this.postscripts.filter(p => {
-      return p.postscriptHTTP === currentURL
-    });
+  setup () {
+    on$$1('set-active', this.onSetActive.bind(this));
+    on$$1('hash-change', this.onHashChange.bind(this));
+    on$$1('reload-posts', this.onReloadPosts.bind(this));
   }
 
-  getCurrentURL () {
-    var webviews = document.getElementById('webviews').children;
-    var currentURL;
-    for (var i = 0; i < webviews.length; i++) {
-      var webview = webviews[i];
-      if (!webview.className.includes('hidden')) {
-        currentURL = webview.src;
-      }
+  onSetActive (page) {
+    console.log('page.url in onSetActive', page.url);
+    this.loadPosts(page.url);
+  }
+
+  onHashChange (url) {
+    console.log('url in onHashChange', url);
+    this.loadPosts(url);
+  }
+
+  onReloadPosts (url) {
+    console.log('url in onReloadPosts', url);
+    this.loadPosts(url);
+  }
+
+  async loadPosts (currentURL) {
+    console.log('currentURL in loadPosts', currentURL);
+    if (currentURL) {
+      const userDB = await ParallelAPI.open(new DatArchive(this.userURL));
+      this.posts = await userDB.listPosts({
+        fetchAuthor: true,
+        fetchReplies: true,
+        countVotes: true,
+        reverse: true,
+        fetchGizmo: true,
+        requester: this.userURL,
+        currentURL
+      });
+      console.log('this.posts after load', this.posts);
     }
-    return currentURL
   }
 
   render () {
@@ -785,7 +786,7 @@ class ParallelBtn {
             </div>
 
 
-            ${this.showGizmos ? gizmoList(this.gizmos) : postscriptList(this.postscripts)}
+            ${this.showGizmos ? gizmoList(this.gizmos) : postList(this.posts)}
 
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2')}>
@@ -818,11 +819,6 @@ class ParallelBtn {
   // Toggles whether the user is viewing prescripts or post scripts on the current site
   onToggleClick (showGizmos) {
     this.showGizmos = showGizmos;
-    if (showGizmos) {
-      this.loadGizmos();
-    } else {
-      this.loadPostscripts();
-    }
     this.updateActives();
   }
 
@@ -3864,6 +3860,7 @@ function onLoadCommit (e) {
     // set title in tabs
     page.title = e.target.getTitle(); // NOTE sync operation
     update$1(page);
+    events.emit('hash-change', page.url);
   }
 }
 
@@ -4153,6 +4150,10 @@ function onIPCMessage (e) {
       break
     case 'close-menus':
       closeMenus();
+      break
+    case 'reload-posts':
+      var currentURL = e.args[0];
+      events.emit('reload-posts', currentURL);
       break
     case 'toggle-live-reloading':
       if (activePage) {
