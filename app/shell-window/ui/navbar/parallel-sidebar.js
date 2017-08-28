@@ -3,8 +3,8 @@ import ParallelAPI from 'parallel-scratch-api'
 import * as yo from 'yo-yo'
 import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
-import gizmoList from './parallel/gizmo-list'
-import postList from './parallel/post-list'
+import { GizmoList } from './parallel/gizmo-list'
+import {PostList} from './parallel/post-list'
 
 export class ParallelBtn {
   constructor () {
@@ -28,20 +28,27 @@ export class ParallelBtn {
 
   setup () {
     this.loadGizmos()
+    this.updateActives()
     pages.on('set-active', this.onSetActive.bind(this))
     pages.on('hash-change', this.onHashChange.bind(this))
     pages.on('reload-posts', this.onReloadPosts.bind(this))
   }
 
   onSetActive (page) {
+    this.posts = null
+    this.updateActives()
     this.loadPosts(page.url)
   }
 
   onHashChange (url) {
+    this.posts = null
+    this.updateActives()
     this.loadPosts(url)
   }
 
   onReloadPosts (url) {
+    this.posts = null
+    this.updateActives()
     this.loadPosts(url)
   }
 
@@ -58,6 +65,7 @@ export class ParallelBtn {
         currentURL
       })
     }
+    this.updateActives()
   }
 
   render () {
@@ -76,7 +84,7 @@ export class ParallelBtn {
                 Posts
               </div>
             </div>
-            ${this.showGizmos ? gizmoList(this.gizmos) : postList(this.posts)}
+            ${this.showGizmos ? new GizmoList(this.gizmos).render() : new PostList(this.posts).render()}
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2')}>
                 <i class="fa fa-home"></i>
@@ -108,11 +116,17 @@ export class ParallelBtn {
 
   // Toggles whether the user is viewing prescripts or post scripts on the current site
   onToggleClick (showGizmos) {
+    if (showGizmos) {
+      Array.from(document.querySelectorAll('.post-list')).forEach(el => { el.innerHTML = '' })
+    } else {
+      Array.from(document.querySelectorAll('.gizmo-list')).forEach(el => { el.innerHTML = '' })
+    }
     this.showGizmos = showGizmos
     this.updateActives()
   }
 
   updateActives () {
+    console.log('actives in button', Array.from(document.querySelectorAll('.browser-dropdown-scripts')))
     Array.from(document.querySelectorAll('.browser-dropdown-scripts')).forEach(el => yo.update(el, this.render()))
   }
 

@@ -1,26 +1,31 @@
 import * as yo from 'yo-yo'
 import loadingView from './loading'
-import { Post } from './post-up'
+import { Post } from './post'
 
-export default function (posts) {
-  if (!posts) {
-    return loadingView()
+export class PostList {
+  constructor (posts) {
+    this.posts = posts
   }
-  if (posts.length === 0) {
+  render () {
+    if (!this.posts) {
+      return loadingView()
+    }
+    if (this.posts.length === 0) {
+      return yo`
+        <ul class="post-list">
+          <li>
+            <div class="list-item sidebarscripts">
+              No posts for this page.
+            </div>
+          </li>
+        </ul>
+      `
+    }
+
     return yo`
-      <ul>
-        <li>
-          <div class="list-item sidebarscripts">
-            No posts for this page.
-          </div>
-        </li>
+      <ul class="post-list">
+        ${this.posts.map(p => new Post(p).render())}
       </ul>
     `
   }
-
-  return yo`
-    <ul>
-      ${posts.map(p => new Post(p).render())}
-    </ul>
-  `
 }

@@ -625,7 +625,10 @@ class Gizmo {
   }
 
   updateActives () {
-    yo.update(document.getElementById(this.gizmo._url), this.render());
+    // yo.update(document.getElementById(this.gizmo._url), this.render())
+    Array.from(document.querySelectorAll('.' + this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()));
+    // Array.from(document.querySelectorAll(this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()))
+    console.log('this in gizmo updateActives', this);
   }
 
   onOpenPage () {
@@ -644,6 +647,15 @@ class Gizmo {
     electron.ipcRenderer.send('inject-gizmo', gizmo);
   }
 
+  parseDatPath () {
+    console.log('this in gizmo parse', this);
+    let dat = this.gizmo._url.replace(/\//g, '');
+    dat = dat.replace(/\./g, '');
+    dat = dat.replace(/:/g, '');
+    console.log('dat in gizmo after parse', dat);
+    return dat
+  }
+
   render () {
     var icons = '';
     if (this.showIcons) {
@@ -655,7 +667,7 @@ class Gizmo {
       `;
     }
     return yo`
-      <li id=${this.gizmo._url} class="list-item sidebarscripts gizmo" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
+      <li class="list-item sidebarscripts ${this.parseDatPath()} gizmo" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
         <div class="list-item">
           <div style="display: inline-block" title=${this.gizmo.gizmoName}>
             <span><b>${this.gizmo.gizmoName}</b></span>
@@ -672,34 +684,40 @@ class Gizmo {
   }
 }
 
-var gizmoList = function (gizmos) {
-  console.log('gizmos', gizmos);
-  if (!gizmos) {
-    return loadingView()
+class GizmoList {
+  constructor (gizmos) {
+    this.gizmos = gizmos;
   }
-  if (gizmos.length === 0) {
+
+  render () {
+    if (!this.gizmos) {
+      return loadingView()
+    }
+    if (this.gizmos.length === 0) {
+      return yo`
+        <ul class="gizmo-list">
+          <li>
+            <div class="list-item sidebarscripts">
+              You are not using any gizmos!
+            </div>
+          </li>
+        </ul>
+      `
+    }
+
+    console.log('gizmos being rendered in list', this.gizmos.map(g => new Gizmo(g).render()));
+
     return yo`
-      <ul>
-        <li>
-          <div class="list-item sidebarscripts">
-            You are not using any gizmos!
-          </div>
-        </li>
+      <ul class="gizmo-list">
+        ${this.gizmos.map(g => new Gizmo(g).render())}
       </ul>
     `
   }
-
-  return yo`
-    <ul>
-      ${gizmos.map(g => new Gizmo(g).render())}
-    </ul>
-  `
-};
+}
 
 // Render the list of scripts in the dropdown
 class Post {
   constructor (post) {
-    console.log('post', post);
     this.showIcons = false;
     this.post = post;
     this.userAppURL = 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2';
@@ -712,7 +730,10 @@ class Post {
 
   updateActives () {
     // Array.from(document.querySelectorAll('.post')).forEach(el => yo.update(el, this.render()))
-    yo.update(document.getElementById(this.post._url), this.render());
+    // yo.update(document.getElementById(this.post._url), this.render())
+    // console.log('document in post', document)
+    Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url))).forEach(el => yo.update(el, this.render()));
+    console.log('this in post updateActives', this);
   }
 
   onOpenPage (opts) {
@@ -751,6 +772,15 @@ class Post {
     electron.ipcRenderer.send('inject-post', post);
   }
 
+  parseDatPath () {
+    console.log('this in post parse', this);
+    let dat = this.post._url.replace(/\//g, '');
+    dat = dat.replace(/\./g, '');
+    dat = dat.replace(/:/g, '');
+    console.log('dat in post after parse', dat);
+    return dat
+  }
+
   render () {
     var icons = '';
     if (this.showIcons) {
@@ -764,7 +794,7 @@ class Post {
       `;
     }
     return yo`
-      <li id=${this.post._url} class="list-item sidebarscripts" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
+      <li class="list-item sidebarscripts ${this.parseDatPath()} post" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
         <div class="list-item">
           <div style="display: inline-block" title=${this.post.author.name}>
             <span><b>${this.post.author.name}</b></span>
@@ -785,28 +815,33 @@ class Post {
   }
 }
 
-var postList = function (posts) {
-  if (!posts) {
-    return loadingView()
+class PostList {
+  constructor (posts) {
+    this.posts = posts;
   }
-  if (posts.length === 0) {
+  render () {
+    if (!this.posts) {
+      return loadingView()
+    }
+    if (this.posts.length === 0) {
+      return yo`
+        <ul class="post-list">
+          <li>
+            <div class="list-item sidebarscripts">
+              No posts for this page.
+            </div>
+          </li>
+        </ul>
+      `
+    }
+
     return yo`
-      <ul>
-        <li>
-          <div class="list-item sidebarscripts">
-            No posts for this page.
-          </div>
-        </li>
+      <ul class="post-list">
+        ${this.posts.map(p => new Post(p).render())}
       </ul>
     `
   }
-
-  return yo`
-    <ul>
-      ${posts.map(p => new Post(p).render())}
-    </ul>
-  `
-};
+}
 
 /* globals DatArchive */
 class ParallelBtn {
@@ -831,20 +866,27 @@ class ParallelBtn {
 
   setup () {
     this.loadGizmos();
+    this.updateActives();
     on$$1('set-active', this.onSetActive.bind(this));
     on$$1('hash-change', this.onHashChange.bind(this));
     on$$1('reload-posts', this.onReloadPosts.bind(this));
   }
 
   onSetActive (page) {
+    this.posts = null;
+    this.updateActives();
     this.loadPosts(page.url);
   }
 
   onHashChange (url) {
+    this.posts = null;
+    this.updateActives();
     this.loadPosts(url);
   }
 
   onReloadPosts (url) {
+    this.posts = null;
+    this.updateActives();
     this.loadPosts(url);
   }
 
@@ -861,6 +903,7 @@ class ParallelBtn {
         currentURL
       });
     }
+    this.updateActives();
   }
 
   render () {
@@ -879,7 +922,7 @@ class ParallelBtn {
                 Posts
               </div>
             </div>
-            ${this.showGizmos ? gizmoList(this.gizmos) : postList(this.posts)}
+            ${this.showGizmos ? new GizmoList(this.gizmos).render() : new PostList(this.posts).render()}
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2')}>
                 <i class="fa fa-home"></i>
@@ -911,11 +954,17 @@ class ParallelBtn {
 
   // Toggles whether the user is viewing prescripts or post scripts on the current site
   onToggleClick (showGizmos) {
+    if (showGizmos) {
+      Array.from(document.querySelectorAll('.post-list')).forEach(el => { el.innerHTML = ''; });
+    } else {
+      Array.from(document.querySelectorAll('.gizmo-list')).forEach(el => { el.innerHTML = ''; });
+    }
     this.showGizmos = showGizmos;
     this.updateActives();
   }
 
   updateActives () {
+    console.log('actives in button', Array.from(document.querySelectorAll('.browser-dropdown-scripts')));
     Array.from(document.querySelectorAll('.browser-dropdown-scripts')).forEach(el => yo.update(el, this.render()));
   }
 

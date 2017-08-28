@@ -16,7 +16,10 @@ export class Gizmo {
   }
 
   updateActives () {
-    yo.update(document.getElementById(this.gizmo._url), this.render())
+    // yo.update(document.getElementById(this.gizmo._url), this.render())
+    Array.from(document.querySelectorAll('.' + this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()))
+    // Array.from(document.querySelectorAll(this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()))
+    console.log('this in gizmo updateActives', this)
   }
 
   onOpenPage () {
@@ -35,6 +38,15 @@ export class Gizmo {
     ipcRenderer.send('inject-gizmo', gizmo)
   }
 
+  parseDatPath () {
+    console.log('this in gizmo parse', this)
+    let dat = this.gizmo._url.replace(/\//g, '')
+    dat = dat.replace(/\./g, '')
+    dat = dat.replace(/:/g, '')
+    console.log('dat in gizmo after parse', dat)
+    return dat
+  }
+
   render () {
     var icons = ''
     if (this.showIcons) {
@@ -46,7 +58,7 @@ export class Gizmo {
       `
     }
     return yo`
-      <li id=${this.gizmo._url} class="list-item sidebarscripts gizmo" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
+      <li class="list-item sidebarscripts ${this.parseDatPath()} gizmo" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
         <div class="list-item">
           <div style="display: inline-block" title=${this.gizmo.gizmoName}>
             <span><b>${this.gizmo.gizmoName}</b></span>
