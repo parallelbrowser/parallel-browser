@@ -1,8 +1,8 @@
 import * as yo from 'yo-yo'
 import loadingView from './loading'
-import renderPost from './post'
+import { Post } from './post-up'
 
-export default function (posts, updatePostscripts) {
+export default function (posts) {
   if (!posts) {
     return loadingView()
   }
@@ -20,7 +20,7 @@ export default function (posts, updatePostscripts) {
 
   return yo`
     <ul>
-      ${posts.map(p => renderPost(p, updatePostscripts))}
+      ${posts.map(p => new Post(p).render())}
     </ul>
   `
 }

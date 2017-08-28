@@ -538,7 +538,6 @@ function setup$2 () {
   window.savePost = savePost;
 
   electron.ipcRenderer.on('inject-gizmo', (event, gizmo) => {
-    console.log('gizmo in inject-gizmo', gizmo);
     localStorage.setItem('activeGizmoURL', gizmo._url);
     inject(gizmo.gizmoJS, gizmo._url);
   });
@@ -593,8 +592,6 @@ async function savePost (postJS) {
     };
     const userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6';
     const userDB = await ParallelAPI.open(new DatArchive(userURL));
-    console.log('post before saving', post);
-    console.log('db in savePost', userDB);
     await userDB.post(userURL, post);
   }
   electron.ipcRenderer.sendToHost('reload-posts', window.location.href);

@@ -15,7 +15,6 @@ export class ParallelBtn {
     this.userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6'
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
     this.setup()
-    this.loadGizmos()
   }
 
   async loadGizmos () {
@@ -28,6 +27,7 @@ export class ParallelBtn {
   }
 
   setup () {
+    this.loadGizmos()
     pages.on('set-active', this.onSetActive.bind(this))
     pages.on('hash-change', this.onHashChange.bind(this))
     pages.on('reload-posts', this.onReloadPosts.bind(this))
@@ -63,11 +63,9 @@ export class ParallelBtn {
   render () {
     var dropdownEl = ''
     if (this.isDropdownOpen) {
-      // TODO: change the "view all scripts" and "discover" links
       dropdownEl = yo`
         <div class="script-dropdown dropdown toolbar-dropdown-menu-dropdown">
-          <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
-
+          <div style="width: 400px; height: 100vh;" class="dropdown-items script-dropdown with-triangle visible">
             <div class="grid default">
               <div id="gizmo" class="grid-item ${this.showGizmos ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
                 <i class="fa fa-file-code-o"></i>
@@ -75,22 +73,19 @@ export class ParallelBtn {
               </div>
               <div id="widget" class="grid-item ${this.showGizmos ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
                 <i class="fa fa-file-text-o"></i>
-                Widgets
+                Posts
               </div>
             </div>
-
-
             ${this.showGizmos ? gizmoList(this.gizmos) : postList(this.posts)}
-
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2')}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
             </div>
-
           </div>
-        </div>`
+        </div>
+      `
     }
 
     // render btn
@@ -100,7 +95,8 @@ export class ParallelBtn {
           <span class="fa fa-code"></span>
         </button>
         ${dropdownEl}
-      </div>`
+      </div>
+    `
   }
 
   // Manages the redirect to other scripts from the clicked author

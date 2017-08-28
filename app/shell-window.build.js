@@ -611,25 +611,65 @@ var loadingView = function () {
 };
 
 // Render the list of scripts in the dropdown
-var renderGizmo = function (gizmo) {
-  return yo`
-    <li>
-      <div class="list-item sidebarscripts" onclick=${() => injectSubscript(gizmo)}>
-          <div style="display: inline-block" title=${gizmo.gizmoName}>
-            <span><b>${gizmo.gizmoName}</b></span>
+class Gizmo {
+  constructor (gizmo) {
+    console.log('gizmo', gizmo);
+    this.showIcons = false;
+    this.gizmo = gizmo;
+    this.userAppURL = 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2';
+  }
+
+  onMouseOverToggle () {
+    this.showIcons = !this.showIcons;
+    this.updateActives();
+  }
+
+  updateActives () {
+    yo.update(document.getElementById(this.gizmo._url), this.render());
+  }
+
+  onOpenPage () {
+    const url = this.userAppURL + this.getViewGizmoURL();
+    setActive(create(url));
+    this.showIcons = false;
+    this.updateActives();
+  }
+
+  getViewGizmoURL () {
+    return '/#gizmo/' + this.gizmo._url.slice('dat://'.length)
+  }
+
+  injectGizmo (gizmo) {
+    console.log('gizmo in button', gizmo);
+    electron.ipcRenderer.send('inject-gizmo', gizmo);
+  }
+
+  render () {
+    var icons = '';
+    if (this.showIcons) {
+      icons = yo`
+        <div style="display: inline-block">
+          <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectGizmo(this.gizmo)}></i>
+          <i class="fa fa-cog fa-lg" onclick=${() => this.onOpenPage()}></i>
+        </div>
+      `;
+    }
+    return yo`
+      <li id=${this.gizmo._url} class="list-item sidebarscripts gizmo" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
+        <div class="list-item">
+          <div style="display: inline-block" title=${this.gizmo.gizmoName}>
+            <span><b>${this.gizmo.gizmoName}</b></span>
           </div>
           <br>
           <div style="display: inline-block">
-            <span>${gizmo.gizmoDescription}</span>
+            <span>${this.gizmo.gizmoDescription}</span>
           </div>
-      </div>
-    </li>
-  `
-};
-
-function injectSubscript (gizmo) {
-  console.log('gizmo in button', gizmo);
-  electron.ipcRenderer.send('inject-gizmo', gizmo);
+          <br>
+          ${icons}
+        </div>
+      </li>
+    `
+  }
 }
 
 var gizmoList = function (gizmos) {
@@ -651,39 +691,101 @@ var gizmoList = function (gizmos) {
 
   return yo`
     <ul>
-      ${gizmos.map(g => renderGizmo(g))}
+      ${gizmos.map(g => new Gizmo(g).render())}
     </ul>
   `
 };
 
 // Render the list of scripts in the dropdown
-var renderPost = function (post) {
-  console.log('post in renderPost', post);
-  return yo`
-    <li>
-      <div class="list-item sidebarscripts" onclick=${() => injectPost(post)}>
-          <div style="display: inline-block" title=${post.gizmo.gizmoName}>
-            <span><b>${post.gizmo.gizmoName}</b></span>
-          </div>
-          <br>
-          <div style="display: inline-block">
-            <span>${post.gizmo.gizmoDescription}</span>
-          </div>
-          <br>
-          <div style="display: inline-block">
-            <span>By ${post.author.name}</span>
-          </div>
-      </div>
-    </li>
-  `
-};
+class Post {
+  constructor (post) {
+    console.log('post', post);
+    this.showIcons = false;
+    this.post = post;
+    this.userAppURL = 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2';
+  }
 
-function injectPost (post) {
-  console.log('post in button', post);
-  electron.ipcRenderer.send('inject-post', post);
+  onMouseOverToggle () {
+    this.showIcons = !this.showIcons;
+    this.updateActives();
+  }
+
+  updateActives () {
+    // Array.from(document.querySelectorAll('.post')).forEach(el => yo.update(el, this.render()))
+    yo.update(document.getElementById(this.post._url), this.render());
+  }
+
+  onOpenPage (opts) {
+    let path$$1;
+    switch (opts) {
+      case 'user':
+        path$$1 = this.getViewProfileURL();
+        break
+      case 'post':
+        path$$1 = this.getViewBroadcastURL();
+        break
+      case 'gizmo':
+        path$$1 = this.getViewGizmoURL();
+        break
+    }
+    const url = this.userAppURL + path$$1;
+    setActive(create(url));
+    this.showIcons = false;
+    this.updateActives();
+  }
+
+  getViewGizmoURL () {
+    return '/#gizmo/' + this.post.gizmo._url.slice('dat://'.length)
+  }
+
+  getViewBroadcastURL () {
+    return '/#broadcast/' + this.post._url.slice('dat://'.length)
+  }
+
+  getViewProfileURL () {
+    return '/#profile/' + this.post._origin.slice('dat://'.length)
+  }
+
+  injectPost (post) {
+    console.log('post in button', post);
+    electron.ipcRenderer.send('inject-post', post);
+  }
+
+  render () {
+    var icons = '';
+    if (this.showIcons) {
+      icons = yo`
+        <div style="display: inline-block">
+          <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectPost(this.post)}></i>
+          <i class="fa fa-user-circle-o fa-lg" onclick=${() => this.onOpenPage('user')}></i>
+          <i class="fa fa-info-circle fa-lg" onclick=${() => this.onOpenPage('post')}></i>
+          <i class="fa fa-cog fa-lg" onclick=${() => this.onOpenPage('gizmo')}></i>
+        </div>
+      `;
+    }
+    return yo`
+      <li id=${this.post._url} class="list-item sidebarscripts" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
+        <div class="list-item">
+          <div style="display: inline-block" title=${this.post.author.name}>
+            <span><b>${this.post.author.name}</b></span>
+          </div>
+          <br>
+          <div style="display: inline-block">
+            <span>${this.post.postText}</span>
+          </div>
+          <br>
+          <div style="display: inline-block">
+            <span>Gizmo: ${this.post.gizmo.gizmoName}</span>
+          </div>
+          <br>
+          ${icons}
+        </div>
+      </li>
+    `
+  }
 }
 
-var postList = function (posts, updatePostscripts) {
+var postList = function (posts) {
   if (!posts) {
     return loadingView()
   }
@@ -701,7 +803,7 @@ var postList = function (posts, updatePostscripts) {
 
   return yo`
     <ul>
-      ${posts.map(p => renderPost(p, updatePostscripts))}
+      ${posts.map(p => new Post(p).render())}
     </ul>
   `
 };
@@ -716,7 +818,6 @@ class ParallelBtn {
     this.userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6';
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
     this.setup();
-    this.loadGizmos();
   }
 
   async loadGizmos () {
@@ -729,28 +830,25 @@ class ParallelBtn {
   }
 
   setup () {
+    this.loadGizmos();
     on$$1('set-active', this.onSetActive.bind(this));
     on$$1('hash-change', this.onHashChange.bind(this));
     on$$1('reload-posts', this.onReloadPosts.bind(this));
   }
 
   onSetActive (page) {
-    console.log('page.url in onSetActive', page.url);
     this.loadPosts(page.url);
   }
 
   onHashChange (url) {
-    console.log('url in onHashChange', url);
     this.loadPosts(url);
   }
 
   onReloadPosts (url) {
-    console.log('url in onReloadPosts', url);
     this.loadPosts(url);
   }
 
   async loadPosts (currentURL) {
-    console.log('currentURL in loadPosts', currentURL);
     if (currentURL) {
       const userDB = await ParallelAPI.open(new DatArchive(this.userURL));
       this.posts = await userDB.listPosts({
@@ -762,18 +860,15 @@ class ParallelBtn {
         requester: this.userURL,
         currentURL
       });
-      console.log('this.posts after load', this.posts);
     }
   }
 
   render () {
     var dropdownEl = '';
     if (this.isDropdownOpen) {
-      // TODO: change the "view all scripts" and "discover" links
       dropdownEl = yo`
         <div class="script-dropdown dropdown toolbar-dropdown-menu-dropdown">
-          <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
-
+          <div style="width: 400px; height: 100vh;" class="dropdown-items script-dropdown with-triangle visible">
             <div class="grid default">
               <div id="gizmo" class="grid-item ${this.showGizmos ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
                 <i class="fa fa-file-code-o"></i>
@@ -781,22 +876,19 @@ class ParallelBtn {
               </div>
               <div id="widget" class="grid-item ${this.showGizmos ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
                 <i class="fa fa-file-text-o"></i>
-                Widgets
+                Posts
               </div>
             </div>
-
-
             ${this.showGizmos ? gizmoList(this.gizmos) : postList(this.posts)}
-
             <div class="footer">
               <a onclick=${e => this.onOpenPage(e, 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2')}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
             </div>
-
           </div>
-        </div>`;
+        </div>
+      `;
     }
 
     // render btn
@@ -806,7 +898,8 @@ class ParallelBtn {
           <span class="fa fa-code"></span>
         </button>
         ${dropdownEl}
-      </div>`
+      </div>
+    `
   }
 
   // Manages the redirect to other scripts from the clicked author

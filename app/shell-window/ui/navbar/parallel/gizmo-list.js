@@ -1,6 +1,6 @@
 import * as yo from 'yo-yo'
 import loadingView from './loading'
-import renderGizmo from './gizmo'
+import { Gizmo } from './gizmo'
 
 export default function (gizmos) {
   console.log('gizmos', gizmos)
@@ -21,7 +21,7 @@ export default function (gizmos) {
 
   return yo`
     <ul>
-      ${gizmos.map(g => renderGizmo(g))}
+      ${gizmos.map(g => new Gizmo(g).render())}
     </ul>
   `
 }
