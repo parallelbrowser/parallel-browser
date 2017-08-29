@@ -540,6 +540,8 @@ function onWillNavigate (e) {
 
     page.siteInfoOverride = null
     navbar.updateLocation(page)
+    console.log('url in onWillNavigate', page.url)
+    console.log('e in onWillNavigate', e)
   }
 }
 
@@ -559,6 +561,8 @@ function onDidNavigateInPage (e) {
 
     // update history
     updateHistory(page)
+    console.log('url in onDidNavigateInPage', page.url)
+    console.log('e in onDidNavigateInPage', e)
   }
 }
 
@@ -589,7 +593,9 @@ function onLoadCommit (e) {
     // set title in tabs
     page.title = e.target.getTitle() // NOTE sync operation
     navbar.update(page)
-    events.emit('hash-change', page.url)
+    events.emit('load-commit', e.url)
+    console.log('url in onLoadCommit', page.url)
+    console.log('e in onLoadCommit', e)
   }
 }
 
@@ -603,6 +609,8 @@ function onDidStartLoading (e) {
     if (page.isActive) {
       statusBar.setIsLoading(true)
     }
+    console.log('url in onDidStartLoading', page.url)
+    console.log('e in onDidStartLoading', e)
   }
 }
 
@@ -615,6 +623,8 @@ function onDidStopLoading (e) {
       page.url = page.loadingURL
     }
     var url = page.url
+    console.log('url in onDidStopLoading', page.url)
+    console.log('e in onDidStopLoading', e)
 
     // update history and UI
     sidebar.onPageChangeLocation(page)
@@ -730,6 +740,7 @@ function onDidGetRedirectRequest (e) {
         console.log('Using redirect workaround for electron #3471; redirecting to', e.newURL)
         e.target.getWebContents().send('redirect-hackfix', e.newURL)
       }, 100)
+      console.log('e in onDidGetRedirectRequest', e)
     }
   }
 }
@@ -752,6 +763,8 @@ function onDidGetResponseDetails (e) {
     page.loadingURL = e.newURL
     page.siteInfoOverride = null
     navbar.updateLocation(page)
+    console.log('url in onDidGetResponseDetails', page.url)
+    console.log('e in onDidGetResponseDetails', e)
   }
 }
 
@@ -769,6 +782,8 @@ function onDidFinishLoad (e) {
     navbar.update(page)
     navbar.updateLocation(page)
     sidebar.onPageChangeLocation(page)
+    console.log('url in onDidFinishLoad', page.url)
+    console.log('e in onDidFinishLoad', e)
   }
 }
 
@@ -825,6 +840,7 @@ async function onPageFaviconUpdated (e) {
 
 function onUpdateTargetUrl ({ url }) {
   statusBar.set(url)
+  console.log('url in onUpdateTargetUrl', url)
 }
 
 function onClose (e) {

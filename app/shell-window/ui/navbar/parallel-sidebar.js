@@ -11,7 +11,7 @@ export class ParallelBtn {
     this.isDropdownOpen = false
     this.showGizmos = true
     this.gizmos = null
-    this.posts = []
+    this.posts = null
     this.userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6'
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
     this.setup()
@@ -30,7 +30,7 @@ export class ParallelBtn {
     this.loadGizmos()
     this.updateActives()
     pages.on('set-active', this.onSetActive.bind(this))
-    pages.on('hash-change', this.onHashChange.bind(this))
+    pages.on('load-commit', this.onLoadCommit.bind(this))
     pages.on('reload-posts', this.onReloadPosts.bind(this))
   }
 
@@ -40,7 +40,7 @@ export class ParallelBtn {
     this.loadPosts(page.url)
   }
 
-  onHashChange (url) {
+  onLoadCommit (url) {
     this.posts = null
     this.updateActives()
     this.loadPosts(url)
@@ -64,6 +64,7 @@ export class ParallelBtn {
         requester: this.userURL,
         currentURL
       })
+      console.log('this.posts after load', this.posts)
     }
     this.updateActives()
   }
@@ -76,7 +77,7 @@ export class ParallelBtn {
           <div style="width: 400px; height: 100vh;" class="dropdown-items script-dropdown with-triangle visible">
             <div class="grid default">
               <div id="gizmo" class="grid-item ${this.showGizmos ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
-                <i class="fa fa-file-code-o"></i>
+                <i class="fa fa-superpowers"></i>
                 Gizmos
               </div>
               <div id="widget" class="grid-item ${this.showGizmos ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
@@ -126,7 +127,6 @@ export class ParallelBtn {
   }
 
   updateActives () {
-    console.log('actives in button', Array.from(document.querySelectorAll('.browser-dropdown-scripts')))
     Array.from(document.querySelectorAll('.browser-dropdown-scripts')).forEach(el => yo.update(el, this.render()))
   }
 

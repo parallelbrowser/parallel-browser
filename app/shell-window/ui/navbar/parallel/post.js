@@ -19,7 +19,6 @@ export class Post {
     // yo.update(document.getElementById(this.post._url), this.render())
     // console.log('document in post', document)
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url))).forEach(el => yo.update(el, this.render()))
-    console.log('this in post updateActives', this)
   }
 
   onOpenPage (opts) {
@@ -59,11 +58,9 @@ export class Post {
   }
 
   parseDatPath () {
-    console.log('this in post parse', this)
     let dat = this.post._url.replace(/\//g, '')
     dat = dat.replace(/\./g, '')
     dat = dat.replace(/:/g, '')
-    console.log('dat in post after parse', dat)
     return dat
   }
 
@@ -74,8 +71,8 @@ export class Post {
         <div style="display: inline-block">
           <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectPost(this.post)}></i>
           <i class="fa fa-user-circle-o fa-lg" onclick=${() => this.onOpenPage('user')}></i>
-          <i class="fa fa-info-circle fa-lg" onclick=${() => this.onOpenPage('post')}></i>
-          <i class="fa fa-cog fa-lg" onclick=${() => this.onOpenPage('gizmo')}></i>
+          <i class="fa fa-file-text-o fa-lg" onclick=${() => this.onOpenPage('post')}></i>
+          <i class="fa fa-superpowers fa-lg" onclick=${() => this.onOpenPage('gizmo')}></i>
         </div>
       `
     }

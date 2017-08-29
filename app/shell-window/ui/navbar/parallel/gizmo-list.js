@@ -23,8 +23,6 @@ export class GizmoList {
       `
     }
 
-    console.log('gizmos being rendered in list', this.gizmos.map(g => new Gizmo(g).render()))
-
     return yo`
       <ul class="gizmo-list">
         ${this.gizmos.map(g => new Gizmo(g).render())}

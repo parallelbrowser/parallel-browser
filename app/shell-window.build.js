@@ -613,7 +613,6 @@ var loadingView = function () {
 // Render the list of scripts in the dropdown
 class Gizmo {
   constructor (gizmo) {
-    console.log('gizmo', gizmo);
     this.showIcons = false;
     this.gizmo = gizmo;
     this.userAppURL = 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2';
@@ -625,10 +624,7 @@ class Gizmo {
   }
 
   updateActives () {
-    // yo.update(document.getElementById(this.gizmo._url), this.render())
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()));
-    // Array.from(document.querySelectorAll(this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()))
-    console.log('this in gizmo updateActives', this);
   }
 
   onOpenPage () {
@@ -648,11 +644,9 @@ class Gizmo {
   }
 
   parseDatPath () {
-    console.log('this in gizmo parse', this);
     let dat = this.gizmo._url.replace(/\//g, '');
     dat = dat.replace(/\./g, '');
     dat = dat.replace(/:/g, '');
-    console.log('dat in gizmo after parse', dat);
     return dat
   }
 
@@ -662,7 +656,7 @@ class Gizmo {
       icons = yo`
         <div style="display: inline-block">
           <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectGizmo(this.gizmo)}></i>
-          <i class="fa fa-cog fa-lg" onclick=${() => this.onOpenPage()}></i>
+          <i class="fa fa-superpowers fa-lg" onclick=${() => this.onOpenPage()}></i>
         </div>
       `;
     }
@@ -705,8 +699,6 @@ class GizmoList {
       `
     }
 
-    console.log('gizmos being rendered in list', this.gizmos.map(g => new Gizmo(g).render()));
-
     return yo`
       <ul class="gizmo-list">
         ${this.gizmos.map(g => new Gizmo(g).render())}
@@ -733,7 +725,6 @@ class Post {
     // yo.update(document.getElementById(this.post._url), this.render())
     // console.log('document in post', document)
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url))).forEach(el => yo.update(el, this.render()));
-    console.log('this in post updateActives', this);
   }
 
   onOpenPage (opts) {
@@ -773,11 +764,9 @@ class Post {
   }
 
   parseDatPath () {
-    console.log('this in post parse', this);
     let dat = this.post._url.replace(/\//g, '');
     dat = dat.replace(/\./g, '');
     dat = dat.replace(/:/g, '');
-    console.log('dat in post after parse', dat);
     return dat
   }
 
@@ -788,8 +777,8 @@ class Post {
         <div style="display: inline-block">
           <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectPost(this.post)}></i>
           <i class="fa fa-user-circle-o fa-lg" onclick=${() => this.onOpenPage('user')}></i>
-          <i class="fa fa-info-circle fa-lg" onclick=${() => this.onOpenPage('post')}></i>
-          <i class="fa fa-cog fa-lg" onclick=${() => this.onOpenPage('gizmo')}></i>
+          <i class="fa fa-file-text-o fa-lg" onclick=${() => this.onOpenPage('post')}></i>
+          <i class="fa fa-superpowers fa-lg" onclick=${() => this.onOpenPage('gizmo')}></i>
         </div>
       `;
     }
@@ -849,7 +838,7 @@ class ParallelBtn {
     this.isDropdownOpen = false;
     this.showGizmos = true;
     this.gizmos = null;
-    this.posts = [];
+    this.posts = null;
     this.userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6';
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
     this.setup();
@@ -868,7 +857,7 @@ class ParallelBtn {
     this.loadGizmos();
     this.updateActives();
     on$$1('set-active', this.onSetActive.bind(this));
-    on$$1('hash-change', this.onHashChange.bind(this));
+    on$$1('load-commit', this.onLoadCommit.bind(this));
     on$$1('reload-posts', this.onReloadPosts.bind(this));
   }
 
@@ -878,7 +867,7 @@ class ParallelBtn {
     this.loadPosts(page.url);
   }
 
-  onHashChange (url) {
+  onLoadCommit (url) {
     this.posts = null;
     this.updateActives();
     this.loadPosts(url);
@@ -902,6 +891,7 @@ class ParallelBtn {
         requester: this.userURL,
         currentURL
       });
+      console.log('this.posts after load', this.posts);
     }
     this.updateActives();
   }
@@ -914,7 +904,7 @@ class ParallelBtn {
           <div style="width: 400px; height: 100vh;" class="dropdown-items script-dropdown with-triangle visible">
             <div class="grid default">
               <div id="gizmo" class="grid-item ${this.showGizmos ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
-                <i class="fa fa-file-code-o"></i>
+                <i class="fa fa-superpowers"></i>
                 Gizmos
               </div>
               <div id="widget" class="grid-item ${this.showGizmos ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
@@ -964,7 +954,6 @@ class ParallelBtn {
   }
 
   updateActives () {
-    console.log('actives in button', Array.from(document.querySelectorAll('.browser-dropdown-scripts')));
     Array.from(document.querySelectorAll('.browser-dropdown-scripts')).forEach(el => yo.update(el, this.render()));
   }
 
@@ -3953,6 +3942,8 @@ function onWillNavigate (e) {
 
     page.siteInfoOverride = null;
     updateLocation(page);
+    console.log('url in onWillNavigate', page.url);
+    console.log('e in onWillNavigate', e);
   }
 }
 
@@ -3972,6 +3963,8 @@ function onDidNavigateInPage (e) {
 
     // update history
     updateHistory(page);
+    console.log('url in onDidNavigateInPage', page.url);
+    console.log('e in onDidNavigateInPage', e);
   }
 }
 
@@ -4002,7 +3995,9 @@ function onLoadCommit (e) {
     // set title in tabs
     page.title = e.target.getTitle(); // NOTE sync operation
     update$1(page);
-    events.emit('hash-change', page.url);
+    events.emit('load-commit', e.url);
+    console.log('url in onLoadCommit', page.url);
+    console.log('e in onLoadCommit', e);
   }
 }
 
@@ -4016,6 +4011,8 @@ function onDidStartLoading (e) {
     if (page.isActive) {
       setIsLoading(true);
     }
+    console.log('url in onDidStartLoading', page.url);
+    console.log('e in onDidStartLoading', e);
   }
 }
 
@@ -4028,6 +4025,8 @@ function onDidStopLoading (e) {
       page.url = page.loadingURL;
     }
     var url = page.url;
+    console.log('url in onDidStopLoading', page.url);
+    console.log('e in onDidStopLoading', e);
 
     // update history and UI
     onPageChangeLocation(page);
@@ -4143,6 +4142,7 @@ function onDidGetRedirectRequest (e) {
         console.log('Using redirect workaround for electron #3471; redirecting to', e.newURL);
         e.target.getWebContents().send('redirect-hackfix', e.newURL);
       }, 100);
+      console.log('e in onDidGetRedirectRequest', e);
     }
   }
 }
@@ -4165,6 +4165,8 @@ function onDidGetResponseDetails (e) {
     page.loadingURL = e.newURL;
     page.siteInfoOverride = null;
     updateLocation(page);
+    console.log('url in onDidGetResponseDetails', page.url);
+    console.log('e in onDidGetResponseDetails', e);
   }
 }
 
@@ -4182,6 +4184,8 @@ function onDidFinishLoad (e) {
     update$1(page);
     updateLocation(page);
     onPageChangeLocation(page);
+    console.log('url in onDidFinishLoad', page.url);
+    console.log('e in onDidFinishLoad', e);
   }
 }
 
@@ -4238,6 +4242,7 @@ async function onPageFaviconUpdated (e) {
 
 function onUpdateTargetUrl ({ url }) {
   set(url);
+  console.log('url in onUpdateTargetUrl', url);
 }
 
 function onClose (e) {

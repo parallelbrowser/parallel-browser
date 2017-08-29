@@ -4,7 +4,6 @@ import * as pages from '../../../pages'
 // Render the list of scripts in the dropdown
 export class Gizmo {
   constructor (gizmo) {
-    console.log('gizmo', gizmo)
     this.showIcons = false
     this.gizmo = gizmo
     this.userAppURL = 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2'
@@ -16,10 +15,7 @@ export class Gizmo {
   }
 
   updateActives () {
-    // yo.update(document.getElementById(this.gizmo._url), this.render())
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()))
-    // Array.from(document.querySelectorAll(this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()))
-    console.log('this in gizmo updateActives', this)
   }
 
   onOpenPage () {
@@ -39,11 +35,9 @@ export class Gizmo {
   }
 
   parseDatPath () {
-    console.log('this in gizmo parse', this)
     let dat = this.gizmo._url.replace(/\//g, '')
     dat = dat.replace(/\./g, '')
     dat = dat.replace(/:/g, '')
-    console.log('dat in gizmo after parse', dat)
     return dat
   }
 
@@ -53,7 +47,7 @@ export class Gizmo {
       icons = yo`
         <div style="display: inline-block">
           <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectGizmo(this.gizmo)}></i>
-          <i class="fa fa-cog fa-lg" onclick=${() => this.onOpenPage()}></i>
+          <i class="fa fa-superpowers fa-lg" onclick=${() => this.onOpenPage()}></i>
         </div>
       `
     }
