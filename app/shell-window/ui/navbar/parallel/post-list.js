@@ -3,8 +3,9 @@ import loadingView from './loading'
 import { Post } from './post'
 
 export class PostList {
-  constructor (posts) {
+  constructor (posts, loadPosts, updateSidebarActives) {
     this.posts = posts
+    this.loadPosts = loadPosts
   }
   render () {
     if (!this.posts) {
@@ -24,7 +25,7 @@ export class PostList {
 
     return yo`
       <ul class="post-list">
-        ${this.posts.map(p => new Post(p).render())}
+        ${this.posts.map(p => new Post(p, this.loadPosts).render())}
       </ul>
     `
   }

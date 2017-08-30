@@ -590,9 +590,9 @@ async function savePost (postJS) {
       postText,
       gizmoURL
     };
-    const userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6';
-    const userDB = await ParallelAPI.open(new DatArchive(userURL));
-    await userDB.post(userURL, post);
+    const userProfileURL = 'dat://a4dea705012a06d007c2340e3519ffd642968b8abbd12d6e84f60dacf0fa758a';
+    const userDB = await ParallelAPI.open(new DatArchive(userProfileURL));
+    await userDB.post(userProfileURL, post);
   }
   electron.ipcRenderer.sendToHost('reload-posts', window.location.href);
 }
@@ -4568,6 +4568,12 @@ exports.open = async function (userArchive) {
         }))
       }
 
+      if (opts.fetchReplies) {
+        promises = promises.concat(gizmos.map(async g => {
+          g.replies = await this.listBroadcasts({fetchAuthor: true}, this.getRepliesQuery(g._url))
+        }))
+      }
+
       if (opts.countVotes) {
         promises = promises.concat(gizmos.map(async g => {
           g.votes = await this.countVotes(g._url)
@@ -4589,12 +4595,14 @@ exports.open = async function (userArchive) {
       return query.count()
     },
 
-    async getGizmo (archive, record) {
+    async getGizmo (requester, record) {
+      const requesterUrl = coerce.archiveUrl(requester)
       const recordUrl = coerce.recordUrl(record)
       record = await db.gizmos.get(recordUrl)
       record.author = await this.getProfile(record._origin)
       record.votes = await this.countVotes(recordUrl)
-      record.isSubscribed = await this.isSubscribed(archive, record)
+      record.isSubscribed = await this.isSubscribed(requesterUrl, record)
+      record.replies = await this.listBroadcasts({fetchAuthor: true}, this.getRepliesQuery(recordUrl))
       return record
     },
 
@@ -4714,6 +4722,12 @@ exports.open = async function (userArchive) {
         }))
       }
 
+      if (opts.fetchReplies) {
+        promises = promises.concat(posts.map(async p => {
+          p.replies = await this.listBroadcasts({fetchAuthor: true}, this.getRepliesQuery(p._url))
+        }))
+      }
+
       await Promise.all(promises)
       return posts
     },
@@ -4723,13 +4737,16 @@ exports.open = async function (userArchive) {
       return query.count()
     },
 
-    async getPost (record) {
-      const recordUrl = coerce.recordUrl(record)
-      record = await db.posts.get(recordUrl)
-      record.author = await this.getProfile(record._origin)
-      record.votes = await this.countVotes(recordUrl)
-      record.gizmo = await this.getGizmo(record.gizmoURL)
-      return record
+    async getPost (requester, post) {
+      const requesterUrl = coerce.archiveUrl(requester)
+      const postUrl = coerce.recordUrl(post)
+      post = await db.posts.get(postUrl)
+      const gizmoURL = coerce.recordUrl(post.gizmoURL)
+      post.author = await this.getProfile(post._origin)
+      post.votes = await this.countVotes(postUrl)
+      post.gizmo = await this.getGizmo(requesterUrl, gizmoURL)
+      post.replies = await this.listBroadcasts({fetchAuthor: true}, this.getRepliesQuery(postUrl))
+      return post
     }
   }
 }

@@ -59,9 +59,9 @@ async function savePost (postJS) {
       postText,
       gizmoURL
     }
-    const userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6'
-    const userDB = await ParallelAPI.open(new DatArchive(userURL))
-    await userDB.post(userURL, post)
+    const userProfileURL = 'dat://a4dea705012a06d007c2340e3519ffd642968b8abbd12d6e84f60dacf0fa758a'
+    const userDB = await ParallelAPI.open(new DatArchive(userProfileURL))
+    await userDB.post(userProfileURL, post)
   }
   ipcRenderer.sendToHost('reload-posts', window.location.href)
 }

@@ -1,12 +1,16 @@
 import { ipcRenderer } from 'electron'
 import * as yo from 'yo-yo'
 import * as pages from '../../../pages'
+import { Comments } from './comments'
 // Render the list of scripts in the dropdown
 export class Post {
-  constructor (post) {
+  constructor (post, loadPosts) {
     this.showIcons = false
+    this.showComments = false
     this.post = post
-    this.userAppURL = 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2'
+    this.loadPosts = loadPosts
+    this.userAppURL = 'dat://8f657e6a3d8ee335b6243fff61f6e031fb5b8531c8effbe599ed5d4c660a637b'
+    console.log('post in constructor', post)
   }
 
   onMouseOverToggle () {
@@ -18,6 +22,7 @@ export class Post {
     // Array.from(document.querySelectorAll('.post')).forEach(el => yo.update(el, this.render()))
     // yo.update(document.getElementById(this.post._url), this.render())
     // console.log('document in post', document)
+    console.log('updating actives in post')
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url))).forEach(el => yo.update(el, this.render()))
   }
 
@@ -28,7 +33,7 @@ export class Post {
         path = this.getViewProfileURL()
         break
       case 'post':
-        path = this.getViewBroadcastURL()
+        path = this.getViewPostURL()
         break
       case 'gizmo':
         path = this.getViewGizmoURL()
@@ -44,8 +49,8 @@ export class Post {
     return '/#gizmo/' + this.post.gizmo._url.slice('dat://'.length)
   }
 
-  getViewBroadcastURL () {
-    return '/#broadcast/' + this.post._url.slice('dat://'.length)
+  getViewPostURL () {
+    return '/#post/' + this.post._url.slice('dat://'.length)
   }
 
   getViewProfileURL () {
@@ -64,12 +69,18 @@ export class Post {
     return dat
   }
 
+  toggleShowComments () {
+    this.showComments = !this.showComments
+    this.updateActives()
+  }
+
   render () {
     var icons = ''
     if (this.showIcons) {
       icons = yo`
         <div style="display: inline-block">
           <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectPost(this.post)}></i>
+          <i class="fa fa-pencil-square-o fa-lg" onclick=${() => this.toggleShowComments()}></i>
           <i class="fa fa-user-circle-o fa-lg" onclick=${() => this.onOpenPage('user')}></i>
           <i class="fa fa-file-text-o fa-lg" onclick=${() => this.onOpenPage('post')}></i>
           <i class="fa fa-superpowers fa-lg" onclick=${() => this.onOpenPage('gizmo')}></i>
@@ -92,6 +103,7 @@ export class Post {
           </div>
           <br>
           ${icons}
+          ${this.showComments ? new Comments(this.post, this.loadPosts, this.updateActives.bind(this)).render() : ''}
         </div>
       </li>
     `

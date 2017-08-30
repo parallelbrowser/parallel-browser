@@ -12,17 +12,17 @@ export class ParallelBtn {
     this.showGizmos = true
     this.gizmos = null
     this.posts = null
-    this.userURL = 'dat://ae24bd05a27e47e0a83694b97ca8a9e98ffa340da6e4a0a325c9852483d377a6'
+    this.userProfileURL = 'dat://a4dea705012a06d007c2340e3519ffd642968b8abbd12d6e84f60dacf0fa758a'
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
     this.setup()
   }
 
   async loadGizmos () {
-    const userDB = await ParallelAPI.open(new DatArchive(this.userURL))
+    const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL))
     this.gizmos = await userDB.listGizmos({
       fetchAuthor: true,
       reverse: true,
-      subscriber: this.userURL
+      subscriber: this.userProfileURL
     })
   }
 
@@ -53,19 +53,20 @@ export class ParallelBtn {
   }
 
   async loadPosts (currentURL) {
+    console.log('I am called!')
     if (currentURL) {
-      const userDB = await ParallelAPI.open(new DatArchive(this.userURL))
+      const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL))
       this.posts = await userDB.listPosts({
         fetchAuthor: true,
         fetchReplies: true,
         countVotes: true,
         reverse: true,
         fetchGizmo: true,
-        requester: this.userURL,
+        requester: this.userProfileURL,
         currentURL
       })
-      console.log('this.posts after load', this.posts)
     }
+    console.log('Posts when I am done!', this.posts)
     this.updateActives()
   }
 
@@ -85,9 +86,9 @@ export class ParallelBtn {
                 Posts
               </div>
             </div>
-            ${this.showGizmos ? new GizmoList(this.gizmos).render() : new PostList(this.posts).render()}
+            ${this.showGizmos ? new GizmoList(this.gizmos).render() : new PostList(this.posts, this.loadPosts.bind(this)).render()}
             <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'dat://a5d20d746829e528e0fc1cf4fd567e245e5213b8fb5bc195f51d2369251cd2c2')}>
+              <a onclick=${e => this.onOpenPage(e, 'dat://8f657e6a3d8ee335b6243fff61f6e031fb5b8531c8effbe599ed5d4c660a637b')}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
