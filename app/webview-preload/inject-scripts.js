@@ -7,11 +7,16 @@ export function setup () {
   window.savePost = savePost
 
   ipcRenderer.on('inject-gizmo', (event, gizmo) => {
+    console.log('gizmo in inject-gizmo', gizmo)
     localStorage.setItem('activeGizmoURL', gizmo._url)
+    gizmo.fullDependencies.forEach((d, idx) => {
+      inject(d.gizmoJS, d._url)
+    })
     inject(gizmo.gizmoJS, gizmo._url)
   })
 
   ipcRenderer.on('inject-post', (event, post) => {
+    console.log('post in inject-post', post)
     togglePost(post)
   })
 }
@@ -38,6 +43,7 @@ function inject (js, gizmoURL) {
     const scriptElement = document.createElement('script')
     scriptElement.setAttribute('id', gizmoURL)
     scriptElement.appendChild(document.createTextNode(js))
+    console.log('script element on insert', scriptElement)
     body.appendChild(scriptElement)
   }
 }
@@ -59,7 +65,7 @@ async function savePost (postJS) {
       postText,
       gizmoURL
     }
-    const userProfileURL = 'dat://a4dea705012a06d007c2340e3519ffd642968b8abbd12d6e84f60dacf0fa758a'
+    const userProfileURL = 'dat://3b585d9f087aa8002418194f245cc87f9f0483c31f13ef382516d5d6b60f71bd'
     const userDB = await ParallelAPI.open(new DatArchive(userProfileURL))
     await userDB.post(userProfileURL, post)
   }
@@ -67,6 +73,9 @@ async function savePost (postJS) {
 }
 
 function togglePost (post) {
+  post.postDependencies.forEach((d, idx) => {
+    inject(d.gizmoJS, d._url)
+  })
   inject(post.postJS, post.gizmoURL)
   // var element = document.getElementById(widget.subscriptURL)
   // if (typeof (element) !== 'undefined' && element !== null) {

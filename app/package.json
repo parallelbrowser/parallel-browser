@@ -44,7 +44,7 @@
     "multicb": "^1.2.1",
     "once": "^1.4.0",
     "parse-dat-url": "^3.0.1",
-    "parallel-scratch-api": "^0.8.2",
+    "parallel-scratch-api": "^0.9.2",
     "pauls-dat-api": "^4.2.5",
     "pauls-electron-rpc": "^4.0.0",
     "pify": "^2.3.0",

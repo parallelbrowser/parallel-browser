@@ -13,13 +13,10 @@ export class Comments {
     this.updatePostActives = updatePostActives
     this.replies = post.replies || []
     this.commentDraft = ''
-    this.userAppURL = 'dat://8f657e6a3d8ee335b6243fff61f6e031fb5b8531c8effbe599ed5d4c660a637b'
-    this.userProfileURL = 'dat://a4dea705012a06d007c2340e3519ffd642968b8abbd12d6e84f60dacf0fa758a'
-    console.log('this.post in comments constructor', this.post)
+    this.userAppURL = 'dat://e1894210760ba8220f4187702ec450bc263e7f609b2746359cea38893031975b'
+    this.userProfileURL = 'dat://3b585d9f087aa8002418194f245cc87f9f0483c31f13ef382516d5d6b60f71bd'
   }
   render () {
-    console.log('this.replies in render comments', this.replies)
-    console.log('this.post in render comments', this.post)
     return yo`
     <div class="comments ${this.parseDatPath()}">
       <div class="comments-editor">

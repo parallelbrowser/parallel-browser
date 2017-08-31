@@ -12,7 +12,8 @@ export class ParallelBtn {
     this.showGizmos = true
     this.gizmos = null
     this.posts = null
-    this.userProfileURL = 'dat://a4dea705012a06d007c2340e3519ffd642968b8abbd12d6e84f60dacf0fa758a'
+    this.userProfileURL = 'dat://3b585d9f087aa8002418194f245cc87f9f0483c31f13ef382516d5d6b60f71bd'
+    this.userAppURL = 'dat://e1894210760ba8220f4187702ec450bc263e7f609b2746359cea38893031975b'
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
     this.setup()
   }
@@ -22,8 +23,10 @@ export class ParallelBtn {
     this.gizmos = await userDB.listGizmos({
       fetchAuthor: true,
       reverse: true,
-      subscriber: this.userProfileURL
+      subscriber: this.userProfileURL,
+      fetchGizmoDependencies: true
     })
+    console.log('this.gizmos after load', this.gizmos)
   }
 
   setup () {
@@ -63,7 +66,8 @@ export class ParallelBtn {
         reverse: true,
         fetchGizmo: true,
         requester: this.userProfileURL,
-        currentURL
+        currentURL,
+        fetchPostDependencies: true
       })
     }
     console.log('Posts when I am done!', this.posts)
@@ -88,7 +92,7 @@ export class ParallelBtn {
             </div>
             ${this.showGizmos ? new GizmoList(this.gizmos).render() : new PostList(this.posts, this.loadPosts.bind(this)).render()}
             <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'dat://8f657e6a3d8ee335b6243fff61f6e031fb5b8531c8effbe599ed5d4c660a637b')}>
+              <a onclick=${e => this.onOpenPage(e, this.userAppURL)}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
