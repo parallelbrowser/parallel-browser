@@ -9,7 +9,7 @@ export class Post {
     this.showComments = false
     this.post = post
     this.loadPosts = loadPosts
-    this.userAppURL = 'dat://e1894210760ba8220f4187702ec450bc263e7f609b2746359cea38893031975b'
+    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6'
     console.log('post in constructor', post)
   }
 

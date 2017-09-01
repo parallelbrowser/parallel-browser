@@ -615,7 +615,7 @@ class Gizmo {
   constructor (gizmo) {
     this.showIcons = false;
     this.gizmo = gizmo;
-    this.userAppURL = 'dat://e1894210760ba8220f4187702ec450bc263e7f609b2746359cea38893031975b';
+    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6';
     console.log('this.gizmo in constructor', gizmo);
   }
 
@@ -719,8 +719,8 @@ class Comments {
     this.updatePostActives = updatePostActives;
     this.replies = post.replies || [];
     this.commentDraft = '';
-    this.userAppURL = 'dat://e1894210760ba8220f4187702ec450bc263e7f609b2746359cea38893031975b';
-    this.userProfileURL = 'dat://3b585d9f087aa8002418194f245cc87f9f0483c31f13ef382516d5d6b60f71bd';
+    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6';
+    this.userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549';
   }
   render () {
     return yo`
@@ -812,7 +812,7 @@ class Post {
     this.showComments = false;
     this.post = post;
     this.loadPosts = loadPosts;
-    this.userAppURL = 'dat://e1894210760ba8220f4187702ec450bc263e7f609b2746359cea38893031975b';
+    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6';
     console.log('post in constructor', post);
   }
 
@@ -949,8 +949,8 @@ class ParallelBtn {
     this.showGizmos = true;
     this.gizmos = null;
     this.posts = null;
-    this.userProfileURL = 'dat://3b585d9f087aa8002418194f245cc87f9f0483c31f13ef382516d5d6b60f71bd';
-    this.userAppURL = 'dat://e1894210760ba8220f4187702ec450bc263e7f609b2746359cea38893031975b';
+    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6';
+    this.userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549';
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
     this.setup();
   }

@@ -65,7 +65,7 @@ async function savePost (postJS) {
       postText,
       gizmoURL
     }
-    const userProfileURL = 'dat://3b585d9f087aa8002418194f245cc87f9f0483c31f13ef382516d5d6b60f71bd'
+    const userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549'
     const userDB = await ParallelAPI.open(new DatArchive(userProfileURL))
     await userDB.post(userProfileURL, post)
   }
