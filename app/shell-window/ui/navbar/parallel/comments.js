@@ -5,6 +5,7 @@ const debounce = require('debounce')
 const moment = require('moment')
 import * as pages from '../../../pages'
 import ParallelAPI from 'parallel-scratch-api'
+import datURLS from './dat-urls'
 
 export class Comments {
   constructor (post, loadPosts, updatePostActives) {
@@ -13,8 +14,8 @@ export class Comments {
     this.updatePostActives = updatePostActives
     this.replies = post.replies || []
     this.commentDraft = ''
-    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6'
-    this.userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549'
+    this.userAppURL = datURLS.userAppURL
+    this.userProfileURL = datURLS.userProfileURL
     this.el = this.render()
   }
   render () {

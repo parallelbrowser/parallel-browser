@@ -5,6 +5,7 @@ import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
 import { GizmoList } from './parallel/gizmo-list'
 import {PostList} from './parallel/post-list'
+import datURLS from './parallel/dat-urls'
 
 export class ParallelBtn {
   constructor () {
@@ -12,8 +13,8 @@ export class ParallelBtn {
     this.showGizmos = true
     this.gizmos = null
     this.posts = null
-    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6'
-    this.userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549'
+    this.userAppURL = datURLS.userAppURL
+    this.userProfileURL = datURLS.userProfileURL
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
     this.setup()
   }

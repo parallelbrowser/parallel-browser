@@ -2,6 +2,8 @@ import { ipcRenderer } from 'electron'
 import * as yo from 'yo-yo'
 import * as pages from '../../../pages'
 import { Comments } from './comments'
+import datURLS from './dat-urls'
+
 // Render the list of scripts in the dropdown
 export class Post {
   constructor (post, loadPosts) {
@@ -9,7 +11,7 @@ export class Post {
     this.showComments = false
     this.post = post
     this.loadPosts = loadPosts
-    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6'
+    this.userAppURL = datURLS.userAppURL
     console.log('post in constructor', post)
   }
 

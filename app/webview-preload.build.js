@@ -532,10 +532,15 @@ var setupRedirectHackfix = function () {
   });
 };
 
+var datURLS = {
+  userAppURL: 'dat://b60149d2cf3cde895ebc17f248d6d6a47eda2818cddf45648eecb8beb3d93b3e',
+  userProfileURL: 'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
+};
+
 /* globals DatArchive localStorage */
 
 function setup$2 () {
-  window.savePost = savePost;
+  window.savePostParams = savePostParams;
 
   electron.ipcRenderer.on('inject-gizmo', (event, gizmo) => {
     console.log('gizmo in inject-gizmo', gizmo);
@@ -584,19 +589,19 @@ function inject (js, gizmoURL) {
 // the injected script from the dom, then writes the postscript to the user's
 // injestdb
 
-async function savePost (postJS) {
+async function savePostParams (postParams) {
   const gizmoURL = localStorage.getItem('activeGizmoURL');
   localStorage.removeItem('activeGizmoURL');
   const postHTTP = window.location.href;
-  const postText = window.prompt('Enter a description of your post.');
-  if (postJS && gizmoURL && postHTTP) {
+  const postText = window.prompt('Describe your post.');
+  if (postParams && gizmoURL && postHTTP) {
     const post = {
-      postJS,
+      postParams,
       postHTTP,
       postText,
       gizmoURL
     };
-    const userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549';
+    const userProfileURL = datURLS.userProfileURL;
     const userDB = await ParallelAPI.open(new DatArchive(userProfileURL));
     await userDB.post(userProfileURL, post);
   }
@@ -607,7 +612,9 @@ function togglePost (post) {
   post.postDependencies.forEach((d, idx) => {
     inject(d.gizmoJS, d._url);
   });
-  inject(post.postJS, post.gizmoURL);
+  const paramString = 'var postParams = ' + post.postParams;
+  inject(paramString);
+  inject(post.gizmo.postJS, post.gizmoURL);
   // var element = document.getElementById(widget.subscriptURL)
   // if (typeof (element) !== 'undefined' && element !== null) {
   //   removeScript(widget.subscriptURL)

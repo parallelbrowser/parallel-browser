@@ -610,12 +610,17 @@ var loadingView = function () {
   `
 };
 
+var datURLS = {
+  userAppURL: 'dat://b60149d2cf3cde895ebc17f248d6d6a47eda2818cddf45648eecb8beb3d93b3e',
+  userProfileURL: 'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
+};
+
 // Render the list of scripts in the dropdown
 class Gizmo {
   constructor (gizmo) {
     this.showIcons = false;
     this.gizmo = gizmo;
-    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6';
+    this.userAppURL = datURLS.userAppURL;
     console.log('this.gizmo in constructor', gizmo);
   }
 
@@ -719,8 +724,8 @@ class Comments {
     this.updatePostActives = updatePostActives;
     this.replies = post.replies || [];
     this.commentDraft = '';
-    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6';
-    this.userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549';
+    this.userAppURL = datURLS.userAppURL;
+    this.userProfileURL = datURLS.userProfileURL;
     this.el = this.render();
   }
   render () {
@@ -805,7 +810,7 @@ class Post {
     this.showComments = false;
     this.post = post;
     this.loadPosts = loadPosts;
-    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6';
+    this.userAppURL = datURLS.userAppURL;
     console.log('post in constructor', post);
   }
 
@@ -942,8 +947,8 @@ class ParallelBtn {
     this.showGizmos = true;
     this.gizmos = null;
     this.posts = null;
-    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6';
-    this.userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549';
+    this.userAppURL = datURLS.userAppURL;
+    this.userProfileURL = datURLS.userProfileURL;
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
     this.setup();
   }
