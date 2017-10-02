@@ -69,7 +69,7 @@ export function setup () {
 
 export function create (opts) {
   // TCW CHANGES -- this sends a synchronous test message to background-process/ui/windows.js
-  console.log('something created');
+  console.log('something created')
 
   console.log(ipcRenderer.sendSync('synchronous-message', 'ping')) // prints "pong"
 
@@ -314,10 +314,6 @@ export function create (opts) {
   page.webviewEl.addEventListener('plugin-crashed', onCrashed)
   page.webviewEl.addEventListener('ipc-message', onIPCMessage)
 
-  // TCW
-
-  page.webviewEl.addEventListener('postscript-submit', onPostscriptSubmit)
-
   // rebroadcasts
   page.webviewEl.addEventListener('did-start-loading', rebroadcastEvent)
   page.webviewEl.addEventListener('did-stop-loading', rebroadcastEvent)
@@ -500,10 +496,6 @@ export function savePinnedToDB () {
 // event handlers
 // =
 
-function onPostscriptSubmit (e) {
-  console.log('event in postscript submit', e)
-}
-
 function onDomReady (e) {
   var page = getByWebview(e.target)
   if (page) {
@@ -589,6 +581,7 @@ function onLoadCommit (e) {
     // set title in tabs
     page.title = e.target.getTitle() // NOTE sync operation
     navbar.update(page)
+    events.emit('load-commit', e.url)
   }
 }
 
@@ -827,7 +820,6 @@ function onUpdateTargetUrl ({ url }) {
 }
 
 function onClose (e) {
-  console.log('the page is closed');
   var page = getByWebview(e.target)
   if (page) {
     remove(page)
@@ -849,9 +841,7 @@ function onCrashed (e) {
 }
 
 export function onIPCMessage (e) {
-  console.log('event on ipc', e)
   var page = getByWebview(e.target)
-  console.log('webview', page)
   switch (e.channel) {
     case 'site-info-override:set':
       if (page) {
@@ -878,6 +868,10 @@ export function onIPCMessage (e) {
       break
     case 'close-menus':
       navbar.closeMenus()
+      break
+    case 'reload-posts':
+      var currentURL = e.args[0]
+      events.emit('reload-posts', currentURL)
       break
     case 'toggle-live-reloading':
       if (activePage) {

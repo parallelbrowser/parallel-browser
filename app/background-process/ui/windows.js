@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, ipcMain, webContents, ipcRenderer } from 'electron'
+import { app, BrowserWindow, screen, ipcMain, webContents } from 'electron'
 import { register as registerShortcut, unregisterAll as unregisterAllShortcuts } from 'electron-localshortcut'
 import jetpack from 'fs-jetpack'
 import path from 'path'
@@ -91,12 +91,13 @@ export function createShellWindow () {
     event.sender.send('asynchronous-reply', 'pong')
   })
 
-  ipcMain.on('inject-subscript', (event, subscript) => {
-    promptInjectSubscript(win, subscript)
+  ipcMain.on('inject-gizmo', (event, gizmo) => {
+    console.log('here in inject gizmo', gizmo)
+    promptInjectGizmo(win, gizmo)
   })
 
-  ipcMain.on('inject-widget', (event, widget) => {
-    promptInjectWidget(win, widget)
+  ipcMain.on('inject-post', (event, post) => {
+    promptInjectPost(win, post)
   })
 
   // this listens for the current webview url from
@@ -104,7 +105,6 @@ export function createShellWindow () {
 
   ipcMain.on('get-webview-url', (event, url) => {
     console.log(url) // prints url
-    console.log('windooow', getActiveWindow())
     getActiveWindow().send('new-url', url) // sends to shell-window/ui/navbar/browser-script.js
   })
 
@@ -147,7 +147,7 @@ export function ensureOneWindowExists () {
 // TCW -- these send the prompts to inject either the subscript or widget
 // into the currently focused webview
 
-async function promptInjectSubscript (win, subscript) {
+async function promptInjectGizmo (win, gizmo) {
   win = win || getActiveWindow()
   var id = await win.webContents.executeJavaScript(`
     (function () {
@@ -155,10 +155,10 @@ async function promptInjectSubscript (win, subscript) {
       return webview && webview.getWebContents().id
     })()
   `)
-  return webContents.fromId(id).send('inject-subscript', subscript)
+  return webContents.fromId(id).send('inject-gizmo', gizmo)
 }
 
-async function promptInjectWidget (win, widget) {
+async function promptInjectPost (win, post) {
   win = win || getActiveWindow()
   var id = await win.webContents.executeJavaScript(`
     (function () {
@@ -166,7 +166,7 @@ async function promptInjectWidget (win, widget) {
       return webview && webview.getWebContents().id
     })()
   `)
-  return webContents.fromId(id).send('inject-widget', widget)
+  return webContents.fromId(id).send('inject-post', post)
 }
 
 // end

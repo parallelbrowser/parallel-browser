@@ -3822,12 +3822,13 @@ function createShellWindow () {
     event.sender.send('asynchronous-reply', 'pong');
   });
 
-  electron.ipcMain.on('inject-subscript', (event, subscript) => {
-    promptInjectSubscript(win, subscript);
+  electron.ipcMain.on('inject-gizmo', (event, gizmo) => {
+    console.log('here in inject gizmo', gizmo);
+    promptInjectGizmo(win, gizmo);
   });
 
-  electron.ipcMain.on('inject-widget', (event, widget) => {
-    promptInjectWidget(win, widget);
+  electron.ipcMain.on('inject-post', (event, post) => {
+    promptInjectPost(win, post);
   });
 
   // this listens for the current webview url from
@@ -3835,7 +3836,6 @@ function createShellWindow () {
 
   electron.ipcMain.on('get-webview-url', (event, url$$1) => {
     console.log(url$$1); // prints url
-    console.log('windooow', getActiveWindow());
     getActiveWindow().send('new-url', url$$1); // sends to shell-window/ui/navbar/browser-script.js
   });
 
@@ -3867,7 +3867,7 @@ function ensureOneWindowExists () {
 // TCW -- these send the prompts to inject either the subscript or widget
 // into the currently focused webview
 
-async function promptInjectSubscript (win, subscript) {
+async function promptInjectGizmo (win, gizmo) {
   win = win || getActiveWindow();
   var id = await win.webContents.executeJavaScript(`
     (function () {
@@ -3875,10 +3875,10 @@ async function promptInjectSubscript (win, subscript) {
       return webview && webview.getWebContents().id
     })()
   `);
-  return electron.webContents.fromId(id).send('inject-subscript', subscript)
+  return electron.webContents.fromId(id).send('inject-gizmo', gizmo)
 }
 
-async function promptInjectWidget (win, widget) {
+async function promptInjectPost (win, post) {
   win = win || getActiveWindow();
   var id = await win.webContents.executeJavaScript(`
     (function () {
@@ -3886,7 +3886,7 @@ async function promptInjectWidget (win, widget) {
       return webview && webview.getWebContents().id
     })()
   `);
-  return electron.webContents.fromId(id).send('inject-widget', widget)
+  return electron.webContents.fromId(id).send('inject-post', post)
 }
 
 // end

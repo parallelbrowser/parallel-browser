@@ -3,81 +3,103 @@ import ParallelAPI from 'parallel-scratch-api'
 import * as yo from 'yo-yo'
 import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
-import subscriptList from './parallel/subscript-list'
-import postscriptList from './parallel/postscript-list'
+import { GizmoList } from './parallel/gizmo-list'
+import {PostList} from './parallel/post-list'
 
 export class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false
-    this.showSubscripts = true
-    this.subscripts = null
-    this.postscripts = null
+    this.showGizmos = true
+    this.gizmos = null
+    this.posts = null
+    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6'
+    this.userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549'
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
-    this.loadSubscripts()
-    this.loadPostscripts()
+    this.setup()
   }
 
-  async loadSubscripts () {
-    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11'
-    const userDB = await ParallelAPI.open(new DatArchive(userURL))
-    const profile = await userDB.getProfile(userURL)
-    this.subscripts = profile.subscripts
-  }
-
-  async loadPostscripts () {
-    const userURL = 'dat://a87ed34ff60ca766333bc5bde7ddf120ebf11814ab2a84e6923fc087f96ccd11'
-    const userDB = await ParallelAPI.open(new DatArchive(userURL))
-    this.postscripts = await userDB.listPostscripts()
-    const currentURL = this.getCurrentURL()
-    this.postscripts = this.postscripts.filter(p => {
-      return p.postscriptHTTP === currentURL
+  async loadGizmos () {
+    const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL))
+    this.gizmos = await userDB.listGizmos({
+      fetchAuthor: true,
+      reverse: true,
+      subscriber: this.userProfileURL,
+      fetchGizmoDependencies: true
     })
+    console.log('this.gizmos after load', this.gizmos)
   }
 
-  getCurrentURL () {
-    var webviews = document.getElementById('webviews').children
-    var currentURL
-    for (var i = 0; i < webviews.length; i++) {
-      var webview = webviews[i]
-      if (!webview.className.includes('hidden')) {
-        currentURL = webview.src
-      }
+  setup () {
+    this.loadGizmos()
+    this.updateActives()
+    pages.on('set-active', this.onSetActive.bind(this))
+    pages.on('load-commit', this.onLoadCommit.bind(this))
+    pages.on('reload-posts', this.onReloadPosts.bind(this))
+  }
+
+  onSetActive (page) {
+    this.posts = null
+    this.updateActives()
+    this.loadPosts(page.url)
+  }
+
+  onLoadCommit (url) {
+    this.posts = null
+    this.updateActives()
+    this.loadPosts(url)
+  }
+
+  onReloadPosts (url) {
+    this.posts = null
+    this.updateActives()
+    this.loadPosts(url)
+  }
+
+  async loadPosts (currentURL) {
+    console.log('I am called!')
+    if (currentURL) {
+      const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL))
+      this.posts = await userDB.listPosts({
+        fetchAuthor: true,
+        fetchReplies: true,
+        countVotes: true,
+        reverse: true,
+        fetchGizmo: true,
+        requester: this.userProfileURL,
+        currentURL,
+        fetchPostDependencies: true
+      })
     }
-    return currentURL
+    console.log('Posts when I am done!', this.posts)
+    this.updateActives()
   }
 
   render () {
-    this.loadPostscripts()
     var dropdownEl = ''
     if (this.isDropdownOpen) {
-      // TODO: change the "view all scripts" and "discover" links
       dropdownEl = yo`
         <div class="script-dropdown dropdown toolbar-dropdown-menu-dropdown">
-          <div style="width: 300px" class="dropdown-items script-dropdown with-triangle visible">
-
+          <div style="width: 400px; height: 100vh;" class="dropdown-items script-dropdown with-triangle visible">
             <div class="grid default">
-              <div id="gizmo" class="grid-item ${this.showSubscripts ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
-                <i class="fa fa-file-code-o"></i>
+              <div id="gizmo" class="grid-item ${this.showGizmos ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
+                <i class="fa fa-superpowers"></i>
                 Gizmos
               </div>
-              <div id="widget" class="grid-item ${this.showSubscripts ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
+              <div id="widget" class="grid-item ${this.showGizmos ? '' : 'enabled'}" onclick=${() => this.onToggleClick(false)}>
                 <i class="fa fa-file-text-o"></i>
-                Widgets
+                Posts
               </div>
             </div>
-
-
-            ${this.showSubscripts ? subscriptList(this.subscripts) : postscriptList(this.postscripts)}
-
+            ${this.showGizmos ? new GizmoList(this.gizmos).render() : new PostList(this.posts, this.loadPosts.bind(this)).render()}
             <div class="footer">
-              <a onclick=${e => this.onOpenPage(e, 'dat://82624ee9b33acc96b9fd0360c28f81107385293e56fec66b7c871b5622a32fcc')}>
+              <a onclick=${e => this.onOpenPage(e, this.userAppURL)}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
             </div>
-
           </div>
-        </div>`
+        </div>
+      `
     }
 
     // render btn
@@ -87,7 +109,8 @@ export class ParallelBtn {
           <span class="fa fa-code"></span>
         </button>
         ${dropdownEl}
-      </div>`
+      </div>
+    `
   }
 
   // Manages the redirect to other scripts from the clicked author
@@ -98,13 +121,13 @@ export class ParallelBtn {
   }
 
   // Toggles whether the user is viewing prescripts or post scripts on the current site
-  onToggleClick (showSubscripts) {
-    this.showSubscripts = showSubscripts
-    if (showSubscripts) {
-      this.loadSubscripts()
+  onToggleClick (showGizmos) {
+    if (showGizmos) {
+      Array.from(document.querySelectorAll('.post-list')).forEach(el => { el.innerHTML = '' })
     } else {
-      this.loadPostscripts()
+      Array.from(document.querySelectorAll('.gizmo-list')).forEach(el => { el.innerHTML = '' })
     }
+    this.showGizmos = showGizmos
     this.updateActives()
   }
 
