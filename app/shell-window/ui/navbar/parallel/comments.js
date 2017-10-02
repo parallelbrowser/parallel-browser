@@ -15,10 +15,11 @@ export class Comments {
     this.commentDraft = ''
     this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6'
     this.userProfileURL = 'dat://e482befbba87b0bd542a1ad20d736105d5f6e6b1212d3b0a70e676062bb17549'
+    this.el = this.render()
   }
   render () {
     return yo`
-    <div class="comments ${this.parseDatPath()}">
+    <div class="comments" id=${this.parseDatPath()}>
       <div class="comments-editor">
         <textarea style="cursor: auto" onkeypress=${this.onDetectEnter.bind(this)} onkeyup=${debounce(this.onChangeComment.bind(this), 300)} type="text" placeholder="Write a comment...">${this.commentDraft}</textarea>
       </div>
@@ -71,17 +72,9 @@ export class Comments {
       return
     }
     this.commentDraft = ''
-    Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url) + 'comments')).forEach(el => el.remove())
     this.loadPosts(this.post.postHTTP)
     this.updatePostActives()
-    this.updateActives()
-  }
-
-  updateActives () {
-    console.log('updating actives in comments')
-    // Array.from(document.querySelectorAll('.comments')).forEach(el => { el.innerHTML = '' })
-    // Array.from(document.querySelectorAll('.post')).forEach(el => { el.innerHTML = '' })
-    // Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url) + 'comments')).forEach(el => yo.update(el, this.render()))
+    yo.update(this.el, this.render())
   }
 
   onChangeComment (e) {
