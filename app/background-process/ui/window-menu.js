@@ -3,7 +3,7 @@ import { createShellWindow } from './windows'
 import datDns from '../networks/dat/dns'
 
 var darwinMenu = {
-  label: 'Beaker',
+  label: 'Parallel',
   submenu: [
     {
       label: 'Preferences',
@@ -14,7 +14,7 @@ var darwinMenu = {
     { type: 'separator' },
     { label: 'Services', role: 'services', submenu: [] },
     { type: 'separator' },
-    { label: 'Hide Beaker', accelerator: 'Command+H', role: 'hide' },
+    { label: 'Hide Parallel', accelerator: 'Command+H', role: 'hide' },
     { label: 'Hide Others', accelerator: 'Command+Alt+H', role: 'hideothers' },
     { label: 'Show All', role: 'unhide' },
     { type: 'separator' },
@@ -237,7 +237,7 @@ if (process.platform == 'darwin') {
 }
 
 var beakerDevMenu = {
-  label: 'BeakerDev',
+  label: 'ParallelDev',
   submenu: [{
     label: 'Reload Shell-Window',
     click: function () {
@@ -286,6 +286,18 @@ var helpMenu = {
     }
   ]
 }
+
+var keysMenu = {
+  label: 'Keys',
+  submenu: [
+    {
+      label: 'View Keys',
+      click: function (item, win) {
+        if (win) win.webContents.send('command', 'file:new-tab', 'beaker://keys')
+      }
+    }
+  ]
+}
 if (process.platform !== 'darwin') {
   helpMenu.submenu.push({ type: 'separator' })
   helpMenu.submenu.push({
@@ -301,5 +313,6 @@ export default function buildWindowMenu () {
   var menus = [fileMenu, editMenu, viewMenu, historyMenu, windowMenu, helpMenu]
   if (process.platform === 'darwin') menus.unshift(darwinMenu)
   menus.push(beakerDevMenu) // TODO: remove in release build?
+  menus.push(keysMenu)
   return menus
 }

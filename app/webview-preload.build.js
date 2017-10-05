@@ -397,6 +397,14 @@ var profilesManifest = {
   setCurrent: 'promise'
 };
 
+var keysManifest = {
+  add: 'promise',
+  changeAppURL: 'promise',
+  changeProfileURL: 'promise',
+  remove: 'promise',
+  get: 'promise'
+};
+
 /* globals DatArchive */
 
 var beaker = {};
@@ -406,6 +414,7 @@ if (window.location.protocol === 'beaker:') {
   const bookmarksRPC = rpc.importAPI('bookmarks', bookmarksManifest, opts);
   const historyRPC = rpc.importAPI('history', historyManifest, opts);
   const profilesRPC = rpc.importAPI('profiles', profilesManifest, opts);
+  const keysRPC = rpc.importAPI('keys', keysManifest, opts);
 
   // beaker.archives
   beaker.archives = new EventTarget();
@@ -461,6 +470,14 @@ if (window.location.protocol === 'beaker:') {
   beaker.profiles.getCurrent = profilesRPC.getCurrent;
   beaker.profiles.setCurrent = profilesRPC.setCurrent;
   // bindEventStream(profilesRPC.createEventStream(), beaker.profiles) TODO
+
+  // parallel keys
+  beaker.keys = new EventTarget();
+  beaker.keys.add = keysRPC.add;
+  beaker.keys.changeAppURL = keysRPC.changeAppURL;
+  beaker.keys.changeProfileURL = keysRPC.changeProfileURL;
+  beaker.keys.remove = keysRPC.remove;
+  beaker.keys.get = keysRPC.get;
 }
 
 // exported api
@@ -532,18 +549,15 @@ var setupRedirectHackfix = function () {
   });
 };
 
-var datURLS = {
-  userAppURL: 'dat://b60149d2cf3cde895ebc17f248d6d6a47eda2818cddf45648eecb8beb3d93b3e',
-  userProfileURL: 'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
-};
+/* globals DatArchive localStorage beaker */
 
-/* globals DatArchive localStorage */
+let profileURL;
 
 function setup$2 () {
   window.savePostParams = savePostParams;
 
   electron.ipcRenderer.on('inject-gizmo', (event, gizmo) => {
-    console.log('gizmo in inject-gizmo', gizmo);
+    profileURL = gizmo.keyset.profileURL;
     localStorage.setItem('activeGizmoURL', gizmo._url);
     gizmo.fullDependencies.forEach((d, idx) => {
       inject(d.gizmoJS, d._url);
@@ -552,7 +566,6 @@ function setup$2 () {
   });
 
   electron.ipcRenderer.on('inject-post', (event, post) => {
-    console.log('post in inject-post', post);
     togglePost(post);
   });
 }
@@ -595,15 +608,15 @@ async function savePostParams (postParams) {
   const postHTTP = window.location.href;
   const postText = window.prompt('Describe your post.');
   if (postParams && gizmoURL && postHTTP) {
+    postParams = JSON.stringify(postParams);
     const post = {
       postParams,
       postHTTP,
       postText,
       gizmoURL
     };
-    const userProfileURL = datURLS.userProfileURL;
-    const userDB = await ParallelAPI.open(new DatArchive(userProfileURL));
-    await userDB.post(userProfileURL, post);
+    const userDB = await ParallelAPI.open(new DatArchive(profileURL));
+    await userDB.post(profileURL, post);
   }
   electron.ipcRenderer.sendToHost('reload-posts', window.location.href);
 }
@@ -612,8 +625,7 @@ function togglePost (post) {
   post.postDependencies.forEach((d, idx) => {
     inject(d.gizmoJS, d._url);
   });
-  const paramString = 'var postParams = ' + post.postParams;
-  inject(paramString);
+  window.postParams = JSON.parse(post.postParams);
   inject(post.gizmo.postJS, post.gizmoURL);
   // var element = document.getElementById(widget.subscriptURL)
   // if (typeof (element) !== 'undefined' && element !== null) {
@@ -4227,6 +4239,7 @@ exports.open = async function (userArchive) {
         gizmoDependencies: coerce.arrayOfDependencies(record.gizmoDependencies),
         postDependencies: coerce.arrayOfDependencies(record.postDependencies),
         gizmoJS: coerce.string(record.gizmoJS),
+        postJS: coerce.string(record.postJS),
         createdAt: coerce.number(record.createdAt, {required: true}),
         receivedAt: Date.now()
       })
@@ -4236,7 +4249,7 @@ exports.open = async function (userArchive) {
       primaryKey: 'createdAt',
       index: ['createdAt', '_origin+createdAt'],
       validator: record => ({
-        postJS: coerce.string(record.postJS),
+        postParams: coerce.string(record.postParams),
         postHTTP: coerce.string(record.postHTTP),
         postText: coerce.string(record.postText),
         gizmoURL: coerce.string(record.gizmoURL),
@@ -4519,20 +4532,18 @@ exports.open = async function (userArchive) {
       gizmoDocs,
       gizmoDependencies,
       postDependencies,
-      gizmoJS
+      gizmoJS,
+      postJS
     }) {
       gizmoName = coerce.string(gizmoName)
       gizmoDescription = coerce.string(gizmoDescription)
       gizmoDocs = coerce.string(gizmoDocs)
       gizmoDependencies = coerce.arrayOfDependencies(gizmoDependencies)
-      console.log('gizmo deps after coerce', gizmoDependencies)
       gizmoDependencies = await Promise.all(gizmoDependencies.map(async d => await this.getGizmo(d.url)))
-      console.log('gizmo deps after promises', gizmoDependencies)
       postDependencies = coerce.arrayOfDependencies(postDependencies)
-      console.log('post deps after coerce', postDependencies)
       postDependencies = await Promise.all(postDependencies.map(async d => await this.getGizmo(d.url)))
-      console.log('post deps after promises', postDependencies)
       gizmoJS = coerce.string(gizmoJS)
+      postJS = coerce.string(postJS)
       const createdAt = Date.now()
       return db.gizmos.add(archive, {
         gizmoName,
@@ -4541,6 +4552,7 @@ exports.open = async function (userArchive) {
         gizmoDependencies,
         postDependencies,
         gizmoJS,
+        postJS,
         createdAt
       })
     },
@@ -4632,7 +4644,6 @@ exports.open = async function (userArchive) {
     },
 
     async getGizmo (gizmo, opts = {}) {
-      console.log('gizmo in getGizmo', gizmo)
       const gizmoURL = coerce.recordUrl(gizmo)
       gizmo = await db.gizmos.get(gizmoURL)
       if (opts.fetchAuthor) {
@@ -4658,11 +4669,11 @@ exports.open = async function (userArchive) {
       return gizmo
     },
 
+    // !! -- need to refactor -- !!
+
     async getDependency (gizmo) {
-      console.log('gizmo in getDependency', gizmo)
       const gizmoURL = coerce.recordUrl(gizmo)
       const dependency = await db.gizmos.get(gizmoURL)
-      console.log('dependency after getDependency', dependency)
       return dependency
     },
 
@@ -4681,20 +4692,18 @@ exports.open = async function (userArchive) {
     },
 
     async getPostDependencies (gizmo) {
-      console.log('gizmo in getPostDependencies', gizmo)
       let postDependencies = []
       postDependencies = await Promise.all(gizmo.postDependencies.map(async d => await this.getGizmo(d.url)))
-      console.log('postDependencies', postDependencies)
       return postDependencies
     },
 
     async getGizmoDependencies (gizmo) {
-      console.log('gizmo in getGizmoDependencies', gizmo)
       let fullDependencies = []
       fullDependencies = await Promise.all(gizmo.gizmoDependencies.map(async d => await this.getGizmo(d.url)))
-      console.log('fullDependencies', fullDependencies)
       return fullDependencies
     },
+
+    // !! -- need to refactor -- !!
 
     async subscribe (archive, gizmo) {
       var archiveUrl = coerce.archiveUrl(archive)
@@ -4737,19 +4746,19 @@ exports.open = async function (userArchive) {
     // TCW -- posts api
 
     post (archive, {
-      postJS,
+      postParams,
       postHTTP,
       postText,
       gizmoURL
     }) {
-      postJS = coerce.string(postJS)
+      postParams = coerce.string(postParams)
       postHTTP = coerce.string(postHTTP)
       postText = coerce.string(postText)
       gizmoURL = coerce.string(gizmoURL)
       const createdAt = Date.now()
 
       return db.posts.add(archive, {
-        postJS,
+        postParams,
         postHTTP,
         postText,
         gizmoURL,
@@ -4825,7 +4834,6 @@ exports.open = async function (userArchive) {
       }
 
       await Promise.all(promises)
-      console.log('posts after first promise.all in listPosts', posts)
 
       promises = []
       if (opts.fetchPostDependencies) {
@@ -4835,7 +4843,6 @@ exports.open = async function (userArchive) {
       }
 
       await Promise.all(promises)
-      console.log('posts after second promise.all in listPosts', posts)
 
       return posts
     },

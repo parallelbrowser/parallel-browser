@@ -3,8 +3,9 @@ import loadingView from './loading'
 import { Gizmo } from './gizmo'
 
 export class GizmoList {
-  constructor (gizmos) {
+  constructor (gizmos, keyset) {
     this.gizmos = gizmos
+    this.keyset = keyset
   }
 
   render () {
@@ -25,7 +26,7 @@ export class GizmoList {
 
     return yo`
       <ul class="gizmo-list">
-        ${this.gizmos.map(g => new Gizmo(g).render())}
+        ${this.gizmos.map(g => new Gizmo(g, this.keyset).render())}
       </ul>
     `
   }

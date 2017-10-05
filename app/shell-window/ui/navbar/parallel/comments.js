@@ -8,14 +8,14 @@ import ParallelAPI from 'parallel-scratch-api'
 import datURLS from './dat-urls'
 
 export class Comments {
-  constructor (post, loadPosts, updatePostActives) {
+  constructor (post, keyset, loadPosts, updatePostActives) {
     this.post = post
     this.loadPosts = loadPosts
     this.updatePostActives = updatePostActives
     this.replies = post.replies || []
     this.commentDraft = ''
-    this.userAppURL = datURLS.userAppURL
-    this.userProfileURL = datURLS.userProfileURL
+    this.userAppURL = keyset.appURL
+    this.userProfileURL = keyset.profileURL
     this.el = this.render()
   }
   render () {

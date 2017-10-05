@@ -1,14 +1,16 @@
-/* globals DatArchive localStorage */
+/* globals DatArchive localStorage beaker */
 
 import { ipcRenderer } from 'electron'
 import ParallelAPI from 'parallel-scratch-api'
 import datURLS from '../shell-window/ui/navbar/parallel/dat-urls'
 
+let profileURL
+
 export function setup () {
   window.savePostParams = savePostParams
 
   ipcRenderer.on('inject-gizmo', (event, gizmo) => {
-    console.log('gizmo in inject-gizmo', gizmo)
+    profileURL = gizmo.keyset.profileURL
     localStorage.setItem('activeGizmoURL', gizmo._url)
     gizmo.fullDependencies.forEach((d, idx) => {
       inject(d.gizmoJS, d._url)
@@ -17,7 +19,6 @@ export function setup () {
   })
 
   ipcRenderer.on('inject-post', (event, post) => {
-    console.log('post in inject-post', post)
     togglePost(post)
   })
 }
@@ -60,15 +61,15 @@ async function savePostParams (postParams) {
   const postHTTP = window.location.href
   const postText = window.prompt('Describe your post.')
   if (postParams && gizmoURL && postHTTP) {
+    postParams = JSON.stringify(postParams)
     const post = {
       postParams,
       postHTTP,
       postText,
       gizmoURL
     }
-    const userProfileURL = datURLS.userProfileURL
-    const userDB = await ParallelAPI.open(new DatArchive(userProfileURL))
-    await userDB.post(userProfileURL, post)
+    const userDB = await ParallelAPI.open(new DatArchive(profileURL))
+    await userDB.post(profileURL, post)
   }
   ipcRenderer.sendToHost('reload-posts', window.location.href)
 }
@@ -77,8 +78,7 @@ function togglePost (post) {
   post.postDependencies.forEach((d, idx) => {
     inject(d.gizmoJS, d._url)
   })
-  const paramString = 'var postParams = ' + post.postParams
-  inject(paramString)
+  window.postParams = JSON.parse(post.postParams)
   inject(post.gizmo.postJS, post.gizmoURL)
   // var element = document.getElementById(widget.subscriptURL)
   // if (typeof (element) !== 'undefined' && element !== null) {

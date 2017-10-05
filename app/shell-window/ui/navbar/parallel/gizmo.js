@@ -5,11 +5,12 @@ import datURLS from './dat-urls'
 
 // Render the list of scripts in the dropdown
 export class Gizmo {
-  constructor (gizmo) {
+  constructor (gizmo, keyset) {
     this.showIcons = false
+    gizmo.keyset = keyset
     this.gizmo = gizmo
-    this.userAppURL = datURLS.userAppURL
-    console.log('this.gizmo in constructor', gizmo)
+    this.keyset = keyset
+    this.userAppURL = keyset.appURL
   }
 
   onMouseOverToggle () {
@@ -33,7 +34,6 @@ export class Gizmo {
   }
 
   injectGizmo (gizmo) {
-    console.log('gizmo in button', gizmo)
     ipcRenderer.send('inject-gizmo', gizmo)
   }
 

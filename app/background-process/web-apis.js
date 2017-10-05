@@ -10,12 +10,14 @@ import profilesManifest from '../lib/api-manifests/internal/profiles'
 import archivesManifest from '../lib/api-manifests/internal/archives'
 import bookmarksManifest from '../lib/api-manifests/internal/bookmarks'
 import historyManifest from '../lib/api-manifests/internal/history'
+import keysManifest from '../lib/api-manifests/internal/keys'
 
 // internal apis
 import profilesAPI from './web-apis/profiles'
 import archivesAPI from './web-apis/archives'
 import bookmarksAPI from './web-apis/bookmarks'
 import historyAPI from './web-apis/history'
+import keysAPI from './web-apis/keys'
 
 // external manifests
 import datArchiveManifest from '../lib/api-manifests/external/dat-archive'
@@ -32,6 +34,7 @@ export function setup () {
   rpc.exportAPI('archives', archivesManifest, archivesAPI, internalOnly)
   rpc.exportAPI('bookmarks', bookmarksManifest, bookmarksAPI, internalOnly)
   rpc.exportAPI('history', historyManifest, historyAPI, internalOnly)
+  rpc.exportAPI('keys', keysManifest, keysAPI, internalOnly)
 
   // external apis
   rpc.exportAPI('dat-archive', datArchiveManifest, datArchiveAPI, secureOnly)

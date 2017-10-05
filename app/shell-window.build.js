@@ -610,18 +610,19 @@ var loadingView = function () {
   `
 };
 
-var datURLS = {
+var datURLs = {
   userAppURL: 'dat://b60149d2cf3cde895ebc17f248d6d6a47eda2818cddf45648eecb8beb3d93b3e',
   userProfileURL: 'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
 };
 
 // Render the list of scripts in the dropdown
 class Gizmo {
-  constructor (gizmo) {
+  constructor (gizmo, keyset) {
     this.showIcons = false;
+    gizmo.keyset = keyset;
     this.gizmo = gizmo;
-    this.userAppURL = datURLS.userAppURL;
-    console.log('this.gizmo in constructor', gizmo);
+    this.keyset = keyset;
+    this.userAppURL = keyset.appURL;
   }
 
   onMouseOverToggle () {
@@ -645,7 +646,6 @@ class Gizmo {
   }
 
   injectGizmo (gizmo) {
-    console.log('gizmo in button', gizmo);
     electron.ipcRenderer.send('inject-gizmo', gizmo);
   }
 
@@ -685,8 +685,9 @@ class Gizmo {
 }
 
 class GizmoList {
-  constructor (gizmos) {
+  constructor (gizmos, keyset) {
     this.gizmos = gizmos;
+    this.keyset = keyset;
   }
 
   render () {
@@ -707,7 +708,7 @@ class GizmoList {
 
     return yo`
       <ul class="gizmo-list">
-        ${this.gizmos.map(g => new Gizmo(g).render())}
+        ${this.gizmos.map(g => new Gizmo(g, this.keyset).render())}
       </ul>
     `
   }
@@ -718,14 +719,14 @@ class GizmoList {
 const debounce = require('debounce');
 const moment = require('moment');
 class Comments {
-  constructor (post, loadPosts, updatePostActives) {
+  constructor (post, keyset, loadPosts, updatePostActives) {
     this.post = post;
     this.loadPosts = loadPosts;
     this.updatePostActives = updatePostActives;
     this.replies = post.replies || [];
     this.commentDraft = '';
-    this.userAppURL = datURLS.userAppURL;
-    this.userProfileURL = datURLS.userProfileURL;
+    this.userAppURL = keyset.appURL;
+    this.userProfileURL = keyset.profileURL;
     this.el = this.render();
   }
   render () {
@@ -805,13 +806,13 @@ class Comments {
 
 // Render the list of scripts in the dropdown
 class Post {
-  constructor (post, loadPosts) {
+  constructor (post, keyset, loadPosts) {
     this.showIcons = false;
     this.showComments = false;
+    post.keyset = keyset;
     this.post = post;
+    this.userAppURL = keyset.appURL;
     this.loadPosts = loadPosts;
-    this.userAppURL = datURLS.userAppURL;
-    console.log('post in constructor', post);
   }
 
   onMouseOverToggle () {
@@ -823,7 +824,6 @@ class Post {
     // Array.from(document.querySelectorAll('.post')).forEach(el => yo.update(el, this.render()))
     // yo.update(document.getElementById(this.post._url), this.render())
     // console.log('document in post', document)
-    console.log('updating actives in post');
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url))).forEach(el => yo.update(el, this.render()));
   }
 
@@ -876,6 +876,7 @@ class Post {
   }
 
   render () {
+    console.log('this post in post', this);
     var icons = '';
     if (this.showIcons) {
       icons = yo`
@@ -904,7 +905,7 @@ class Post {
           </div>
           <br>
           ${icons}
-          ${this.showComments ? new Comments(this.post, this.loadPosts, this.updateActives.bind(this)).render() : ''}
+          ${this.showComments ? new Comments(this.post, this.keyset, this.loadPosts, this.updateActives.bind(this)).render() : ''}
         </div>
       </li>
     `
@@ -912,8 +913,9 @@ class Post {
 }
 
 class PostList {
-  constructor (posts, loadPosts, updateSidebarActives) {
+  constructor (posts, keyset, loadPosts) {
     this.posts = posts;
+    this.keyset = keyset;
     this.loadPosts = loadPosts;
   }
   render () {
@@ -934,21 +936,22 @@ class PostList {
 
     return yo`
       <ul class="post-list">
-        ${this.posts.map(p => new Post(p, this.loadPosts).render())}
+        ${this.posts.map(p => new Post(p, this.keyset, this.loadPosts).render())}
       </ul>
     `
   }
 }
 
-/* globals DatArchive */
+/* globals DatArchive beaker prompt */
 class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false;
     this.showGizmos = true;
     this.gizmos = null;
     this.posts = null;
-    this.userAppURL = datURLS.userAppURL;
-    this.userProfileURL = datURLS.userProfileURL;
+    this.userAppURL = null;
+    this.userProfileURL = null;
+    this.keyset = null;
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
     this.setup();
   }
@@ -965,34 +968,44 @@ class ParallelBtn {
   }
 
   setup () {
-    this.loadGizmos();
-    this.updateActives();
-    on$$1('set-active', this.onSetActive.bind(this));
-    on$$1('load-commit', this.onLoadCommit.bind(this));
-    on$$1('reload-posts', this.onReloadPosts.bind(this));
+    beaker.keys.get(0).then(keyset => {
+      console.log('keyset', keyset);
+      this.keyset = keyset;
+      this.userAppURL = keyset.appURL;
+      this.userProfileURL = keyset.profileURL;
+      electron.ipcRenderer.send('set-keys', keyset);
+      this.loadGizmos();
+      this.updateActives();
+      on$$1('set-active', this.onSetActive.bind(this));
+      on$$1('load-commit', this.onLoadCommit.bind(this));
+      on$$1('reload-posts', this.onReloadPosts.bind(this));
+    });
   }
 
   onSetActive (page) {
     this.posts = null;
     this.updateActives();
+    this.loadGizmos();
     this.loadPosts(page.url);
   }
 
   onLoadCommit (url) {
     this.posts = null;
     this.updateActives();
+    this.loadGizmos();
     this.loadPosts(url);
   }
 
   onReloadPosts (url) {
     this.posts = null;
     this.updateActives();
+    this.loadGizmos();
     this.loadPosts(url);
   }
 
   async loadPosts (currentURL) {
-    console.log('I am called!');
-    if (currentURL) {
+    console.log('this.userProfileURL in loadPosts', this.userProfileURL);
+    if (currentURL && this.userProfileURL) {
       const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL));
       this.posts = await userDB.listPosts({
         fetchAuthor: true,
@@ -1005,16 +1018,31 @@ class ParallelBtn {
         fetchPostDependencies: true
       });
     }
-    console.log('Posts when I am done!', this.posts);
     this.updateActives();
   }
 
+  toggleKeyPrompt () {
+    console.log('hi');
+    // const appURL = prompt('Enter the app URL.')
+    // const profileURL = prompt('Enter the profile URL.')
+    beaker.keys.add(
+      'dat://b60149d2cf3cde895ebc17f248d6d6a47eda2818cddf45648eecb8beb3d93b3e',
+      'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
+    );
+    beaker.keys.get(0).then(keyset => {
+      console.log('keyset', keyset);
+      datURLs.userAppURL = keyset.userAppURL;
+      datURLs.userProfileURL = keyset.userProfileURL;
+    });
+  }
+
   render () {
+    console.log('this in render para button', this);
     var dropdownEl = '';
     if (this.isDropdownOpen) {
       dropdownEl = yo`
         <div class="script-dropdown dropdown toolbar-dropdown-menu-dropdown">
-          <div style="width: 400px; height: 100vh;" class="dropdown-items script-dropdown with-triangle visible">
+          <div style="width: 400px; height: 100vh; position: fixed; overflow: auto;" class="dropdown-items script-dropdown with-triangle visible">
             <div class="grid default">
               <div id="gizmo" class="grid-item ${this.showGizmos ? 'enabled' : ''}" onclick=${() => this.onToggleClick(true)}>
                 <i class="fa fa-superpowers"></i>
@@ -1025,11 +1053,15 @@ class ParallelBtn {
                 Posts
               </div>
             </div>
-            ${this.showGizmos ? new GizmoList(this.gizmos).render() : new PostList(this.posts, this.loadPosts.bind(this)).render()}
-            <div class="footer">
+            ${this.showGizmos ? new GizmoList(this.gizmos, this.keyset).render() : new PostList(this.posts, this.keyset, this.loadPosts.bind(this)).render()}
+            <div class="footer" style="">
               <a onclick=${e => this.onOpenPage(e, this.userAppURL)}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
+              </a>
+              <a onclick=${e => this.onOpenPage(e, 'beaker://keys')}>
+                <i class="fa fa-key" onclick=${() => this.toggleKeyPrompt()}></i>
+                <span>Keys</span>
               </a>
             </div>
           </div>
@@ -5571,6 +5603,14 @@ var profilesManifest = {
   setCurrent: 'promise'
 };
 
+var keysManifest = {
+  add: 'promise',
+  changeAppURL: 'promise',
+  changeProfileURL: 'promise',
+  remove: 'promise',
+  get: 'promise'
+};
+
 /* globals DatArchive */
 
 var beaker$1 = {};
@@ -5580,6 +5620,7 @@ if (window.location.protocol === 'beaker:') {
   const bookmarksRPC = rpc.importAPI('bookmarks', bookmarksManifest, opts);
   const historyRPC = rpc.importAPI('history', historyManifest, opts);
   const profilesRPC = rpc.importAPI('profiles', profilesManifest, opts);
+  const keysRPC = rpc.importAPI('keys', keysManifest, opts);
 
   // beaker.archives
   beaker$1.archives = new EventTarget();
@@ -5635,8 +5676,21 @@ if (window.location.protocol === 'beaker:') {
   beaker$1.profiles.getCurrent = profilesRPC.getCurrent;
   beaker$1.profiles.setCurrent = profilesRPC.setCurrent;
   // bindEventStream(profilesRPC.createEventStream(), beaker.profiles) TODO
+
+  // parallel keys
+  beaker$1.keys = new EventTarget();
+  beaker$1.keys.add = keysRPC.add;
+  beaker$1.keys.changeAppURL = keysRPC.changeAppURL;
+  beaker$1.keys.changeProfileURL = keysRPC.changeProfileURL;
+  beaker$1.keys.remove = keysRPC.remove;
+  beaker$1.keys.get = keysRPC.get;
 }
 
+beaker$1.keys.get(0).then(keyset => {
+  console.log('keyset', keyset);
+  window.keyset = keyset;
+  console.log('window keyset in shell', window.keyset);
+});
 importWebAPIs();
 window.DatArchive = DatArchive$1;
 window.beaker = beaker$1;
@@ -15051,6 +15105,7 @@ exports.open = async function (userArchive) {
         gizmoDependencies: coerce.arrayOfDependencies(record.gizmoDependencies),
         postDependencies: coerce.arrayOfDependencies(record.postDependencies),
         gizmoJS: coerce.string(record.gizmoJS),
+        postJS: coerce.string(record.postJS),
         createdAt: coerce.number(record.createdAt, {required: true}),
         receivedAt: Date.now()
       })
@@ -15060,7 +15115,7 @@ exports.open = async function (userArchive) {
       primaryKey: 'createdAt',
       index: ['createdAt', '_origin+createdAt'],
       validator: record => ({
-        postJS: coerce.string(record.postJS),
+        postParams: coerce.string(record.postParams),
         postHTTP: coerce.string(record.postHTTP),
         postText: coerce.string(record.postText),
         gizmoURL: coerce.string(record.gizmoURL),
@@ -15343,20 +15398,18 @@ exports.open = async function (userArchive) {
       gizmoDocs,
       gizmoDependencies,
       postDependencies,
-      gizmoJS
+      gizmoJS,
+      postJS
     }) {
       gizmoName = coerce.string(gizmoName)
       gizmoDescription = coerce.string(gizmoDescription)
       gizmoDocs = coerce.string(gizmoDocs)
       gizmoDependencies = coerce.arrayOfDependencies(gizmoDependencies)
-      console.log('gizmo deps after coerce', gizmoDependencies)
       gizmoDependencies = await Promise.all(gizmoDependencies.map(async d => await this.getGizmo(d.url)))
-      console.log('gizmo deps after promises', gizmoDependencies)
       postDependencies = coerce.arrayOfDependencies(postDependencies)
-      console.log('post deps after coerce', postDependencies)
       postDependencies = await Promise.all(postDependencies.map(async d => await this.getGizmo(d.url)))
-      console.log('post deps after promises', postDependencies)
       gizmoJS = coerce.string(gizmoJS)
+      postJS = coerce.string(postJS)
       const createdAt = Date.now()
       return db.gizmos.add(archive, {
         gizmoName,
@@ -15365,6 +15418,7 @@ exports.open = async function (userArchive) {
         gizmoDependencies,
         postDependencies,
         gizmoJS,
+        postJS,
         createdAt
       })
     },
@@ -15456,7 +15510,6 @@ exports.open = async function (userArchive) {
     },
 
     async getGizmo (gizmo, opts = {}) {
-      console.log('gizmo in getGizmo', gizmo)
       const gizmoURL = coerce.recordUrl(gizmo)
       gizmo = await db.gizmos.get(gizmoURL)
       if (opts.fetchAuthor) {
@@ -15482,11 +15535,11 @@ exports.open = async function (userArchive) {
       return gizmo
     },
 
+    // !! -- need to refactor -- !!
+
     async getDependency (gizmo) {
-      console.log('gizmo in getDependency', gizmo)
       const gizmoURL = coerce.recordUrl(gizmo)
       const dependency = await db.gizmos.get(gizmoURL)
-      console.log('dependency after getDependency', dependency)
       return dependency
     },
 
@@ -15505,20 +15558,18 @@ exports.open = async function (userArchive) {
     },
 
     async getPostDependencies (gizmo) {
-      console.log('gizmo in getPostDependencies', gizmo)
       let postDependencies = []
       postDependencies = await Promise.all(gizmo.postDependencies.map(async d => await this.getGizmo(d.url)))
-      console.log('postDependencies', postDependencies)
       return postDependencies
     },
 
     async getGizmoDependencies (gizmo) {
-      console.log('gizmo in getGizmoDependencies', gizmo)
       let fullDependencies = []
       fullDependencies = await Promise.all(gizmo.gizmoDependencies.map(async d => await this.getGizmo(d.url)))
-      console.log('fullDependencies', fullDependencies)
       return fullDependencies
     },
+
+    // !! -- need to refactor -- !!
 
     async subscribe (archive, gizmo) {
       var archiveUrl = coerce.archiveUrl(archive)
@@ -15561,19 +15612,19 @@ exports.open = async function (userArchive) {
     // TCW -- posts api
 
     post (archive, {
-      postJS,
+      postParams,
       postHTTP,
       postText,
       gizmoURL
     }) {
-      postJS = coerce.string(postJS)
+      postParams = coerce.string(postParams)
       postHTTP = coerce.string(postHTTP)
       postText = coerce.string(postText)
       gizmoURL = coerce.string(gizmoURL)
       const createdAt = Date.now()
 
       return db.posts.add(archive, {
-        postJS,
+        postParams,
         postHTTP,
         postText,
         gizmoURL,
@@ -15649,7 +15700,6 @@ exports.open = async function (userArchive) {
       }
 
       await Promise.all(promises)
-      console.log('posts after first promise.all in listPosts', posts)
 
       promises = []
       if (opts.fetchPostDependencies) {
@@ -15659,7 +15709,6 @@ exports.open = async function (userArchive) {
       }
 
       await Promise.all(promises)
-      console.log('posts after second promise.all in listPosts', posts)
 
       return posts
     },

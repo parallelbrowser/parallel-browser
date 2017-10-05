@@ -92,7 +92,6 @@ export function createShellWindow () {
   })
 
   ipcMain.on('inject-gizmo', (event, gizmo) => {
-    console.log('here in inject gizmo', gizmo)
     promptInjectGizmo(win, gizmo)
   })
 
@@ -104,8 +103,13 @@ export function createShellWindow () {
   // webview-preload/locationbar.js
 
   ipcMain.on('get-webview-url', (event, url) => {
-    console.log(url) // prints url
     getActiveWindow().send('new-url', url) // sends to shell-window/ui/navbar/browser-script.js
+  })
+
+  ipcMain.on('keys-reset', event => {
+    var win = getActiveWindow()
+    console.log('keys reset in windows')
+    win.webContents.send('keys-reset')
   })
 
   // end

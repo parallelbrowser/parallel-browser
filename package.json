@@ -1,6 +1,6 @@
 {
   "bin": "./tasks/start-cli.js",
-  "name": "beakerbrowser",
+  "name": "parallelbrowser",
   "devDependencies": {
     "asar": "^0.11.0",
     "browserify": "^13.0.1",
@@ -21,7 +21,7 @@
     "gulp-watch": "^4.3.5",
     "into-stream": "^2.0.1",
     "node-dat-archive": "^1.2.0",
-    "parallel-scratch-api": "^0.4.2",
+    "parallel-scratch-api": "^0.9.3",
     "q": "^1.4.1",
     "rollup": "^0.41.0",
     "yargs": "^4.2.0"
@@ -31,9 +31,9 @@
     "rcedit": "^0.5.0"
   },
   "build": {
-    "appId": "com.pfrazee.beaker-browser",
+    "appId": "com.twillkens.parallel-browser",
     "category": "public.app-category.productivity",
-    "copyright": "© 2016, Paul Frazee",
+    "copyright": "© 2017, Tom Willkens",
     "npmRebuild": false,
     "asar": false,
     "protocols": [
@@ -63,7 +63,7 @@
           "x": 130,
           "y": 220,
           "type": "file",
-          "path": "dist/mac/Beaker Browser.app"
+          "path": "dist/mac/Parallel Browser.app"
         },
         {
           "x": 50,
@@ -102,10 +102,5 @@
     "start": "gulp start",
     "start-logging": "DEBUG=*,-bittorrent-dht $(node -e \"console.log(require('electron'))\") -r trace ./app",
     "watch": "gulp start-watch"
-  },
-  "collective": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/beaker",
-    "logo": "https://opencollective.com/opencollective/logo.txt"
   }
 }
