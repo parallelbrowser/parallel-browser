@@ -82,3 +82,5 @@ shell-window.build.js
 webview-preload.build.js
 app/shell-window.build.js
 app/webview-preload.build.js
+
+dist
