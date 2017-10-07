@@ -62,3 +62,9 @@ dist/
 
 # build folder for builtin pages
 app/builtin-pages/build/
+
+# app builds
+app/background-process.build.js
+app/markdown-renderer.build.js
+app/shell-window.build.js
+app/webview-preload.build.js
