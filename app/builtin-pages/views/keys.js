@@ -1,5 +1,4 @@
 /* globals beaker */
-import { ipcRenderer} from 'electron'
 
 const yo = require('yo-yo')
 const co = require('co')
@@ -114,7 +113,6 @@ function onKeyUp (i) {
 
       // save in backend
       beaker.keys.add(keys[0].url, keys[1].url)
-      ipcRenderer.send('keys-reset')
     } else if (e.keyCode == 27) {
       // escape-key
       // exit edit-mode
