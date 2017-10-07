@@ -8,6 +8,7 @@ import archivesManifest from '../api-manifests/internal/archives'
 import bookmarksManifest from '../api-manifests/internal/bookmarks'
 import historyManifest from '../api-manifests/internal/history'
 import profilesManifest from '../api-manifests/internal/profiles'
+import keysManifest from '../api-manifests/internal/keys'
 
 var beaker = {}
 if (window.location.protocol === 'beaker:') {
@@ -16,6 +17,7 @@ if (window.location.protocol === 'beaker:') {
   const bookmarksRPC = rpc.importAPI('bookmarks', bookmarksManifest, opts)
   const historyRPC = rpc.importAPI('history', historyManifest, opts)
   const profilesRPC = rpc.importAPI('profiles', profilesManifest, opts)
+  const keysRPC = rpc.importAPI('keys', keysManifest, opts)
 
   // beaker.archives
   beaker.archives = new EventTarget()
@@ -71,6 +73,14 @@ if (window.location.protocol === 'beaker:') {
   beaker.profiles.getCurrent = profilesRPC.getCurrent
   beaker.profiles.setCurrent = profilesRPC.setCurrent
   // bindEventStream(profilesRPC.createEventStream(), beaker.profiles) TODO
+
+  // parallel keys
+  beaker.keys = new EventTarget()
+  beaker.keys.add = keysRPC.add
+  beaker.keys.changeAppURL = keysRPC.changeAppURL
+  beaker.keys.changeProfileURL = keysRPC.changeProfileURL
+  beaker.keys.remove = keysRPC.remove
+  beaker.keys.get = keysRPC.get
 }
 
 export default beaker

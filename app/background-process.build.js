@@ -213,7 +213,7 @@ var debug$1 = require('debug')('beaker');
 // 1. waits for the setupPromise
 // 2. provides a cb handler that returns a promise
 // 3. creates a transaction lock, and wraps the cb with it
-// NOTE: 
+// NOTE:
 //   Using the transactor does mean that the DB is locked into sequential operation.
 //   This is slower, but necessary if the SQLite instance has any transactions that
 //   do async work within them; eg, SELECT then UPDATE.
@@ -952,6 +952,14 @@ var historyManifest = {
   removeVisitsAfter: 'promise'
 };
 
+var keysManifest = {
+  add: 'promise',
+  changeAppURL: 'promise',
+  changeProfileURL: 'promise',
+  remove: 'promise',
+  get: 'promise'
+};
+
 // globals
 // =
 
@@ -999,7 +1007,8 @@ migrations$1 = [
   migration('profile-data.v1.sql'),
   migration('profile-data.v2.sql'),
   migration('profile-data.v3.sql'),
-  migration('profile-data.v4.sql')
+  migration('profile-data.v4.sql'),
+  migration('profile-data.v5.sql')
 ];
 function migration (file) {
   return cb => db$1.exec(fs.readFileSync(path__default.join(__dirname, 'background-process', 'dbs', 'schemas', file), 'utf8'), cb)
@@ -2546,6 +2555,59 @@ var historyAPI = {
   }
 };
 
+// exported methods
+// =
+
+function add$2 (profileId, appURL, profileURL) {
+  return run(`
+    INSERT OR REPLACE
+      INTO keys (profileId, appURL, profileURL)
+      VALUES (?, ?, ?)
+  `, [profileId, appURL, profileURL])
+}
+
+function changeAppURL (profileId, appURL) {
+  return run(`UPDATE keys SET appURL = ? WHERE profileId = ?`, [appURL, profileId])
+}
+
+function changeProfileURL (profileId, profileURL) {
+  return run(`UPDATE keys SET profileURL = ? WHERE profileId = ?`, [profileURL, profileId])
+}
+
+function remove$2 (profileId) {
+  return run(`DELETE FROM keys WHERE profileId = ?`, [profileId])
+}
+
+function get$4 (profileId) {
+  return get$2(`SELECT appURL, profileURL FROM keys WHERE profileId = ?`, [profileId])
+}
+
+// exported api
+// =
+
+var keysAPI = {
+  async add (...args) {
+    console.log('lol. im here in web-apis/keys.js', args);
+    return add$2(0, ...args)
+  },
+
+  async changeAppURL (...args) {
+    return changeAppURL(0, ...args)
+  },
+
+  async changeProfileURL (...args) {
+    return changeProfileURL(0, ...args)
+  },
+
+  async remove (...args) {
+    return remove$2(0, ...args)
+  },
+
+  async get (...args) {
+    return get$4(0, ...args)
+  }
+};
+
 var datArchiveManifest = {
   createArchive: 'promise',
   forkArchive: 'promise',
@@ -2604,7 +2666,7 @@ function setup$9 () {
   setupPromise$2 = setupSqliteDB(db$2, migrations$2, '[SITEDATA]');
 
   // wire up RPC
-  rpc.exportAPI('beakerSitedata', manifest$1, { get: get$4, set: set$1, getPermissions, getPermission, setPermission }, internalOnly);
+  rpc.exportAPI('beakerSitedata', manifest$1, { get: get$5, set: set$1, getPermissions, getPermission, setPermission }, internalOnly);
 }
 
 async function set$1 (url$$1, key, value) {
@@ -2620,7 +2682,7 @@ async function set$1 (url$$1, key, value) {
   })
 }
 
-async function get$4 (url$$1, key) {
+async function get$5 (url$$1, key) {
   await setupPromise$2;
   var origin = await extractOrigin$1(url$$1);
   if (!origin) return null
@@ -2652,7 +2714,7 @@ async function getPermissions (url$$1) {
 
 
 function getPermission (url$$1, key) {
-  return get$4(url$$1, 'perm:' + key)
+  return get$5(url$$1, 'perm:' + key)
 }
 
 function setPermission (url$$1, key, value) {
@@ -3492,6 +3554,7 @@ function setup$3 () {
   rpc.exportAPI('archives', archivesManifest, archivesAPI, internalOnly);
   rpc.exportAPI('bookmarks', bookmarksManifest, bookmarksAPI, internalOnly);
   rpc.exportAPI('history', historyManifest, historyAPI, internalOnly);
+  rpc.exportAPI('keys', keysManifest, keysAPI, internalOnly);
 
   // external apis
   rpc.exportAPI('dat-archive', datArchiveManifest, datArchiveAPI, secureOnly);
@@ -3532,7 +3595,7 @@ var downloadsEvents = new EventEmitter();
 
 function setup$11 () {
   // wire up RPC
-  rpc.exportAPI('beakerDownloads', manifest, { eventsStream: eventsStream$1, getDownloads, pause, resume, cancel, remove: remove$2, open: open$1, showInFolder }, internalOnly);
+  rpc.exportAPI('beakerDownloads', manifest, { eventsStream: eventsStream$1, getDownloads, pause, resume, cancel, remove: remove$3, open: open$1, showInFolder }, internalOnly);
 }
 
 function registerListener (win, opts = {}) {
@@ -3644,7 +3707,7 @@ function cancel (id) {
   return Promise.resolve()
 }
 
-function remove$2 (id) {
+function remove$3 (id) {
   var download = downloads.find(d => d.id == id);
   if (download && download.getState() != 'progressing') { downloads.splice(downloads.indexOf(download), 1); }
   return Promise.resolve()
@@ -3823,7 +3886,6 @@ function createShellWindow () {
   });
 
   electron.ipcMain.on('inject-gizmo', (event, gizmo) => {
-    console.log('here in inject gizmo', gizmo);
     promptInjectGizmo(win, gizmo);
   });
 
@@ -3835,8 +3897,13 @@ function createShellWindow () {
   // webview-preload/locationbar.js
 
   electron.ipcMain.on('get-webview-url', (event, url$$1) => {
-    console.log(url$$1); // prints url
     getActiveWindow().send('new-url', url$$1); // sends to shell-window/ui/navbar/browser-script.js
+  });
+
+  electron.ipcMain.on('keys-reset', event => {
+    var win = getActiveWindow();
+    console.log('keys reset in windows');
+    win.webContents.send('keys-reset');
   });
 
   // end
@@ -4025,7 +4092,7 @@ function sendScrollTouchBegin (e) {
 }
 
 var darwinMenu = {
-  label: 'Beaker',
+  label: 'Parallel',
   submenu: [
     {
       label: 'Preferences',
@@ -4036,7 +4103,7 @@ var darwinMenu = {
     { type: 'separator' },
     { label: 'Services', role: 'services', submenu: [] },
     { type: 'separator' },
-    { label: 'Hide Beaker', accelerator: 'Command+H', role: 'hide' },
+    { label: 'Hide Parallel', accelerator: 'Command+H', role: 'hide' },
     { label: 'Hide Others', accelerator: 'Command+Alt+H', role: 'hideothers' },
     { label: 'Show All', role: 'unhide' },
     { type: 'separator' },
@@ -4259,7 +4326,7 @@ if (process.platform == 'darwin') {
 }
 
 var beakerDevMenu = {
-  label: 'BeakerDev',
+  label: 'ParallelDev',
   submenu: [{
     label: 'Reload Shell-Window',
     click: function () {
@@ -4308,6 +4375,18 @@ var helpMenu = {
     }
   ]
 };
+
+var keysMenu = {
+  label: 'Keys',
+  submenu: [
+    {
+      label: 'View Keys',
+      click: function (item, win) {
+        if (win) win.webContents.send('command', 'file:new-tab', 'beaker://keys');
+      }
+    }
+  ]
+};
 if (process.platform !== 'darwin') {
   helpMenu.submenu.push({ type: 'separator' });
   helpMenu.submenu.push({
@@ -4323,6 +4402,7 @@ function buildWindowMenu () {
   var menus = [fileMenu, editMenu, viewMenu, historyMenu, windowMenu, helpMenu];
   if (process.platform === 'darwin') menus.unshift(darwinMenu);
   menus.push(beakerDevMenu); // TODO: remove in release build?
+  menus.push(keysMenu);
   return menus
 }
 
@@ -4921,6 +5001,18 @@ async function beakerServer (req, res) {
   if (requestUrl === 'beaker://bookmarks/main.js') {
     return cb(200, 'OK', 'application/javascript; charset=utf-8', path__default.join(__dirname, 'builtin-pages/build/bookmarks.build.js'))
   }
+
+  // new - keys
+
+  if (requestUrl === 'beaker://keys/') {
+    return cb(200, 'OK', 'text/html; charset=utf-8', path__default.join(__dirname, 'builtin-pages/keys.html'))
+  }
+  if (requestUrl === 'beaker://keys/main.js') {
+    return cb(200, 'OK', 'application/javascript; charset=utf-8', path__default.join(__dirname, 'builtin-pages/build/keys.build.js'))
+  }
+
+  // end
+
   if (requestUrl === 'beaker://history/') {
     return cb(200, 'OK', 'text/html; charset=utf-8', path__default.join(__dirname, 'builtin-pages/history.html'))
   }
@@ -5056,7 +5148,7 @@ function setup$14 () {
     var url$$1 = request.url.slice('beaker-favicon:'.length);
 
     // look up in db
-    get$4(url$$1, 'favicon').then(data => {
+    get$5(url$$1, 'favicon').then(data => {
       if (data) {
         // `data` is a data url ('data:image/png;base64,...')
         // so, skip the beginning and pull out the data

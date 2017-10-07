@@ -664,8 +664,8 @@ function onMouseOutShelf (e) {
 const colorThief = new ColorThief();
 
 const LATEST_VERSION = 7004; // semver where major*1mm and minor*1k; thus 3.2.1 = 3002001
-const WELCOME_URL = 'https://beakerbrowser.com/docs/using-beaker/';
-const RELEASE_NOTES_URL = 'https://beakerbrowser.com/releases/0-7-4/?updated=true';
+const WELCOME_URL = 'https://github.com/parallelbrowser/parallel-browser';
+const RELEASE_NOTES_URL = 'https://github.com/parallelbrowser/parallel-browser';
 
 // globals
 // =
@@ -677,12 +677,14 @@ var bookmarks;
 var pinnedBookmarks;
 var archivesList;
 var settings;
+var appURL;
 
 setup();
 async function setup () {
   await loadBookmarks();
   archivesStatus = await beaker.archives.status();
   userProfile = await beaker.profiles.get(0);
+  appURL = await beaker.keys.get(0).appURL;
   try {
     userProfile.title = (await beaker.archives.get(userProfile.url, {timeout: 500})).title;
   } catch (e) {
@@ -746,7 +748,7 @@ function renderProfileCard () {
   return yo`
     <div class="profile">
       ${renderNetworkLink()}
-      <a href=${userProfile.url}>${userProfile.title} <i class="fa fa-user-circle-o"></i></a>
+      <a href=${appURL}>${userProfile.title} <i class="fa fa-user-circle-o"></i></a>
     </div>
   `
 }

@@ -2,15 +2,17 @@ import { ipcRenderer } from 'electron'
 import * as yo from 'yo-yo'
 import * as pages from '../../../pages'
 import { Comments } from './comments'
+import datURLS from './dat-urls'
+
 // Render the list of scripts in the dropdown
 export class Post {
-  constructor (post, loadPosts) {
+  constructor (post, keyset, loadPosts) {
     this.showIcons = false
     this.showComments = false
+    post.keyset = keyset
     this.post = post
+    this.userAppURL = keyset.appURL
     this.loadPosts = loadPosts
-    this.userAppURL = 'dat://93b7277e6204d6434597f98aa01f844d813073802d45ebe5538511504ae81da6'
-    console.log('post in constructor', post)
   }
 
   onMouseOverToggle () {
@@ -22,7 +24,6 @@ export class Post {
     // Array.from(document.querySelectorAll('.post')).forEach(el => yo.update(el, this.render()))
     // yo.update(document.getElementById(this.post._url), this.render())
     // console.log('document in post', document)
-    console.log('updating actives in post')
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url))).forEach(el => yo.update(el, this.render()))
   }
 
@@ -75,6 +76,7 @@ export class Post {
   }
 
   render () {
+    console.log('this post in post', this)
     var icons = ''
     if (this.showIcons) {
       icons = yo`
@@ -103,7 +105,7 @@ export class Post {
           </div>
           <br>
           ${icons}
-          ${this.showComments ? new Comments(this.post, this.loadPosts, this.updateActives.bind(this)).render() : ''}
+          ${this.showComments ? new Comments(this.post, this.keyset, this.loadPosts, this.updateActives.bind(this)).render() : ''}
         </div>
       </li>
     `

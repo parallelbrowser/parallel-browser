@@ -159,6 +159,18 @@ async function beakerServer (req, res) {
   if (requestUrl === 'beaker://bookmarks/main.js') {
     return cb(200, 'OK', 'application/javascript; charset=utf-8', path.join(__dirname, 'builtin-pages/build/bookmarks.build.js'))
   }
+
+  // new - keys
+
+  if (requestUrl === 'beaker://keys/') {
+    return cb(200, 'OK', 'text/html; charset=utf-8', path.join(__dirname, 'builtin-pages/keys.html'))
+  }
+  if (requestUrl === 'beaker://keys/main.js') {
+    return cb(200, 'OK', 'application/javascript; charset=utf-8', path.join(__dirname, 'builtin-pages/build/keys.build.js'))
+  }
+
+  // end
+
   if (requestUrl === 'beaker://history/') {
     return cb(200, 'OK', 'text/html; charset=utf-8', path.join(__dirname, 'builtin-pages/history.html'))
   }

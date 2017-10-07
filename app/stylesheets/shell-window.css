@@ -1180,6 +1180,9 @@ body.darwin #toolbar {
   width: 100%;
   height: 100%;
 }
+.script-dropdown {
+  padding-bottom: 100px;
+}
 .script-dropdown h2 {
   font-size: 12px;
   font-weight: bold;

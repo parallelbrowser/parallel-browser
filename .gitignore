@@ -57,28 +57,8 @@ typings/
 # dotenv environment variables file
 .env
 
+# distribution folder
+dist/
 
-background-process.build.js
-dat-sidebar.build.js
-shell-window.build.js
-webview-preload.build.js
-background-process.build.js
-markdown-renderer.build.js
-package-lock.json
-webview-preload.build.js
-bundle.js
-build.js
-generate_spec_imports.js
-create-archive-modal.build.js
-dat-sidebar.build.js
-downloads.build.js
-fork-archive-modal.build.js
-library.build.js
-start.build.js
-swarm-debugger.build.js
-view-source.build.js
-renderer.build.js
-shell-window.build.js
-webview-preload.build.js
-app/shell-window.build.js
-app/webview-preload.build.js
+# build folder for builtin pages
+app/builtin-pages/build/
