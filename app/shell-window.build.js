@@ -953,6 +953,7 @@ class ParallelBtn {
     this.userProfileURL = null;
     this.keyset = null;
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
+    this.wireIPC();
     this.setup();
   }
 
@@ -964,16 +965,19 @@ class ParallelBtn {
       subscriber: this.userProfileURL,
       fetchGizmoDependencies: true
     });
-    console.log('this.gizmos after load', this.gizmos);
+  }
+
+  wireIPC () {
+    electron.ipcRenderer.on('keys-reset', e => {
+      this.setup();
+    });
   }
 
   setup () {
     beaker.keys.get(0).then(keyset => {
-      console.log('keyset', keyset);
       this.keyset = keyset;
       this.userAppURL = keyset.appURL;
       this.userProfileURL = keyset.profileURL;
-      electron.ipcRenderer.send('set-keys', keyset);
       this.loadGizmos();
       this.updateActives();
       on$$1('set-active', this.onSetActive.bind(this));
@@ -1004,7 +1008,6 @@ class ParallelBtn {
   }
 
   async loadPosts (currentURL) {
-    console.log('this.userProfileURL in loadPosts', this.userProfileURL);
     if (currentURL && this.userProfileURL) {
       const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL));
       this.posts = await userDB.listPosts({
@@ -1022,7 +1025,6 @@ class ParallelBtn {
   }
 
   toggleKeyPrompt () {
-    console.log('hi');
     // const appURL = prompt('Enter the app URL.')
     // const profileURL = prompt('Enter the profile URL.')
     beaker.keys.add(
@@ -1030,14 +1032,12 @@ class ParallelBtn {
       'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
     );
     beaker.keys.get(0).then(keyset => {
-      console.log('keyset', keyset);
       datURLs.userAppURL = keyset.userAppURL;
       datURLs.userProfileURL = keyset.userProfileURL;
     });
   }
 
   render () {
-    console.log('this in render para button', this);
     var dropdownEl = '';
     if (this.isDropdownOpen) {
       dropdownEl = yo`

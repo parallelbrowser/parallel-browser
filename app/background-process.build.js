@@ -2559,10 +2559,6 @@ var historyAPI = {
 // =
 
 function add$2 (profileId, appURL, profileURL) {
-  console.log('profile id', profileId);
-  console.log('appURL', appURL);
-  console.log('profileURL', profileURL);
-  console.log('this', this);
   return run(`
     INSERT OR REPLACE
       INTO keys (profileId, appURL, profileURL)
@@ -3890,12 +3886,10 @@ function createShellWindow () {
   });
 
   electron.ipcMain.on('inject-gizmo', (event, gizmo) => {
-    console.log('here in inject gizmo', gizmo);
     promptInjectGizmo(win, gizmo);
   });
 
   electron.ipcMain.on('inject-post', (event, post) => {
-    console.log('in main on inject-post', post);
     promptInjectPost(win, post);
   });
 
@@ -3903,8 +3897,13 @@ function createShellWindow () {
   // webview-preload/locationbar.js
 
   electron.ipcMain.on('get-webview-url', (event, url$$1) => {
-    console.log(url$$1); // prints url
     getActiveWindow().send('new-url', url$$1); // sends to shell-window/ui/navbar/browser-script.js
+  });
+
+  electron.ipcMain.on('keys-reset', event => {
+    var win = getActiveWindow();
+    console.log('keys reset in windows');
+    win.webContents.send('keys-reset');
   });
 
   // end
