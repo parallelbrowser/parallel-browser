@@ -68,19 +68,6 @@ export function setup () {
 }
 
 export function create (opts) {
-  // TCW CHANGES -- this sends a synchronous test message to background-process/ui/windows.js
-  console.log('something created')
-
-  console.log(ipcRenderer.sendSync('synchronous-message', 'ping')) // prints "pong"
-
-  ipcRenderer.on('asynchronous-reply', (event, arg) => {
-    console.log(arg) // prints "pong"
-  })
-
-  ipcRenderer.send('asynchronous-message', 'ping')
-
-  // TCW -- END
-
   var url
   if (opts && typeof opts == 'object') {
     url = opts.url

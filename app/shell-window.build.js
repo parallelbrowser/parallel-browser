@@ -610,11 +610,6 @@ var loadingView = function () {
   `
 };
 
-var datURLs = {
-  userAppURL: 'dat://b60149d2cf3cde895ebc17f248d6d6a47eda2818cddf45648eecb8beb3d93b3e',
-  userProfileURL: 'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
-};
-
 // Render the list of scripts in the dropdown
 class Gizmo {
   constructor (gizmo, keyset) {
@@ -942,42 +937,31 @@ class PostList {
   }
 }
 
-/* globals DatArchive beaker prompt */
+/* globals DatArchive beaker */
 class ParallelBtn {
   constructor () {
     this.isDropdownOpen = false;
     this.showGizmos = true;
     this.gizmos = null;
     this.posts = null;
-    this.userAppURL = null;
-    this.userProfileURL = null;
     this.keyset = null;
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true);
-    this.wireIPC();
     this.setup();
   }
 
   async loadGizmos () {
-    const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL));
+    const userDB = await ParallelAPI.open(new DatArchive(this.keyset.profileURL));
     this.gizmos = await userDB.listGizmos({
       fetchAuthor: true,
       reverse: true,
-      subscriber: this.userProfileURL,
+      subscriber: this.keyset.profileURL,
       fetchGizmoDependencies: true
-    });
-  }
-
-  wireIPC () {
-    electron.ipcRenderer.on('keys-reset', e => {
-      this.setup();
     });
   }
 
   setup () {
     beaker.keys.get(0).then(keyset => {
       this.keyset = keyset;
-      this.userAppURL = keyset.appURL;
-      this.userProfileURL = keyset.profileURL;
       this.loadGizmos();
       this.updateActives();
       on$$1('set-active', this.onSetActive.bind(this));
@@ -1008,33 +992,20 @@ class ParallelBtn {
   }
 
   async loadPosts (currentURL) {
-    if (currentURL && this.userProfileURL) {
-      const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL));
+    if (currentURL && this.keyset.profileURL) {
+      const userDB = await ParallelAPI.open(new DatArchive(this.keyset.profileURL));
       this.posts = await userDB.listPosts({
         fetchAuthor: true,
         fetchReplies: true,
         countVotes: true,
         reverse: true,
         fetchGizmo: true,
-        requester: this.userProfileURL,
+        requester: this.keyset.profileURL,
         currentURL,
         fetchPostDependencies: true
       });
     }
     this.updateActives();
-  }
-
-  toggleKeyPrompt () {
-    // const appURL = prompt('Enter the app URL.')
-    // const profileURL = prompt('Enter the profile URL.')
-    beaker.keys.add(
-      'dat://b60149d2cf3cde895ebc17f248d6d6a47eda2818cddf45648eecb8beb3d93b3e',
-      'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
-    );
-    beaker.keys.get(0).then(keyset => {
-      datURLs.userAppURL = keyset.userAppURL;
-      datURLs.userProfileURL = keyset.userProfileURL;
-    });
   }
 
   render () {
@@ -1055,7 +1026,7 @@ class ParallelBtn {
             </div>
             ${this.showGizmos ? new GizmoList(this.gizmos, this.keyset).render() : new PostList(this.posts, this.keyset, this.loadPosts.bind(this)).render()}
             <div class="footer" style="">
-              <a onclick=${e => this.onOpenPage(e, this.userAppURL)}>
+              <a onclick=${e => this.onOpenPage(e, this.keyset.appURL)}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
@@ -1072,13 +1043,20 @@ class ParallelBtn {
     // render btn
     return yo`
       <div class="toolbar-dropdown-menu browser-dropdown-scripts">
-        <button class="toolbar-btn toolbar-dropdown-menu-btn ${this.isDropdownOpen ? 'pressed' : ''}" onclick=${e => this.onClickBtn(e)} title="Script">
-          <span class="fa fa-code"></span>
+        <button style="background-image :url(beaker://assets/logo); background-size: contain; background-repeat: no-repeat;"
+          class="toolbar-btn toolbar-dropdown-menu-btn ${this.isDropdownOpen ? 'pressed' : ''}" onclick=${e => this.onClickBtn(e)} title="Script">
         </button>
         ${dropdownEl}
       </div>
     `
   }
+
+
+
+
+  // "padding-right: 18px; padding-left: -10px; padding-bottom: 15px; text-align: center"
+	// vertical-align:middle;
+	// text-align:center;
 
   // Manages the redirect to other scripts from the clicked author
   clickedAuthor (scriptObj) {
@@ -1114,6 +1092,7 @@ class ParallelBtn {
 
   onClickBtn (e) {
     this.isDropdownOpen = !this.isDropdownOpen;
+    this.setup();
     this.updateActives();
   }
 
@@ -3615,19 +3594,6 @@ function setup$2 () {
 }
 
 function create (opts) {
-  // TCW CHANGES -- this sends a synchronous test message to background-process/ui/windows.js
-  console.log('something created');
-
-  console.log(electron.ipcRenderer.sendSync('synchronous-message', 'ping')); // prints "pong"
-
-  electron.ipcRenderer.on('asynchronous-reply', (event, arg) => {
-    console.log(arg); // prints "pong"
-  });
-
-  electron.ipcRenderer.send('asynchronous-message', 'ping');
-
-  // TCW -- END
-
   var url;
   if (opts && typeof opts == 'object') {
     url = opts.url;

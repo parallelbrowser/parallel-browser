@@ -1,8 +1,7 @@
-/* globals DatArchive localStorage beaker */
+/* globals DatArchive localStorage  */
 
 import { ipcRenderer } from 'electron'
 import ParallelAPI from 'parallel-scratch-api'
-import datURLS from '../shell-window/ui/navbar/parallel/dat-urls'
 
 let profileURL
 
@@ -45,7 +44,6 @@ function inject (js, gizmoURL) {
     const scriptElement = document.createElement('script')
     scriptElement.setAttribute('id', gizmoURL)
     scriptElement.appendChild(document.createTextNode(js))
-    console.log('script element on insert', scriptElement)
     body.appendChild(scriptElement)
   }
 }
@@ -80,17 +78,4 @@ function togglePost (post) {
   })
   window.postParams = JSON.parse(post.postParams)
   inject(post.gizmo.postJS, post.gizmoURL)
-  // var element = document.getElementById(widget.subscriptURL)
-  // if (typeof (element) !== 'undefined' && element !== null) {
-  //   removeScript(widget.subscriptURL)
-  // } else {
-  //   inject(widget.postscriptJS, null, widget.subscriptURL)
-  // }
 }
-
-// function removeScript (id) {
-//   const scriptElement = document.getElementById(id)
-//   scriptElement.parentNode.removeChild(scriptElement)
-// }
-
-// end

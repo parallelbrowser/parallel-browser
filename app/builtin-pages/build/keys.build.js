@@ -18,7 +18,6 @@ var keys;
 co(function * () {
   // get the bookmarks, ordered by # of views
   keys = yield beaker.keys.get(0);
-  console.log('keys in keys', keys);
   keys = [{title: 'App Key', url: keys.appURL}, {title: 'Profile Key', url: keys.profileURL}];
   render();
 });

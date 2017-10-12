@@ -78,19 +78,6 @@ export function createShellWindow () {
   // in the shell-window/ui/pages.js in the "create" function and returns
   // 'pong'
 
-  ipcMain.on('synchronous-message', (event, arg) => {
-    console.log(arg) // prints "ping"
-    event.returnValue = 'pong'
-  })
-
-  // this listens for an asynchronous message from the icp
-  // in the shell-window/ui/pages.js in the "create" function
-
-  ipcMain.on('asynchronous-message', (event, arg) => {
-    console.log(arg) // prints "ping"
-    event.sender.send('asynchronous-reply', 'pong')
-  })
-
   ipcMain.on('inject-gizmo', (event, gizmo) => {
     promptInjectGizmo(win, gizmo)
   })
@@ -104,12 +91,6 @@ export function createShellWindow () {
 
   ipcMain.on('get-webview-url', (event, url) => {
     getActiveWindow().send('new-url', url) // sends to shell-window/ui/navbar/browser-script.js
-  })
-
-  ipcMain.on('keys-reset', event => {
-    var win = getActiveWindow()
-    console.log('keys reset in windows')
-    win.webContents.send('keys-reset')
   })
 
   // end
