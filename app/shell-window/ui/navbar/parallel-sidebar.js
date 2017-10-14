@@ -119,20 +119,6 @@ export class ParallelBtn {
     `
   }
 
-
-
-
-  // "padding-right: 18px; padding-left: -10px; padding-bottom: 15px; text-align: center"
-	// vertical-align:middle;
-	// text-align:center;
-
-  // Manages the redirect to other scripts from the clicked author
-  clickedAuthor (scriptObj) {
-      // TODO: send an ipc request for the rest of the scripts from this author
-      //       and find a way to display them
-    this.updateActives()
-  }
-
   // Toggles whether the user is viewing prescripts or post scripts on the current site
   onToggleClick (showGizmos) {
     if (showGizmos) {
