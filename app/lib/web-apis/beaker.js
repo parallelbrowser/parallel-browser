@@ -81,6 +81,7 @@ if (window.location.protocol === 'beaker:') {
   beaker.keys.changeProfileURL = keysRPC.changeProfileURL
   beaker.keys.remove = keysRPC.remove
   beaker.keys.get = keysRPC.get
+  beaker.keys.sendPulse = keysRPC.sendPulse
 }
 
 export default beaker

@@ -2,14 +2,13 @@ import { ipcRenderer } from 'electron'
 import * as yo from 'yo-yo'
 import * as pages from '../../../pages'
 import { Comments } from './comments'
-import datURLS from './dat-urls'
 
 // Render the list of scripts in the dropdown
 export class Post {
   constructor (post, keyset, loadPosts) {
     this.showIcons = false
     this.showComments = false
-    post.keyset = keyset
+    this.keyset = keyset
     this.post = post
     this.userAppURL = keyset.appURL
     this.loadPosts = loadPosts
@@ -27,7 +26,8 @@ export class Post {
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.post._url))).forEach(el => yo.update(el, this.render()))
   }
 
-  onOpenPage (opts) {
+  onOpenPage (e, opts) {
+    e.stopPropagation()
     let path
     switch (opts) {
       case 'user':
@@ -59,7 +59,6 @@ export class Post {
   }
 
   injectPost (post) {
-    console.log('post in button', post)
     ipcRenderer.send('inject-post', post)
   }
 
@@ -70,27 +69,29 @@ export class Post {
     return dat
   }
 
-  toggleShowComments () {
+  toggleShowComments (e) {
+    e.stopPropagation()
     this.showComments = !this.showComments
     this.updateActives()
   }
 
   render () {
-    console.log('this post in post', this)
     var icons = ''
     if (this.showIcons) {
       icons = yo`
         <div style="display: inline-block">
-          <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectPost(this.post)}></i>
-          <i class="fa fa-pencil-square-o fa-lg" onclick=${() => this.toggleShowComments()}></i>
-          <i class="fa fa-user-circle-o fa-lg" onclick=${() => this.onOpenPage('user')}></i>
-          <i class="fa fa-file-text-o fa-lg" onclick=${() => this.onOpenPage('post')}></i>
-          <i class="fa fa-superpowers fa-lg" onclick=${() => this.onOpenPage('gizmo')}></i>
+          <span onclick=${(e) => this.toggleShowComments(e)}><i class="fa fa-pencil-square-o fa-lg"></i>Comments</span>
+          <span onclick=${(e) => this.onOpenPage(e, 'user')}><i class="fa fa-user-circle-o fa-lg"></i>Profile</span>
+          <span onclick=${(e) => this.onOpenPage(e, 'post')}><i class="fa fa-file-text-o fa-lg"></i>Details</span>
         </div>
       `
     }
     return yo`
-      <li class="list-item sidebarscripts ${this.parseDatPath()} post" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
+      <li class="list-item sidebarscripts ${this.parseDatPath()} post"
+        onmouseenter=${() => this.onMouseOverToggle()}
+        onmouseleave=${() => this.onMouseOverToggle()}
+        onclick=${() => this.injectPost(this.post)}
+      >
         <div class="list-item">
           <div style="display: inline-block" title=${this.post.author.name}>
             <span><b>${this.post.author.name}</b></span>

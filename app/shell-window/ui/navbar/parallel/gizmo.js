@@ -1,7 +1,6 @@
 import { ipcRenderer } from 'electron'
 import * as yo from 'yo-yo'
 import * as pages from '../../../pages'
-import datURLS from './dat-urls'
 
 // Render the list of scripts in the dropdown
 export class Gizmo {
@@ -22,7 +21,8 @@ export class Gizmo {
     Array.from(document.querySelectorAll('.' + this.parseDatPath(this.gizmo._url))).forEach(el => yo.update(el, this.render()))
   }
 
-  onOpenGizmoPage () {
+  onOpenGizmoPage (e) {
+    e.stopPropagation()
     const url = this.userAppURL + this.getViewGizmoURL()
     pages.setActive(pages.create(url))
     this.showIcons = false
@@ -45,17 +45,13 @@ export class Gizmo {
   }
 
   render () {
-    var icons = ''
-    if (this.showIcons) {
-      icons = yo`
+    var icons = yo`
         <div style="display: inline-block">
-          <i class="fa fa-play-circle-o fa-lg" onclick=${() => this.injectGizmo(this.gizmo)}></i>
-          <i class="fa fa-superpowers fa-lg" onclick=${() => this.onOpenGizmoPage()}></i>
+          <span onclick=${(e) => this.onOpenGizmoPage(e)}><i class="fa fa-question-circle-o fa-lg"></i>More Info</span>
         </div>
       `
-    }
     return yo`
-      <li class="list-item sidebarscripts ${this.parseDatPath()} gizmo" onmouseenter=${() => this.onMouseOverToggle()} onmouseleave=${() => this.onMouseOverToggle()}>
+      <li class="list-item sidebarscripts ${this.parseDatPath()} gizmo" onclick=${() => this.injectGizmo(this.gizmo)}>
         <div class="list-item">
           <div style="display: inline-block" title=${this.gizmo.gizmoName}>
             <span><b>${this.gizmo.gizmoName}</b></span>

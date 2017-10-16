@@ -1,7 +1,7 @@
 /* globals DatArchive localStorage  */
 
 import { ipcRenderer } from 'electron'
-import ParallelAPI from 'parallel-scratch-api'
+import ParallelAPI from 'parallel-api'
 
 let profileURL
 
@@ -12,9 +12,9 @@ export function setup () {
     profileURL = gizmo.keyset.profileURL
     localStorage.setItem('activeGizmoURL', gizmo._url)
     gizmo.fullDependencies.forEach((d, idx) => {
-      inject(d.gizmoJS, d._url)
+      inject(d.gizmoJS, d.gizmoCSS, d._url)
     })
-    inject(gizmo.gizmoJS, gizmo._url)
+    inject(gizmo.gizmoJS, gizmo.gizmoCSS, gizmo._url)
   })
 
   ipcRenderer.on('inject-post', (event, post) => {
@@ -22,23 +22,23 @@ export function setup () {
   })
 }
 
-function inject (js, gizmoURL) {
-  // defines body and head of underlying webview DOM
-
+function inject (js, css, gizmoURL) {
   const body = document.body || document.getElementsByTagName('body')[0]
   const head = document.head || document.getElementsByTagName('head')[0]
-
-  // HACK defines SECURITY_POLICY constant to inject into the page. (surely
-  // there's a better way...)
 
   // const SECURITY_POLICY = `<meta http-equiv="Content-Security-Policy" content="script-src 'self';">`
   // <meta http-equiv="Content-Security-Policy" content="connect-src 'self' file: data: blob: filesystem:; default-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"/>
   const SECURITY_POLICY = `<meta http-equiv="Content-Security-Policy" content="default-src *;
-   img-src * 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' *;
-   style-src  'self' 'unsafe-inline' *">`
+   img-src * 'self' data: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' *;
+   style-src 'self' 'unsafe-inline' *">`
   head.prepend(SECURITY_POLICY)
 
-  // appends javascript to the <body>
+  if (css) {
+    const cssElement = document.createElement('style')
+    cssElement.type = 'text/css'
+    cssElement.appendChild(document.createTextNode(css))
+    head.appendChild(cssElement)
+  }
 
   if (js && gizmoURL) {
     const scriptElement = document.createElement('script')
@@ -48,15 +48,21 @@ function inject (js, gizmoURL) {
   }
 }
 
-// important! savePostscript is attached to the window and must be defined in
-// the prescript. the function gets credentials from localStorage, removes
-// the injected script from the dom, then writes the postscript to the user's
-// injestdb
+function togglePost (post) {
+  post.postDependencies.forEach((d, idx) => {
+    inject(d.gizmoJS, d.gizmoCSS, d._url)
+  })
+  window.postParams = JSON.parse(post.postParams)
+  inject(post.gizmo.postJS, post.gizmo.postCSS, post.gizmoURL)
+}
 
 async function savePostParams (postParams) {
   const gizmoURL = localStorage.getItem('activeGizmoURL')
   localStorage.removeItem('activeGizmoURL')
-  const postHTTP = window.location.href
+  let postHTTP = window.location.href
+  if (postHTTP.indexOf('?') !== -1) {
+    postHTTP = postHTTP.split('?')[0]
+  }
   const postText = window.prompt('Describe your post.')
   if (postParams && gizmoURL && postHTTP) {
     postParams = JSON.stringify(postParams)
@@ -70,12 +76,4 @@ async function savePostParams (postParams) {
     await userDB.post(profileURL, post)
   }
   ipcRenderer.sendToHost('reload-posts', window.location.href)
-}
-
-function togglePost (post) {
-  post.postDependencies.forEach((d, idx) => {
-    inject(d.gizmoJS, d._url)
-  })
-  window.postParams = JSON.parse(post.postParams)
-  inject(post.gizmo.postJS, post.gizmoURL)
 }

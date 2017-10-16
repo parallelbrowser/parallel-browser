@@ -86,13 +86,6 @@ export function createShellWindow () {
     promptInjectPost(win, post)
   })
 
-  // this listens for the current webview url from
-  // webview-preload/locationbar.js
-
-  ipcMain.on('get-webview-url', (event, url) => {
-    getActiveWindow().send('new-url', url) // sends to shell-window/ui/navbar/browser-script.js
-  })
-
   // end
 
   return win

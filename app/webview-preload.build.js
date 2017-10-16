@@ -7,7 +7,7 @@ var electron = require('electron');
 var rpc = _interopDefault(require('pauls-electron-rpc'));
 var errors = _interopDefault(require('beaker-error-constants'));
 var parseDatURL = _interopDefault(require('parse-dat-url'));
-var ParallelAPI = _interopDefault(require('parallel-scratch-api'));
+var ParallelAPI = _interopDefault(require('parallel-api'));
 
 // method which will populate window.beaker with the APIs deemed appropriate for the protocol
 var importWebAPIs = function () {
@@ -402,7 +402,8 @@ var keysManifest = {
   changeAppURL: 'promise',
   changeProfileURL: 'promise',
   remove: 'promise',
-  get: 'promise'
+  get: 'promise',
+  sendPulse: 'promise'
 };
 
 /* globals DatArchive */
@@ -478,6 +479,7 @@ if (window.location.protocol === 'beaker:') {
   beaker.keys.changeProfileURL = keysRPC.changeProfileURL;
   beaker.keys.remove = keysRPC.remove;
   beaker.keys.get = keysRPC.get;
+  beaker.keys.sendPulse = keysRPC.sendPulse;
 }
 
 // exported api
@@ -492,13 +494,6 @@ function setup () {
     window.locationbar.openUrl = openUrl;
     window.locationbar.closeMenus = closeMenus;
     window.locationbar.toggleLiveReloading = toggleLiveReloading;
-  } else {
-    // TCW CHANGES - this sends an asynchronous message to the listener at
-    // background-process/ui/windows.js with the href of the new window.
-
-    electron.ipcRenderer.send('get-webview-url', window.location.href);
-
-    // TCW -- END
   }
 }
 
@@ -560,9 +555,9 @@ function setup$2 () {
     profileURL = gizmo.keyset.profileURL;
     localStorage.setItem('activeGizmoURL', gizmo._url);
     gizmo.fullDependencies.forEach((d, idx) => {
-      inject(d.gizmoJS, d._url);
+      inject(d.gizmoJS, d.gizmoCSS, d._url);
     });
-    inject(gizmo.gizmoJS, gizmo._url);
+    inject(gizmo.gizmoJS, gizmo.gizmoCSS, gizmo._url);
   });
 
   electron.ipcRenderer.on('inject-post', (event, post) => {
@@ -570,23 +565,23 @@ function setup$2 () {
   });
 }
 
-function inject (js, gizmoURL) {
-  // defines body and head of underlying webview DOM
-
+function inject (js, css, gizmoURL) {
   const body = document.body || document.getElementsByTagName('body')[0];
   const head = document.head || document.getElementsByTagName('head')[0];
-
-  // HACK defines SECURITY_POLICY constant to inject into the page. (surely
-  // there's a better way...)
 
   // const SECURITY_POLICY = `<meta http-equiv="Content-Security-Policy" content="script-src 'self';">`
   // <meta http-equiv="Content-Security-Policy" content="connect-src 'self' file: data: blob: filesystem:; default-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"/>
   const SECURITY_POLICY = `<meta http-equiv="Content-Security-Policy" content="default-src *;
-   img-src * 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' *;
-   style-src  'self' 'unsafe-inline' *">`;
+   img-src * 'self' data: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' *;
+   style-src 'self' 'unsafe-inline' *">`;
   head.prepend(SECURITY_POLICY);
 
-  // appends javascript to the <body>
+  if (css) {
+    const cssElement = document.createElement('style');
+    cssElement.type = 'text/css';
+    cssElement.appendChild(document.createTextNode(css));
+    head.appendChild(cssElement);
+  }
 
   if (js && gizmoURL) {
     const scriptElement = document.createElement('script');
@@ -596,15 +591,21 @@ function inject (js, gizmoURL) {
   }
 }
 
-// important! savePostscript is attached to the window and must be defined in
-// the prescript. the function gets credentials from localStorage, removes
-// the injected script from the dom, then writes the postscript to the user's
-// injestdb
+function togglePost (post) {
+  post.postDependencies.forEach((d, idx) => {
+    inject(d.gizmoJS, d.gizmoCSS, d._url);
+  });
+  window.postParams = JSON.parse(post.postParams);
+  inject(post.gizmo.postJS, post.gizmo.postCSS, post.gizmoURL);
+}
 
 async function savePostParams (postParams) {
   const gizmoURL = localStorage.getItem('activeGizmoURL');
   localStorage.removeItem('activeGizmoURL');
-  const postHTTP = window.location.href;
+  let postHTTP = window.location.href;
+  if (postHTTP.indexOf('?') !== -1) {
+    postHTTP = postHTTP.split('?')[0];
+  }
   const postText = window.prompt('Describe your post.');
   if (postParams && gizmoURL && postHTTP) {
     postParams = JSON.stringify(postParams);
@@ -618,14 +619,6 @@ async function savePostParams (postParams) {
     await userDB.post(profileURL, post);
   }
   electron.ipcRenderer.sendToHost('reload-posts', window.location.href);
-}
-
-function togglePost (post) {
-  post.postDependencies.forEach((d, idx) => {
-    inject(d.gizmoJS, d._url);
-  });
-  window.postParams = JSON.parse(post.postParams);
-  inject(post.gizmo.postJS, post.gizmoURL);
 }
 
 // TCW CHANGES --- import inject scripts
@@ -646,7 +639,7 @@ electron.webFrame.registerURLSchemeAsPrivileged('dat', { bypassCSP: false });
 
 // setup APIs
 importWebAPIs();
-if (['beaker:', 'dat:', 'https:'].includes(window.location.protocol) ||
+if (['beaker:', 'dat:', 'https:', 'http:'].includes(window.location.protocol) ||
     (window.location.protocol === 'http:' && window.location.hostname === 'localhost')) {
   window.DatArchive = DatArchive$1;
 }
@@ -663,7 +656,7 @@ setup$2();
 
 // TCW -- END
 
-},{"beaker-error-constants":12,"electron":undefined,"parallel-scratch-api":112,"parse-dat-url":114,"pauls-electron-rpc":116}],2:[function(require,module,exports){
+},{"beaker-error-constants":12,"electron":undefined,"parallel-api":112,"parse-dat-url":124,"pauls-electron-rpc":126}],2:[function(require,module,exports){
 (function (process){
 /* Copyright (c) 2013 Rod Vagg, MIT License */
 
@@ -2091,7 +2084,7 @@ function filter(arr, cb) {
   return res;
 }
 
-},{"expand-range":27,"preserve":120,"repeat-element":148}],14:[function(require,module,exports){
+},{"expand-range":27,"preserve":130,"repeat-element":158}],14:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -4082,7 +4075,7 @@ function length(val) {
   return val.toString().length;
 }
 
-},{"is-number":45,"isobject":50,"randomatic":132,"repeat-element":148,"repeat-string":149}],31:[function(require,module,exports){
+},{"is-number":45,"isobject":50,"randomatic":142,"repeat-element":158,"repeat-string":159}],31:[function(require,module,exports){
 /*!
  * for-in <https://github.com/jonschlinkert/for-in>
  *
@@ -9024,7 +9017,7 @@ function _wrap(method, methodP) {
   }
 }
 
-},{"promise":122}],77:[function(require,module,exports){
+},{"promise":132}],77:[function(require,module,exports){
 
 //define the key ordering for level-sublevelq
 
@@ -12426,7 +12419,7 @@ module.exports.repair = deprecate(
 )
 
 }).call(this,require('_process'))
-},{"./batch":100,"./leveldown":170,"./util":102,"_process":180,"deferred-leveldown":17,"events":173,"level-codec":53,"level-errors":55,"level-iterator-stream":56,"prr":130,"util":206,"xtend":167}],102:[function(require,module,exports){
+},{"./batch":100,"./leveldown":170,"./util":102,"_process":180,"deferred-leveldown":17,"events":173,"level-codec":53,"level-errors":55,"level-iterator-stream":56,"prr":140,"util":206,"xtend":167}],102:[function(require,module,exports){
 /* Copyright (c) 2012-2016 LevelUP contributors
  * See list at <https://github.com/level/levelup#contributing>
  * MIT License
@@ -14144,7 +14137,7 @@ utils.escapeRe = function escapeRe(str) {
 module.exports = utils;
 
 }).call(this,require('_process'))
-},{"_process":180,"arr-diff":6,"array-unique":8,"braces":13,"expand-brackets":26,"extglob":28,"filename-regex":29,"is-extglob":43,"is-glob":44,"kind-of":51,"normalize-path":110,"object.omit":111,"parse-glob":115,"path":178,"regex-cache":146}],110:[function(require,module,exports){
+},{"_process":180,"arr-diff":6,"array-unique":8,"braces":13,"expand-brackets":26,"extglob":28,"filename-regex":29,"is-extglob":43,"is-glob":44,"kind-of":51,"normalize-path":110,"object.omit":111,"parse-glob":125,"path":178,"regex-cache":156}],110:[function(require,module,exports){
 /*!
  * normalize-path <https://github.com/jonschlinkert/normalize-path>
  *
@@ -14165,7 +14158,7 @@ module.exports = function normalizePath(str, stripTrailing) {
   return str;
 };
 
-},{"remove-trailing-separator":147}],111:[function(require,module,exports){
+},{"remove-trailing-separator":157}],111:[function(require,module,exports){
 /*!
  * object.omit <https://github.com/jonschlinkert/object.omit>
  *
@@ -14208,7 +14201,7 @@ module.exports = function omit(obj, keys) {
 };
 
 },{"for-own":32,"is-extendable":42}],112:[function(require,module,exports){
-const InjestDB = require('scratch-gest')
+const InjestDB = require('parallel-ingest')
 const coerce = require('./lib/coerce')
 
 // exported api
@@ -14264,7 +14257,9 @@ exports.open = async function (userArchive) {
         gizmoDependencies: coerce.arrayOfDependencies(record.gizmoDependencies),
         postDependencies: coerce.arrayOfDependencies(record.postDependencies),
         gizmoJS: coerce.string(record.gizmoJS),
+        gizmoCSS: coerce.string(record.gizmoCSS),
         postJS: coerce.string(record.postJS),
+        postCSS: coerce.string(record.postCSS),
         createdAt: coerce.number(record.createdAt, {required: true}),
         receivedAt: Date.now()
       })
@@ -14291,7 +14286,9 @@ exports.open = async function (userArchive) {
 
     // index the followers
     db.profile.get(userArchive).then(async profile => {
-      profile.followUrls.forEach(url => db.addArchive(url))
+      if (profile) {
+        profile.followUrls.forEach(url => db.addArchive(url))
+      }
     })
   }
 
@@ -14332,9 +14329,9 @@ exports.open = async function (userArchive) {
       return db.profile.get(archiveUrl)
     },
 
-    setProfile (archive, profile) {
+    async setProfile (archive, profile) {
       var archiveUrl = coerce.archiveUrl(archive)
-      return db.profile.upsert(archiveUrl, profile)
+      await db.profile.upsert(archiveUrl, profile)
     },
 
     async setAvatar (archive, imgData, extension) {
@@ -14558,7 +14555,9 @@ exports.open = async function (userArchive) {
       gizmoDependencies,
       postDependencies,
       gizmoJS,
-      postJS
+      gizmoCSS,
+      postJS,
+      postCSS
     }) {
       gizmoName = coerce.string(gizmoName)
       gizmoDescription = coerce.string(gizmoDescription)
@@ -14568,7 +14567,9 @@ exports.open = async function (userArchive) {
       postDependencies = coerce.arrayOfDependencies(postDependencies)
       postDependencies = await Promise.all(postDependencies.map(async d => await this.getGizmo(d.url)))
       gizmoJS = coerce.string(gizmoJS)
+      gizmoCSS = coerce.string(gizmoCSS)
       postJS = coerce.string(postJS)
+      postCSS = coerce.string(postCSS)
       const createdAt = Date.now()
       return db.gizmos.add(archive, {
         gizmoName,
@@ -14577,7 +14578,9 @@ exports.open = async function (userArchive) {
         gizmoDependencies,
         postDependencies,
         gizmoJS,
+        gizmoCSS,
         postJS,
+        postCSS,
         createdAt
       })
     },
@@ -14749,6 +14752,27 @@ exports.open = async function (userArchive) {
       }
     },
 
+    async subscribeMany (archive, gizmoArray) {
+      var archiveUrl = coerce.archiveUrl(archive)
+      var changes = await db.profile.where('_origin').equals(archiveUrl).update(record => {
+        record.subgizmos = record.subgizmos || []
+        gizmoArray.forEach(gizmo => {
+          if (!record.subgizmos.find(sg => sg.url === gizmo._url)) {
+            record.subgizmos.push({
+              url: gizmo._url,
+              origin: gizmo._origin,
+              author: gizmo.author.name,
+              name: gizmo.gizmoName
+            })
+          }
+        })
+        return record
+      })
+      if (changes === 0) {
+        throw new Error('Failed to subscribe: gizmo record already exists.')
+      }
+    },
+
     async unsubscribe (archive, gizmo) {
       var archiveUrl = coerce.archiveUrl(archive)
       var changes = await db.profile.where('_origin').equals(archiveUrl).update(record => {
@@ -14897,7 +14921,7 @@ exports.open = async function (userArchive) {
   }
 }
 
-},{"./lib/coerce":113,"scratch-gest":152}],113:[function(require,module,exports){
+},{"./lib/coerce":113,"parallel-ingest":114}],113:[function(require,module,exports){
 exports.string = function (v) {
   if (typeof v === 'number') v = v.toString()
   if (typeof v === 'string') return v
@@ -15029,6 +15053,1797 @@ exports.recordUrl = function (v) {
 }
 
 },{}],114:[function(require,module,exports){
+/* globals window */
+
+const EventEmitter = require('events')
+const level = require('level-browserify')
+const sublevel = require('level-sublevel')
+const levelPromisify = require('level-promise')
+const {debug, veryDebug, assert} = require('./lib/util')
+const {SchemaError} = require('./lib/errors')
+const Schemas = require('./lib/schemas')
+const Indexer = require('./lib/indexer')
+
+class IngestDB extends EventEmitter {
+  constructor (name, opts = {}) {
+    super()
+    if (typeof window === 'undefined' && !opts.DatArchive) {
+      throw new Error('Must provide {DatArchive} opt when using IngestDB outside the browser.')
+    }
+    this.level = false
+    this.name = name
+    this.version = 0
+    this.isBeingOpened = false
+    this.isOpen = false
+    this.DatArchive = opts.DatArchive || window.DatArchive
+    this._schemas = []
+    this._archives = {}
+    this._tablesToRebuild = []
+    this._activeTableNames = []
+    this._activeSchema = null
+    this._tablePathPatterns = []
+    this._dbReadyPromise = new Promise((resolve, reject) => {
+      this.once('open', () => resolve(this))
+      this.once('open-failed', reject)
+    })
+  }
+
+  async open () {
+    // guard against duplicate opens
+    if (this.isBeingOpened || this.level) {
+      veryDebug('duplicate open, returning ready promise')
+      return this._dbReadyPromise
+    }
+    if (this.isOpen) {
+      return
+    }
+    this.isBeingOpened = true
+    Schemas.addBuiltinTableSchemas(this)
+
+    // open the db
+    debug('opening')
+    try {
+      this.level = sublevel(level(this.name, {valueEncoding: 'json'}))
+      levelPromisify(this.level)
+
+      // run upgrades
+      try {
+        var oldVersion = (await this.level.get('version')) || 0
+      } catch (e) {
+        oldVersion = 0
+      }
+      if (oldVersion < this.version) {
+        await runUpgrades({db: this, oldVersion})
+        await this.level.put('version', this.version)
+      }
+
+      // construct the final ingestdb object
+      this._activeSchema = this._schemas.reduce(Schemas.merge, {})
+      this.isBeingOpened = false
+      this.isOpen = true
+      Schemas.addTables(this)
+      let needsRebuild = await Indexer.resetOutdatedIndexes(this)
+      await Indexer.loadArchives(this, needsRebuild)
+
+      // events
+      debug('opened')
+      this.emit('open')
+    } catch (e) {
+      console.error('Upgrade has failed', e)
+      this.isBeingOpened = false
+      this.emit('open-failed', e)
+    }
+  }
+
+  async close () {
+    debug('closing')
+    this.isOpen = false
+    if (this.level) {
+      Schemas.removeTables(this)
+      this.listArchives().forEach(archive => Indexer.unwatchArchive(this, archive))
+      await new Promise(resolve => this.level.close(resolve))
+      this.level = null
+      veryDebug('db .level closed')
+    } else {
+      veryDebug('db .level didnt yet exist')
+    }
+  }
+
+  schema (desc) {
+    assert(!this.level && !this.isBeingOpened, SchemaError, 'Cannot add version when database is open')
+    Schemas.validateAndSanitize(desc)
+
+    // update current version
+    this.version = Math.max(this.version, desc.version)
+    this._schemas.push(desc)
+    this._schemas.sort(lowestVersionFirst)
+  }
+
+  get tables () {
+    return this._activeTableNames
+      .filter(name => !name.startsWith('_'))
+      .map(name => this[name])
+  }
+
+  async prepareArchive (archive) {
+    archive = typeof archive === 'string' ? new (this.DatArchive)(archive) : archive
+    await Promise.all(this.tables.map(table => {
+      if (!table.schema.singular) {
+        return archive.mkdir(`/${table.name}`).catch(() => {})
+      }
+    }))
+  }
+
+  async addArchive (archive, {prepare} = {}) {
+    // create our own new DatArchive instance
+    archive = typeof archive === 'string' ? new (this.DatArchive)(archive) : archive
+    if (!(archive.url in this._archives)) {
+      // store and process
+      debug('Ingest.addArchive', archive.url)
+      this._archives[archive.url] = archive
+      if (prepare !== false) await this.prepareArchive(archive)
+      await Indexer.addArchive(this, archive)
+    }
+  }
+
+  async addArchives (archives, opts) {
+    archives = Array.isArray(archives) ? archives : [archives]
+    return Promise.all(archives.map(a => this.addArchive(a, opts)))
+  }
+
+  async removeArchive (archive) {
+    archive = typeof archive === 'string' ? new (this.DatArchive)(archive) : archive
+    if (archive.url in this._archives) {
+      debug('Ingest.removeArchive', archive.url)
+      delete this._archives[archive.url]
+      await Indexer.removeArchive(this, archive)
+    }
+  }
+
+  listArchives (archive) {
+    return Object.keys(this._archives).map(url => this._archives[url])
+  }
+
+  static list () {
+    // TODO
+  }
+
+  static delete (name) {
+    if (typeof level.destroy !== 'function') {
+      throw new Error('Cannot .delete() databases outside of the browser environment. You should just delete the files manually.')
+    }
+
+    // delete the database from indexeddb
+    return new Promise((resolve, reject) => {
+      level.destroy(name, err => {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
+  }
+}
+module.exports = IngestDB
+
+// run the database's queued upgrades
+async function runUpgrades ({db, oldVersion}) {
+  // get the ones that haven't been run
+  var upgrades = db._schemas.filter(s => s.version > oldVersion)
+  db._activeSchema = db._schemas.filter(s => s.version <= oldVersion).reduce(Schemas.merge, {})
+  if (oldVersion > 0 && !db._activeSchema) {
+    throw new SchemaError(`Missing schema for previous version (${oldVersion}), unable to run upgrade.`)
+  }
+  debug(`running upgrade from ${oldVersion}, ${upgrades.length} upgrade(s) found`)
+
+  // diff and apply changes
+  var tablesToRebuild = []
+  for (let schema of upgrades) {
+    // compute diff
+    debug(`applying upgrade for version ${schema.version}`)
+    var diff = Schemas.diff(db._activeSchema, schema)
+
+    // apply diff
+    await Schemas.applyDiff(db, diff)
+    tablesToRebuild.push(diff.tablesToRebuild)
+
+    // update current schema
+    db._activeSchema = Schemas.merge(db._activeSchema, schema)
+    debug(`version ${schema.version} applied`)
+  }
+
+  // track the tables that need rebuilding
+  db._tablesToRebuild = Array.from(new Set(...tablesToRebuild))
+  debug('Ingest.runUpgrades complete', (db._tablesToRebuild.length === 0) ? '- no rebuilds needed' : 'REBUILD REQUIRED')
+}
+
+function lowestVersionFirst (a, b) {
+  return a.version - b.version
+}
+
+},{"./lib/errors":115,"./lib/indexer":116,"./lib/schemas":119,"./lib/util":121,"events":173,"level-browserify":52,"level-promise":75,"level-sublevel":79}],115:[function(require,module,exports){
+class ExtendableError extends Error {
+  constructor (msg) {
+    super(msg)
+    this.name = this.constructor.name
+    this.message = msg
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, this.constructor)
+    } else {
+      this.stack = (new Error(msg)).stack
+    }
+  }
+}
+
+exports.SchemaError = class SchemaError extends ExtendableError {
+  constructor (msg) {
+    super(msg || 'Schema error')
+    this.schemaError = true
+  }
+}
+
+exports.ParameterError = class ParameterError extends ExtendableError {
+  constructor (msg) {
+    super(msg || 'Invalid parameter')
+    this.parameterError = true
+  }
+}
+
+exports.QueryError = class QueryError extends ExtendableError {
+  constructor (msg) {
+    super(msg || 'Query is malformed')
+    this.queryError = true
+  }
+}
+
+},{}],116:[function(require,module,exports){
+
+const flatten = require('lodash.flatten')
+const anymatch = require('anymatch')
+const Lev = require('./level-wrapper')
+const {debug, veryDebug, lock} = require('./util')
+
+// exported api
+// =
+
+exports.loadArchives = async function (db, needsRebuild) {
+  debug('Indexer.loadArchives, needsRebuild=' + needsRebuild)
+  var promises = []
+  await db._indexMeta.each(indexMeta => {
+    debug('loading archive', indexMeta._url, indexMeta.localPath)
+    // load the archive
+    const archive = new (db.DatArchive)(indexMeta._url, {localPath: indexMeta.localPath})
+    archive.isWritable = indexMeta.isWritable
+    if (archive.isWritable) db.prepareArchive(archive)
+    db._archives[archive.url] = archive
+
+    // process the archive
+    promises.push(indexArchive(db, archive, needsRebuild))
+    exports.watchArchive(db, archive)
+  })
+  await Promise.all(promises)
+  debug('Indexer.loadArchives done')
+}
+
+exports.addArchive = async function (db, archive) {
+  veryDebug('Indexer.addArchive', archive.url)
+  // store entry in the meta db
+  var info = await archive.getInfo()
+  archive.isWritable = info.isOwner
+  await db._indexMeta.level.put(archive.url, {
+    _url: archive.url,
+    version: 0,
+    isWritable: archive.isWritable,
+    localPath: archive._localPath
+  })
+  // process the archive
+  await indexArchive(db, archive)
+  exports.watchArchive(db, archive)
+}
+
+exports.removeArchive = async function (db, archive) {
+  veryDebug('Indexer.removeArchive', archive.url)
+  await unindexArchive(db, archive)
+  exports.unwatchArchive(db, archive)
+}
+
+exports.watchArchive = async function (db, archive) {
+  veryDebug('Indexer.watchArchive', archive.url)
+  if (archive.fileEvents) {
+    console.error('watchArchive() called on archive that already is being watched', archive.url)
+    return
+  }
+  if (archive._loadPromise) {
+    // HACK node-dat-archive fix
+    // Because of a weird API difference btwn node-dat-archive and beaker's DatArchive...
+    // ...the event-stream methods need await _loadPromise
+    // -prf
+    await archive._loadPromise
+  }
+  archive.fileEvents = archive.createFileActivityStream(db.tablePathPatterns)
+  // autodownload all changes to the watched files
+  archive.fileEvents.addEventListener('invalidated', ({path}) => archive.download(path))
+  // autoindex on changes
+  // TODO debounce!!!!
+  archive.fileEvents.addEventListener('changed', ({path}) => indexArchive(db, archive))
+}
+
+exports.unwatchArchive = function (db, archive) {
+  veryDebug('unwatching', archive.url)
+  if (archive.fileEvents) {
+    archive.fileEvents.close()
+    archive.fileEvents = null
+  }
+}
+
+exports.waitTillIndexed = async function (db, archive) {
+  debug('Indexer.waitTillIndexed', archive.url)
+  // fetch the current state of the archive's index
+  var [indexMeta, archiveMeta] = await Promise.all([
+    db._indexMeta.level.get(archive.url),
+    archive.getInfo()
+  ])
+  indexMeta = indexMeta || {version: 0}
+
+  // done?
+  if (indexMeta.version >= archiveMeta.version) {
+    debug('Indexer.waitTillIndexed already indexed')
+    return
+  }
+
+  return new Promise(resolve => {
+    db.on('indexes-updated', onIndex)
+    function onIndex (indexedArchive, version) {
+      if (indexedArchive.url === archive.url && version >= archiveMeta.version) {
+        db.removeListener('indexes-updated', onIndex)
+        resolve()
+      }
+    }
+  })
+}
+
+exports.resetOutdatedIndexes = async function (db) {
+  if (db._tablesToRebuild.length === 0) {
+    return false
+  }
+  debug(`Indexer.resetOutdatedIndexes need to rebuid ${db._tablesToRebuild.length} tables`)
+  veryDebug('Indexer.resetOutdatedIndexes tablesToRebuild', db._tablesToRebuild)
+
+  // clear tables
+  // TODO
+  // for simplicity, we just clear all data and re-index everything
+  // a better future design would only clear the tables that changed
+  // unfortunately our indexer isn't smart enough for that yet
+  // -prf
+  const tables = db.tables
+  for (let i = 0; i < tables.length; i++) {
+    let table = tables[i]
+    veryDebug('clearing', table.name)
+    // clear indexed data
+    await Lev.clear(table.level)
+  }
+
+  // reset meta records
+  var promises = []
+  await db._indexMeta.each(indexMeta => {
+    indexMeta.version = 0
+    promises.push(db._indexMeta.level.put(indexMeta._url, indexMeta))
+  })
+  await Promise.all(promises)
+
+  return true
+}
+
+// figure how what changes need to be processed
+// then update the indexes
+async function indexArchive (db, archive, needsRebuild) {
+  debug('Indexer.indexArchive', archive.url, {needsRebuild})
+  var release = await lock(`index:${archive.url}`)
+  try {
+    // sanity check
+    if (!db.isOpen) {
+      return
+    }
+    if (!db.level) {
+      return console.log('indexArchive called on corrupted db')
+    }
+
+    // fetch the current state of the archive's index
+    var [indexMeta, archiveMeta] = await Promise.all([
+      db._indexMeta.level.get(archive.url).catch(e => null),
+      archive.getInfo()
+    ])
+    indexMeta = indexMeta || {version: 0}
+
+    // has this version of the archive been processed?
+    if (indexMeta && indexMeta.version >= archiveMeta.version) {
+      debug('Indexer.indexArchive no index needed for', archive.url)
+      return // yes, stop
+    }
+    debug('Indexer.indexArchive ', archive.url, 'start', indexMeta.version, 'end', archiveMeta.version)
+
+    // find and apply all changes which haven't yet been processed
+    var updates = await scanArchiveHistoryForUpdates(db, archive, {
+      start: indexMeta.version + 1,
+      end: archiveMeta.version + 1
+    })
+    debug('updates after scanning', updates)
+    debug('archive after scanning', archive)
+    var results = await applyUpdates(db, archive, archiveMeta, updates)
+    debug('Indexer.indexArchive applied', results.length, 'updates from', archive.url)
+
+    // update meta
+    await Lev.update(db._indexMeta.level, archive.url, {
+      _url: archive.url,
+      version: archiveMeta.version // record the version we've indexed
+    })
+
+    // emit
+    var updatedTables = new Set(results)
+    for (let tableName of updatedTables) {
+      if (!tableName) continue
+      db[tableName].emit('index-updated', archive, archiveMeta.version)
+    }
+    db.emit('indexes-updated', archive, archiveMeta.version)
+  } finally {
+    release()
+  }
+}
+exports.indexArchive = indexArchive
+
+// delete all records generated from the archive
+async function unindexArchive (db, archive) {
+  var release = await lock(`index:${archive.url}`)
+  try {
+    // find any relevant records and delete them from the indexes
+    var recordMatches = await scanArchiveForRecords(db, archive)
+    await Promise.all(recordMatches.map(match => match.table.level.del(match.recordUrl)))
+    await db._indexMeta.level.del(archive.url)
+  } finally {
+    release()
+  }
+}
+exports.unindexArchive = unindexArchive
+
+// internal methods
+// =
+
+// look through the given history slice
+// match against the tables' path patterns
+// return back the *latest* change to each matching changed record
+async function scanArchiveHistoryForUpdates (db, archive, {start, end}) {
+  var history = await archive.history({start, end})
+  debug('history in scanArchiveHistoryForUpdates', history)
+  var updates = {}
+  history.forEach(update => {
+    if (anymatch(db._tablePathPatterns, update.path)) {
+      updates[update.path] = update
+    }
+  })
+  return updates
+}
+
+// look through the archive for any files that generate records
+async function scanArchiveForRecords (db, archive) {
+  var recordFiles = await Promise.all(db.tables.map(table => {
+    return table.listRecordFiles(archive)
+  }))
+  return flatten(recordFiles)
+}
+
+// iterate the updates and apply them to the indexes
+async function applyUpdates (db, archive, archiveMeta, updates) {
+  return Promise.all(Object.keys(updates).map(async path => {
+    var update = updates[path]
+    if (update.type === 'del') {
+      return unindexFile(db, archive, update.path)
+    } else {
+      return readAndIndexFile(db, archive, archiveMeta, update.path)
+    }
+  }))
+}
+
+// read the file, find the matching table, validate, then store
+async function readAndIndexFile (db, archive, archiveMeta, filepath) {
+  const tables = db.tables
+  const fileUrl = archive.url + filepath
+  try {
+    // read file
+    var record = JSON.parse(await archive.readFile(filepath))
+
+    // index on the first matching table
+    for (var i = 0; i < tables.length; i++) {
+      let table = tables[i]
+      if (table.isRecordFile(filepath)) {
+        // validate if needed
+        if (table.schema.validator) {
+          record = table.schema.validator(record)
+        }
+        // add standard attributes
+        record._url = fileUrl
+        record._origin = archive.url
+        record._author = archiveMeta && archiveMeta.author && archiveMeta.author.url
+        // save
+        await table.level.put(record._url, record)
+        return table.name
+      }
+    }
+  } catch (e) {
+    console.log('Failed to index', fileUrl, e)
+  }
+  return false
+}
+
+async function unindexFile (db, archive, filepath) {
+  const tables = db.tables
+  const fileUrl = archive.url + filepath
+  try {
+    // unindex on the first matching table
+    for (var i = 0; i < tables.length; i++) {
+      let table = tables[i]
+      if (table.isRecordFile(filepath)) {
+        await table.level.del(fileUrl)
+        return table.name
+      }
+    }
+  } catch (e) {
+    console.log('Failed to unindex', fileUrl, e)
+  }
+  return false
+}
+
+},{"./level-wrapper":117,"./util":121,"anymatch":123,"lodash.flatten":103}],117:[function(require,module,exports){
+const through2 = require('through2')
+const {assert, debug, veryDebug} = require('./util')
+
+exports.update = async function (db, key, updates) {
+  key = toKey(key)
+  assert(updates && typeof updates === 'object')
+  var record = await db.get(key)
+  record = record || {}
+  for (var k in updates) {
+    record[k] = updates[k]
+  }
+  await db.put(key, record)
+}
+
+exports.clear = async function (db) {
+  return new Promise((resolve, reject) => {
+    var stream = db.createKeyStream()
+      .pipe(through2.obj((key, enc, cb) => db.del(key).then(cb, cb)))
+      .on('error', reject)
+      .on('end', () => resolve())
+    stream.resume()
+  })
+}
+
+exports.iterate = async function (query, fn) {
+  return new Promise((resolve, reject) => {
+    debug('Lev.iterate', query._table.name)
+
+    // select the sublevel for the query
+    var index
+    const {_table, _where} = query
+    if (_where && _where._index !== '_url') {
+      veryDebug('Lev.iterate setting stream factory to index', _where._index)
+      index = _table.level.indexes[_where._index]
+      if (!index) {
+        return reject(new Error('Invalid index: ' + _where._index))
+      }
+    } else {
+      veryDebug('Lev.iterate using default stream factory')
+      index = _table.level
+    }
+
+    // slice opts
+    var {_offset, _limit} = query
+    _offset = _offset || 0
+    _limit = _limit || false
+    veryDebug('Lev.iterate offset', _offset, 'limit', _limit)
+    veryDebug('Lev.iterate where', query._where)
+
+    // start stream
+    var resultIndex = 0
+    var numEmitted = 0
+    var isDone = false
+    var stream = index.createValueStream(makeStreamOpts(query))
+    stream.on('data', value => {
+      if (isDone) return
+      veryDebug('data', value)
+      if (resultIndex >= _offset && applyFilters(query, value)) {
+        // iter call
+        veryDebug('emitting')
+        fn(value)
+        veryDebug('emitted')
+        numEmitted++
+      }
+      resultIndex++
+      if (_limit && numEmitted >= _limit || applyUntil(query, value)) {
+        // hit limit/until, stop here
+        isDone = true
+        veryDebug('done')
+        // TODO we need to figure out how to stop the stream -prf
+        resolve()
+      }
+    })
+    stream.on('error', err => {
+      veryDebug('stream error', err)
+      reject(err)
+    })
+    stream.on('end', resolve)
+    stream.resume()
+  })
+}
+
+// internal methods
+// =
+
+function toKey (key) {
+  if (Array.isArray(key)) {
+    return key.join('!')
+  }
+  return key
+}
+
+function makeStreamOpts (query) {
+  const {_reverse, _where} = query
+  const opts = {reverse: _reverse}
+  if (_where) {
+    if (_where._only) {
+      opts.gte = opts.lte = _where._only
+    } else {
+      if (typeof _where._lowerBound !== 'undefined') {
+        let key = _where._lowerBoundInclusive ? 'gte' : 'gt'
+        opts[key] = _where._lowerBound
+      }
+      if (typeof _where._upperBound !== 'undefined') {
+        let key = _where._upperBoundInclusive ? 'lte' : 'lt'
+        opts[key] = _where._upperBound
+      }
+    }
+  }
+  veryDebug('stream opts', opts)
+  return opts
+}
+
+function applyFilters (query, value) {
+  for (let i = 0; i < query._filters.length; i++) {
+    if (!query._filters[i](value)) {
+      return false
+    }
+  }
+  return true
+}
+
+function applyUntil (query, value) {
+  return (query._until && query._until(value))
+}
+
+},{"./util":121,"through2":163}],118:[function(require,module,exports){
+const Lev = require('./level-wrapper')
+const IngestWhereClause = require('./where-clause')
+const Indexer = require('./indexer')
+const {assert, debug} = require('./util')
+const {QueryError, ParameterError} = require('./errors')
+
+class IngestQuery {
+  constructor (table) {
+    this._table = table
+    this._filters = []
+    this._reverse = false
+    this._offset = 0
+    this._limit = false
+    this._until = null
+    this._where = null
+  }
+
+  // () => IngestQuery
+  clone () {
+    var clone = new IngestQuery()
+    for (var k in this) {
+      if (k.startsWith('_')) {
+        clone[k] = this[k]
+      }
+    }
+    return clone
+  }
+
+  // () => Promise<Number>
+  async count () {
+    var count = 0
+    await this.each(() => { count++ })
+    return count
+  }
+
+  // () => Promise<Number>
+  async delete () {
+    var deletes = []
+    await this.each(record => {
+      const archive = this._table.db._archives[record._origin]
+      debug('IngestQuery.delete', record)
+      if (archive && archive.isWritable) {
+        const filepath = record._url.slice(record._origin.length)
+        deletes.push(
+          archive.unlink(filepath)
+            .then(() => Indexer.indexArchive(this._table.db, archive))
+        )
+      } else {
+        debug('IngestQuery.delete not enacted:', !archive ? 'Archive not found' : 'Archive not writable')
+      }
+    })
+    await Promise.all(deletes)
+    return deletes.length
+  }
+
+  // (Function) => Promise<Void>
+  async each (fn) {
+    return Lev.iterate(this, fn)
+  }
+
+  // (Function) => Promise<Void>
+  async eachKey (fn) {
+    assert(typeof fn === 'function', ParameterError, `First parameter of .eachKey() must be a function, got ${fn}`)
+    return this.each(cursor => {
+      // choose the key
+      var key = this._table.schema.primaryKey // default to the primary key
+      if (this._where && this._where._index) {
+        key = this._where._index // use the where clause's key if there is one
+      }
+      if (!key) key = '_url' // fallback to url
+
+      // emit all
+      if (Array.isArray(cursor[key])) {
+        cursor[key].forEach(v => fn(v))
+      } else {
+        fn(cursor[key])
+      }
+    })
+  }
+
+  // (Function) => Promise<Void>
+  async eachUrl (fn) {
+    assert(typeof fn === 'function', ParameterError, `First parameter of .eachUrl() must be a function, got ${fn}`)
+    return this.each(cursor => { fn(cursor._url) })
+  }
+
+  // (Function) => IngestQuery
+  filter (fn) {
+    assert(typeof fn === 'function', ParameterError, `First parameter of .filter() must be a function, got ${fn}`)
+    this._filters.push(fn)
+    return this
+  }
+
+  // () => Promise<Object>
+  async first () {
+    var arr = await this.limit(1).toArray()
+    return arr[0]
+  }
+
+  // () => Promise<Array<String>>
+  async keys () {
+    var keys = []
+    await this.eachKey(key => keys.push(key))
+    return keys
+  }
+
+  // () => Promise<Object>
+  async last () {
+    return this.reverse().first()
+  }
+
+  // (Number) => IngestQuery
+  limit (n) {
+    assert(typeof n === 'number', ParameterError, `The first parameter to .limit() must be a number, got ${n}`)
+    this._limit = n
+    return this
+  }
+
+  // (Number) => IngestQuery
+  offset (n) {
+    assert(typeof n === 'number', ParameterError, `The first parameter to .offset() must be a number, got ${n}`)
+    this._offset = n
+    return this
+  }
+
+  // (index) => IngestWhereClause
+  or (index) {
+    assert(this._where, QueryError, 'Can not have a .or() before a .where()')
+    // TODO
+  }
+
+  // (index) => IngestQuery
+  orderBy (index) {
+    assert(typeof index === 'string', ParameterError, `The first parameter to .orderBy() must be a string, got ${index}`)
+    assert(!this._where, QueryError, 'Can not have an .orderBy() and a .where() - where() implicitly sets the orderBy() to its key')
+    this._where = new IngestWhereClause(this, index)
+    return this
+  }
+
+  // () => Promise<Array<String>>
+  async urls () {
+    var urls = []
+    await this.eachUrl(url => urls.push(url))
+    return urls
+  }
+
+  // () => IngestQuery
+  reverse () {
+    this._reverse = true
+    return this
+  }
+
+  // () => Promise<Array<Object>>
+  async toArray () {
+    var records = []
+    await this.each(record => records.push(record))
+    return records
+  }
+
+  // () => Promise<Array<String>>
+  async uniqueKeys () {
+    return Array.from(new Set(await this.keys()))
+  }
+
+  // (Function) => IngestQuery
+  until (fn) {
+    assert(typeof fn === 'function', ParameterError, `First parameter of .until() must be a function, got ${fn}`)
+    this._until = fn
+    return this
+  }
+
+  // (Object|Function) => Promise<Number>
+  async update (objOrFn) {
+    var fn
+    if (objOrFn && typeof objOrFn === 'object') {
+      // create a function which applies the object updates
+      const obj = objOrFn
+      fn = record => {
+        for (var k in obj) {
+          if (k === '_url' || k === '_origin' || k === '_author') {
+            continue // skip special attrs
+          }
+          if (typeof obj[k] !== 'undefined') {
+            record[k] = obj[k]
+          }
+        }
+      }
+    } else if (typeof objOrFn === 'function') {
+      fn = objOrFn
+    } else {
+      throw new ParameterError(`First parameter of .update() must be a function or object, got ${objOrFn}`)
+    }
+
+    // apply updates
+    var updates = []
+    await this.each(record => {
+      const archive = this._table.db._archives[record._origin]
+      debug('IngestQuery.update', record)
+      if (archive && archive.isWritable) {
+        // run update
+        fn(record)
+
+        // run validation
+        if (this._table.schema.validator) {
+          let {_url, _origin, _author} = record
+          record = this._table.schema.validator(record)
+          record._url = _url
+          record._origin = _origin
+          record._author = _author
+        }
+
+        // run to-file pass
+        const fileData = (this._table.schema.toFile) ?
+          this._table.schema.toFile(record) :
+          record
+
+        // write to archive
+        const filepath = record._url.slice(record._origin.length)
+        updates.push(
+          archive.writeFile(filepath, JSON.stringify(fileData))
+            .then(() => {
+              if (typeof archive.commit === 'function') {
+                // legacy dat api
+                return archive.commit()
+              }
+            })
+            .then(() => Indexer.indexArchive(this._table.db, archive))
+        )
+      } else {
+        debug('IngestQuery.delete not enacted:', !archive ? 'Archive not found' : 'Archive not writable')
+      }
+    })
+    await Promise.all(updates)
+    return updates.length
+  }
+
+  // (index|query) => IngestWhereClause|IngestQuery
+  where (indexOrQuery) {
+    assert(!this._where, QueryError, 'Can not have two .where()s unless they are separated by a .or()')
+    this._where = new IngestWhereClause(this, indexOrQuery)
+    return this._where
+  }
+}
+
+module.exports = IngestQuery
+
+},{"./errors":115,"./indexer":116,"./level-wrapper":117,"./util":121,"./where-clause":122}],119:[function(require,module,exports){
+const IngestTable = require('./table')
+const Lev = require('./level-wrapper')
+const {diffArrays, assert, debug, veryDebug, deepClone} = require('./util')
+const {SchemaError} = require('./errors')
+
+exports.validateAndSanitize = function (schema) {
+  // validate and sanitize
+  assert(schema && typeof schema === 'object', SchemaError, `Must pass a schema object to db.schema(), got ${schema}`)
+  assert(schema.version > 0 && typeof schema.version === 'number', SchemaError, `The .version field is required and must be a number, got ${schema.version}`)
+  getTableNames(schema).forEach(tableName => {
+    var table = schema[tableName]
+    if (table === null) {
+      return // done, this is a deleted table
+    }
+    assert(!('singular' in table) || typeof table.singular === 'boolean', SchemaError, `The .singular field must be a bool, got ${table.singular}`)
+    assert(!table.index || typeof table.index === 'string' || isArrayOfStrings(table.index), SchemaError, `The .index field must be a string or an array of strings, got ${schema.index}`)
+    table.index = arrayify(table.index)
+
+    // always include _origin
+    if (!table.index.includes('_origin')) {
+      table.index.push('_origin')
+    }
+  })
+}
+
+// returns {add:[], change: [], remove: [], tablesToRebuild: []}
+// - `add` is an array of [name, tableDef]s
+// - `change` is an array of [name, tableChanges]s
+// - `remove` is an array of names
+// - `tablesToRebuild` is an array of names- tables that will need to be cleared and re-ingested
+// - applied using `applyDiff()`, below
+exports.diff = function (oldSchema, newSchema) {
+  if (!oldSchema) {
+    debug(`Schemas.diff creating diff for first version`)
+  } else {
+    debug(`Schemas.diff diffing ${oldSchema.version} against ${newSchema.version}`)
+  }
+  veryDebug('diff old', oldSchema)
+  veryDebug('diff new', newSchema)
+  // compare tables in both schemas
+  // and produce a set of changes which will modify the db
+  // to match `newSchema`
+  var diff = {add: [], change: [], remove: [], tablesToRebuild: []}
+  var allTableNames = new Set(getTableNames(oldSchema).concat(getTableNames(newSchema)))
+  for (let tableName of allTableNames) {
+    var oldSchemaHasTable = oldSchema ? (tableName in oldSchema) : false
+    var newSchemaHasTable = (newSchema[tableName] !== null)
+    if (oldSchemaHasTable && !newSchemaHasTable) {
+      // remove
+      diff.remove.push(tableName)
+    } else if (!oldSchemaHasTable && newSchemaHasTable) {
+      // add
+      diff.add.push([tableName, newSchema[tableName]])
+      diff.tablesToRebuild.push(tableName)
+    } else if (newSchema[tableName]) {
+      // different?
+      var tableChanges = diffTables(oldSchema[tableName], newSchema[tableName])
+      veryDebug('Schemas.diff diffTables', tableName, tableChanges)
+      if (tableChanges.indexDiff) {
+        diff.change.push([tableName, tableChanges])
+      }
+      if (tableChanges.needsRebuild) {
+        diff.tablesToRebuild.push(tableName)
+      }
+    }
+  }
+  veryDebug('diff result, add', diff.add, 'change', diff.change, 'remove', diff.remove, 'rebuilds', diff.tablesToRebuild)
+  return diff
+}
+
+// takes the return value of .diff()
+// updates `db`
+exports.applyDiff = async function (db, diff) {
+  debug('Schemas.applyDiff')
+  veryDebug('diff', diff)
+  await Promise.all(diff.remove.map(tableName => {
+    // deleted tables
+    return Lev.clear(db.level.sublevel(tableName))
+  }))
+  // NOTE
+  // only need to delete old tables
+  // everything else is a rebuild
+  // -prf
+}
+
+// add builtin table defs to the db object
+exports.addBuiltinTableSchemas = function (db) {
+  // metadata on each indexed record
+  db._schemas[0]._indexMeta = {index: []}
+}
+
+// add table defs to the db object
+exports.addTables = function (db) {
+  const tableNames = getActiveTableNames(db)
+  debug('Schemas.addTables', tableNames)
+  db._activeTableNames = tableNames
+  tableNames.forEach(tableName => {
+    db[tableName] = new IngestTable(db, tableName, db._activeSchema[tableName])
+    db._tablePathPatterns.push(db[tableName]._pathPattern)
+  })
+}
+
+// remove table defs from the db object
+exports.removeTables = function (db) {
+  const tableNames = getActiveTableNames(db)
+  debug('Schemas.removeTables', tableNames)
+  tableNames.forEach(tableName => {
+    delete db[tableName]
+  })
+}
+
+// helper to compute the current schema
+exports.merge = function (currentSchema, newSchema) {
+  var result = currentSchema ? deepClone(currentSchema) : {}
+  // apply updates
+  for (let k in newSchema) {
+    if (newSchema[k] === null) {
+      delete result[k]
+    } else if (typeof newSchema[k] === 'object' && !Array.isArray(newSchema[k])) {
+      result[k] = exports.merge(currentSchema[k], newSchema[k])
+    } else {
+      result[k] = newSchema[k]
+    }
+  }
+  return result
+}
+
+// helpers
+// =
+
+function diffTables (oldTableDef, newTableDef) {
+  const indexDiff = newTableDef.index ? diffArrays(oldTableDef.index, newTableDef.index) : false
+  return {
+    indexDiff,
+    needsRebuild: !!indexDiff ||
+      (oldTableDef.primaryKey !== newTableDef.primaryKey) ||
+      (oldTableDef.singular !== newTableDef.singular)
+  }
+}
+
+function getTableNames (schema, fn) {
+  if (!schema) {
+    return []
+  }
+  // all keys except 'version'
+  return Object.keys(schema).filter(k => k !== 'version')
+}
+
+function getActiveTableNames (db) {
+  var tableNames = new Set()
+  db._schemas.forEach(schema => {
+    getTableNames(schema).forEach(tableName => {
+      if (schema[tableName] === null) {
+        tableNames.delete(tableName)
+      } else {
+        tableNames.add(tableName)
+      }
+    })
+  })
+  return Array.from(tableNames)
+}
+
+function arrayify (v) {
+  if (typeof v === 'undefined') return []
+  return Array.isArray(v) ? v : [v]
+}
+
+function isArrayOfStrings (v) {
+  return Array.isArray(v) && v.reduce((acc, v) => acc && typeof v === 'string', true)
+}
+
+},{"./errors":115,"./level-wrapper":117,"./table":120,"./util":121}],120:[function(require,module,exports){
+const anymatch = require('anymatch')
+const EventEmitter = require('events')
+const IngestLevel = require('ingestdb-level')
+const Indexer = require('./indexer')
+const IngestQuery = require('./query')
+const {assert, debug, veryDebug, lock, toArchiveUrl} = require('./util')
+const {ParameterError, QueryError} = require('./errors')
+
+// exported api
+// =
+
+class IngestTable extends EventEmitter {
+  constructor (db, name, schema) {
+    super()
+    this.db = db
+    this.name = name
+    this.schema = schema
+    veryDebug('IngestTable', this.name, this.schema)
+    this._pathPattern = schema.singular ? `/${name}.json` : `/${name}${'/*'}.json`
+    // ^ HACKERY: the ${'/*'} is to fool sublime's syntax highlighting -prf
+
+    // construct db object
+    this.level = IngestLevel(db.level.sublevel(name), schema.index)
+  }
+
+  // queries
+  // =
+
+  // () => IngestQuery
+  query () {
+    return new IngestQuery(this)
+  }
+
+  // (DatArchive, record) => Promise<url>
+  async add (archive, record, noLockNeeded = false) {
+    assert(archive && (typeof archive === 'string' || typeof archive.url === 'string'), ParameterError, 'The first parameter of .add() must be an archive or url')
+    assert(record && typeof record === 'object', ParameterError, 'The second parameter of .add() must be a record object')
+
+    // run validation
+    if (this.schema.validator) {
+      record = this.schema.validator(record)
+    }
+
+    // run to-file pass
+    const fileData = (this.schema.toFile) ?
+      this.schema.toFile(record) :
+      record
+
+    // lookup the archive
+    archive = this.db._archives[typeof archive === 'string' ? archive : archive.url]
+    if (!archive) {
+      throw new QueryError('Unable to add(): the given archive is not part of the index')
+    }
+    if (!archive.isWritable) {
+      throw new QueryError('Unable to add(): the given archive is not owned by this user')
+    }
+
+    // build the path
+    var filepath
+    if (this.schema.singular) {
+      filepath = `/${this.name}.json`
+    } else {
+      let key = record[this.schema.primaryKey]
+      if (!key) throw new QueryError(`Unable to add(): the given record is missing the primary key attribute, ${this.schema.primaryKey}`)
+      filepath = `/${this.name}/${key}.json`
+    }
+    debug('Table.add', filepath)
+    veryDebug('Table.add archive', archive.url)
+    veryDebug('Table.add record', record)
+    var release = noLockNeeded === true ? noop : await lock(toArchiveUrl(archive))
+    try {
+      await archive.writeFile(filepath, JSON.stringify(fileData))
+      if (typeof archive.commit === 'function') {
+        // legacy api
+        await archive.commit()
+      }
+      await Indexer.indexArchive(this.db, archive)
+      return archive.url + filepath
+    } finally {
+      release()
+    }
+  }
+
+  // () => Promise<Number>
+  async count () {
+    return this.query().count()
+  }
+
+  // (url|DatArchive, key?) => Promise<url>
+  async delete (urlOrArchive, key) {
+    if (typeof urlOrArchive === 'string') {
+      return this.where('_url').equals(urlOrArchive).delete()
+    }
+    const filepath = (this.schema.singular)
+      ? `/${this.name}.json`
+      : `/${this.name}/${key}.json`
+    const url = urlOrArchive.url + filepath
+    return this.where('_url').equals(url).delete()
+  }
+
+  // (Function) => Promise<Void>
+  async each (fn) {
+    return this.query().each(fn)
+  }
+
+  // (Function) => IngestQuery
+  filter (fn) {
+    return this.query().filter(fn)
+  }
+
+  // (url) => Promise<Object>
+  // (archive) => Promise<Object>
+  // (archive, key) => Promise<Object>
+  // (index, value) => Promise<Object>
+  async get (...args) {
+    if (args.length === 2) {
+      if (typeof args[0] === 'string' && args[0].indexOf('://') === -1) {
+        return getByKeyValue(this, ...args)
+      }
+      return getMultiByKey(this, ...args)
+    }
+    if (typeof args[0] === 'string' && args[0].endsWith('.json')) {
+      return getByRecordUrl(this, ...args)
+    }
+    return getSingle(this, args[0])
+  }
+
+  // (Number) => IngestQuery
+  limit (n) {
+    return this.query().limit(n)
+  }
+
+  // (Number) => IngestQuery
+  offset (n) {
+    return this.query().offset(n)
+  }
+
+  // (index) => IngestQuery
+  orderBy (index) {
+    return this.query().orderBy(index)
+  }
+
+  // () => IngestQuery
+  reverse () {
+    return this.query().reverse()
+  }
+
+  // () => Promise<Array>
+  async toArray () {
+    return this.query().toArray()
+  }
+
+  // (record) => Promise<Number>
+  // (url, updates) => Promise<Number>
+  // (archive, updates) => Promise<Number>
+  // (archive, key, updates) => Promise<Number>
+  async update (...args) {
+    if (args.length === 3) {
+      return updateByKey(this, ...args)
+    }
+    if (args.length === 2) {
+      if (this.schema.singular && typeof args[0] === 'object') {
+        return updateSingular(this, ...args)
+      }
+      return updateByUrl(this, ...args)
+    }
+    return updateRecord(this, ...args)
+  }
+
+  // (url|archive, Object|Function) => Promise<Void | url>
+  async upsert (archive, objOrFn) {
+    assert(archive && (typeof archive === 'string' || typeof archive.url === 'string'), ParameterError, 'The first parameter of .upsert() must be an archive or url')
+    assert(objOrFn && (typeof objOrFn === 'object' || typeof objOrFn === 'function'), ParameterError, 'The second parameter of .upsert() must be a record object or an update function')
+
+    // update or add
+    var release = await lock(toArchiveUrl(archive))
+    try {
+      var changes = (this.schema.singular)
+        ? await updateSingular(this, archive, objOrFn, true)
+        : await updateByUrl(this, archive, objOrFn, true)
+      if (changes === 0) {
+        return this.add(archive, typeof objOrFn === 'function' ? objOrFn() : objOrFn, true)
+      }
+      return changes
+    } finally {
+      release()
+    }
+  }
+
+  // (index|query) => IngestWhereClause|IngestQuery
+  where (indexOrQuery) {
+    return this.query().where(indexOrQuery)
+  }
+
+  // record helpers
+  // =
+
+  // (String) => Boolean
+  isRecordFile (filepath) {
+    return anymatch(this._pathPattern, filepath)
+  }
+
+  // (DatArchive) => Array<Object>
+  async listRecordFiles (archive) {
+    try {
+      if (this.schema.singular) {
+        // check if the record exists on this archive
+        let filepath = `/${this.name}.json`
+        await archive.stat(filepath)
+        return [{recordUrl: archive.url + filepath, table: this}]
+      } else {
+        // scan for matching records
+        let records = await archive.readdir(this.name)
+        return records.filter(name => name.endsWith('.json')).map(name => {
+          return {
+            recordUrl: archive.url + '/' + this.name + '/' + name,
+            table: this
+          }
+        })
+      }
+    } catch (e) {
+      return []
+    }
+  }
+}
+
+function getByKeyValue (table, key, value) {
+  debug('getByKeyValue')
+  veryDebug('getByKeyValue table', table.name)
+  veryDebug('getByKeyValue key', key)
+  veryDebug('getByKeyValue value', value)
+  return table.where(key).equals(value).first()
+}
+
+function getMultiByKey (table, archive, key) {
+  debug('getMultiByKey')
+  veryDebug('getMultiByKey table', table.name)
+  veryDebug('getMultiByKey archive', archive)
+  veryDebug('getMultiByKey key', key)
+  var url = typeof archive === 'string' ? archive : archive.url
+  return table.where('_url').equals(`${url}/${table.name}/${key}.json`).first()
+}
+
+function getSingle (table, archive) {
+  debug('getSingle')
+  veryDebug('getSingle table', table.name)
+  veryDebug('getSingle archive', archive)
+  var url = typeof archive === 'string' ? archive : archive.url
+  return table.where('_url').equals(`${url}/${table.name}.json`).first()
+}
+
+function getByRecordUrl (table, url) {
+  debug('getByRecordUrl')
+  veryDebug('getByRecordUrl table', table.name)
+  veryDebug('getByRecordUrl url', url)
+  return table.where('_url').equals(url).first()
+}
+
+async function updateByKey (table, archive, key, updates, noLockNeeded = false) {
+  debug('updateByKey')
+  veryDebug('updateByKey table', table.name)
+  veryDebug('updateByKey archive', archive.url)
+  veryDebug('updateByKey key', key)
+  veryDebug('updateByKey updates', updates)
+  assert(archive && typeof archive.url === 'string', ParameterError, 'Invalid parameters given to update()')
+  assert(typeof key === 'string', ParameterError, 'Invalid parameters given to update()')
+  assert(updates && (typeof updates === 'object' || typeof updates === 'function'), ParameterError, 'Invalid parameters given to update()')
+
+  var release = noLockNeeded === true ? noop : await lock(toArchiveUrl(archive))
+  try {
+    return table.where(table.schema.primaryKey).equals(key).update(updates)
+  } finally {
+    release()
+  }
+}
+
+async function updateSingular (table, archive, updates, noLockNeeded = false) {
+  const archiveUrl = toArchiveUrl(archive)
+  debug('updateSingular')
+  veryDebug('updateSingular table', table.name)
+  veryDebug('updateSingular archive', archiveUrl)
+  veryDebug('updateSingular updates', updates)
+  assert(updates && (typeof updates === 'object' || typeof updates === 'function'), ParameterError, 'Invalid parameters given to update()')
+
+  var release = noLockNeeded === true ? noop : await lock(archiveUrl)
+  try {
+    const url = archiveUrl + `/${table.name}.json`
+    return table.where('_url').equals(url).update(updates)
+  } finally {
+    release()
+  }
+}
+
+async function updateByUrl (table, url, updates, noLockNeeded = false) {
+  debug('updateByUrl')
+  url = url && url.url ? url.url : url
+  veryDebug('updateByUrl table', table.name)
+  veryDebug('updateByUrl url', url)
+  veryDebug('updateByUrl updates', updates)
+  assert(typeof url === 'string', ParameterError, 'Invalid parameters given to update()')
+  assert(updates && (typeof updates === 'object' || typeof updates === 'function'), ParameterError, 'Invalid parameters given to update()')
+  if (url.endsWith('.json') === false && typeof updates === 'object') {
+    // this is probably the url of an archive - add the path
+    url += (url.endsWith('/') ? '' : '/') + table.name + '/' + updates[table.schema.primaryKey] + '.json'
+  }
+
+  var release = noLockNeeded === true ? noop : await lock(toArchiveUrl(url))
+  try {
+    return table.where('_url').equals(url).update(updates)
+  } finally {
+    release()
+  }
+}
+
+async function updateRecord (table, record, noLockNeeded = false) {
+  debug('updateRecord')
+  veryDebug('updateRecord table', table.name)
+  veryDebug('updateRecord record', record)
+  assert(record && typeof record._url === 'string', ParameterError, 'Invalid parameters given to update()')
+
+  var release = noLockNeeded === true ? noop : await lock(toArchiveUrl(record._url))
+  try {
+    return table.where('_url').equals(record._url).update(record)
+  } finally {
+    release()
+  }
+}
+
+function noop () {}
+
+module.exports = IngestTable
+
+},{"./errors":115,"./indexer":116,"./query":118,"./util":121,"anymatch":123,"events":173,"ingestdb-level":36}],121:[function(require,module,exports){
+(function (process){
+/* globals window process console */
+const AwaitLock = require('await-lock')
+const URL = (typeof window === 'undefined') ? require('url-parse') : window.URL
+
+// read log level from the environment
+const LOG_LEVEL = (typeof window === 'undefined'
+  ? +process.env.LOG_LEVEL
+  : +window.localStorage.LOG_LEVEL) || 0
+const LOG_LEVEL_DEBUG = 1
+const LOG_LEVEL_VERYDEBUG = 2
+
+// debug logging
+function noop () {}
+exports.debug = (LOG_LEVEL >= LOG_LEVEL_DEBUG) ? console.log : noop
+exports.veryDebug = (LOG_LEVEL >= LOG_LEVEL_VERYDEBUG) ? console.log : noop
+
+// assert helper
+exports.assert = function (cond, ErrorConstructor = Error, msg) {
+  if (!cond) {
+    throw new ErrorConstructor(msg)
+  }
+}
+
+// provide a diff of 2 arrays
+// eg diffArrays([1,2], [2,3]) => {add: [3], remove: [1]}
+// if no difference, returns false
+exports.diffArrays = function (left, right) {
+  var diff = {add: [], remove: []}
+
+  // iterate all values in the arrays
+  var union = new Set(left.concat(right))
+  for (let index of union) {
+    // push to add/remove based on left/right membership
+    var leftHas = left.indexOf(index) !== -1
+    var rightHas = right.indexOf(index) !== -1
+    if (leftHas && !rightHas) {
+      diff.remove.push(index)
+    } else if (!leftHas && rightHas) {
+      diff.add.push(index)
+    }
+  }
+
+  if (diff.add.length === 0 && diff.remove.add === 0) {
+    return false
+  }
+  return diff
+}
+
+exports.deepClone = function (v) {
+  return JSON.parse(JSON.stringify(v))
+}
+
+exports.toArchiveUrl = function (v) {
+  if (v) {
+    if (typeof v.url === 'string') {
+      v = v.url
+    }
+    const urlp = new URL(v)
+    return urlp.protocol + '//' + urlp.hostname
+  }
+  throw new Error('Not a valid archive')
+}
+
+// wraps await-lock in a simpler interface, with many possible locks
+// usage:
+/*
+async function foo () {
+  var release = await lock('bar')
+  // ...
+  release()
+}
+*/
+var locks = {}
+exports.lock = async function (key) {
+  if (!(key in locks)) locks[key] = new AwaitLock()
+
+  var lock = locks[key]
+  await lock.acquireAsync()
+  return lock.release.bind(lock)
+}
+
+}).call(this,require('_process'))
+},{"_process":180,"await-lock":11,"url-parse":165}],122:[function(require,module,exports){
+const {assert} = require('./util')
+const {ParameterError, QueryError} = require('./errors')
+const MAX_STRING = String.fromCharCode(65535)
+
+// exported api
+// =
+
+class IngestWhereClause {
+  constructor (query, index) {
+    this.query = query
+    this._index = index
+    this._only = undefined
+    this._lowerBound = undefined
+    this._lowerBoundInclusive = false
+    this._upperBound = undefined
+    this._upperBoundInclusive = false
+  }
+
+  // (lowerBound) => IngestQuery
+  above (lowerBound) {
+    this._lowerBound = lowerBound
+    this._lowerBoundInclusive = false
+    return this.query
+  }
+
+  // (lowerBound) => IngestQuery
+  aboveOrEqual (lowerBound) {
+    this._lowerBound = lowerBound
+    this._lowerBoundInclusive = true
+    return this.query
+  }
+
+  // (Array|...args) => IngestQuery
+  anyOf (...args) {
+    // do a between() of the min and max values
+    // then filter down to matches
+    args.sort()
+    var [lo, hi] = [args[0], args[args.length - 1]]
+    try {
+      args = toArrayOfStrings(args)
+    } catch (e) {
+      throw new QueryError('The parameters to .anyOf() must be strings or numbers')
+    }
+    return this.between(lo, hi, {includeLower: true, includeUpper: true})
+      .filter(record => {
+        return testValues(record[this._index], v => {
+          v = (v || '').toString()
+          return args.indexOf(v) !== -1
+        })
+      })
+  }
+
+  // (Array|...args) => IngestQuery
+  anyOfIgnoreCase (...args) {
+    // just filter down to matches
+    try {
+      args = toArrayOfStrings(args, {toLowerCase: true})
+    } catch (e) {
+      throw new QueryError('The parameters to .anyOfIgnoreCase() must be strings or numbers')
+    }
+    return this.query.filter(record => {
+      return testValues(record[this._index], v => {
+        v = (v || '').toString().toLowerCase()
+        return args.indexOf(v) !== -1
+      })
+    })
+  }
+
+  // (upperBound) => IngestQuery
+  below (upperBound) {
+    this._upperBound = upperBound
+    this._upperBoundInclusive = false
+    return this.query
+  }
+
+  // (upperBound) => IngestQuery
+  belowOrEqual (upperBound) {
+    this._upperBound = upperBound
+    this._upperBoundInclusive = true
+    return this.query
+  }
+
+  // (lowerBound, upperBound, opts) => IngestQuery
+  between (lowerBound, upperBound, {includeLower, includeUpper} = {}) {
+    this._lowerBound = lowerBound
+    this._upperBound = upperBound
+    this._lowerBoundInclusive = !!includeLower
+    this._upperBoundInclusive = !!includeUpper
+    return this.query
+  }
+
+  // (value) => IngestQuery
+  equals (value) {
+    this._only = value
+    return this.query
+  }
+
+  // (value) => IngestQuery
+  equalsIgnoreCase (value) {
+    // just filter down to matches
+    assert(typeof value !== 'object', QueryError, 'The parameter to .equalsIgnoreCase() must be a string or number')
+    value = (value || '').toString().toLowerCase()
+    return this.query.filter(record => {
+      return testValues(record[this._index], v => {
+        v = (v || '').toString().toLowerCase()
+        return v === value
+      })
+    })
+  }
+
+  // (Array|...args) => IngestQuery
+  noneOf (...args) {
+    // just filter down to matches
+    try {
+      args = toArrayOfStrings(args)
+    } catch (e) {
+      throw new QueryError('The parameters to .noneOf() must be strings or numbers')
+    }
+    return this.query.filter(record => {
+      return testValues(record[this._index], v => {
+        v = (v || '').toString()
+        return args.indexOf(v) === -1
+      })
+    })
+  }
+
+  // (value) => IngestQuery
+  notEqual (value) {
+    // just filter down to matches
+    return this.query.filter(record => {
+      return testValues(record[this._index], v => {
+        return v !== value
+      })
+    })
+  }
+
+  // (value) => IngestQuery
+  startsWith (value) {
+    assert(typeof value === 'string', ParameterError, `First parameter or .startsWith() must be a string, got ${value}`)
+    return this.between(value, value + MAX_STRING)
+  }
+
+  // (Array|...args) => IngestQuery
+  startsWithAnyOf (...args) {
+    // just filter down to matches
+    try {
+      args = toArrayOfStrings(args)
+    } catch (e) {
+      throw new QueryError('The parameters to .startsWithAnyOf() must be strings or numbers')
+    }
+    return this.query.filter(record => {
+      return testValues(record[this._index], v => {
+        v = (v || '').toString()
+        for (let i = 0; i < args.length; i++) {
+          if (v.startsWith(args[i])) {
+            return true
+          }
+        }
+        return false
+      })
+    })
+  }
+
+  // (Array|...args) => IngestQuery
+  startsWithAnyOfIgnoreCase (...args) {
+    // just filter down to matches
+    try {
+      args = toArrayOfStrings(args, {toLowerCase: true})
+    } catch (e) {
+      throw new QueryError('The parameters to .startsWithAnyOfIgnoreCase() must be strings or numbers')
+    }
+    return this.query.filter(record => {
+      return testValues(record[this._index], v => {
+        v = (v || '').toString().toLowerCase()
+        for (let i = 0; i < args.length; i++) {
+          if (v.startsWith(args[i])) {
+            return true
+          }
+        }
+        return false
+      })
+    })
+  }
+
+  // (value) => IngestQuery
+  startsWithIgnoreCase (value) {
+    assert(typeof value === 'string', ParameterError, `First parameter or .startsWith() must be a string, got ${value}`)
+    value = value.toLowerCase()
+    // just filter down to matches
+    return this.query.filter(record => {
+      return testValues(record[this._index], v => {
+        return (v || '').toString().toLowerCase().startsWith(value)
+      })
+    })
+  }
+}
+
+module.exports = IngestWhereClause
+
+// internal methods
+// =
+
+function testValues (v, fn) {
+  if (Array.isArray(v)) {
+    return v.reduce((agg, v) => agg || fn(v), false)
+  }
+  return fn(v)
+}
+
+function toArrayOfStrings (arr, {toLowerCase} = {}) {
+  return arr.map(v => {
+    if (typeof v === 'object') {
+      throw new ParameterError()
+    }
+    v = v ? v.toString() : ''
+    if (toLowerCase) v = v.toLowerCase()
+    return v
+  })
+}
+
+},{"./errors":115,"./util":121}],123:[function(require,module,exports){
+'use strict';
+
+var micromatch = require('micromatch');
+var normalize = require('normalize-path');
+var path = require('path'); // required for tests.
+var arrify = function(a) { return a == null ? [] : (Array.isArray(a) ? a : [a]); };
+
+var anymatch = function(criteria, value, returnIndex, startIndex, endIndex) {
+  criteria = arrify(criteria);
+  value = arrify(value);
+  if (arguments.length === 1) {
+    return anymatch.bind(null, criteria.map(function(criterion) {
+      return typeof criterion === 'string' && criterion[0] !== '!' ?
+        micromatch.matcher(criterion) : criterion;
+    }));
+  }
+  startIndex = startIndex || 0;
+  var string = value[0];
+  var altString, altValue;
+  var matched = false;
+  var matchIndex = -1;
+  function testCriteria(criterion, index) {
+    var result;
+    switch (Object.prototype.toString.call(criterion)) {
+    case '[object String]':
+      result = string === criterion || altString && altString === criterion;
+      result = result || micromatch.isMatch(string, criterion);
+      break;
+    case '[object RegExp]':
+      result = criterion.test(string) || altString && criterion.test(altString);
+      break;
+    case '[object Function]':
+      result = criterion.apply(null, value);
+      result = result || altValue && criterion.apply(null, altValue);
+      break;
+    default:
+      result = false;
+    }
+    if (result) {
+      matchIndex = index + startIndex;
+    }
+    return result;
+  }
+  var crit = criteria;
+  var negGlobs = crit.reduce(function(arr, criterion, index) {
+    if (typeof criterion === 'string' && criterion[0] === '!') {
+      if (crit === criteria) {
+        // make a copy before modifying
+        crit = crit.slice();
+      }
+      crit[index] = null;
+      arr.push(criterion.substr(1));
+    }
+    return arr;
+  }, []);
+  if (!negGlobs.length || !micromatch.any(string, negGlobs)) {
+    if (path.sep === '\\' && typeof string === 'string') {
+      altString = normalize(string);
+      altString = altString === string ? null : altString;
+      if (altString) altValue = [altString].concat(value.slice(1));
+    }
+    matched = crit.slice(startIndex, endIndex).some(testCriteria);
+  }
+  return returnIndex === true ? matchIndex : matched;
+};
+
+module.exports = anymatch;
+
+},{"micromatch":105,"normalize-path":110,"path":178}],124:[function(require,module,exports){
 const isNode = typeof window === 'undefined'
 const parse = isNode ? require('url').parse : browserParse
 
@@ -15058,7 +16873,7 @@ module.exports = function parseDatURL (str, parseQS) {
 function browserParse (str) {
   return new URL(str)
 }
-},{"url":201}],115:[function(require,module,exports){
+},{"url":201}],125:[function(require,module,exports){
 /*!
  * parse-glob <https://github.com/jonschlinkert/parse-glob>
  *
@@ -15216,10 +17031,10 @@ function unescape(str) {
   return str;
 }
 
-},{"glob-base":33,"is-dotfile":40,"is-extglob":43,"is-glob":44}],116:[function(require,module,exports){
+},{"glob-base":33,"is-dotfile":40,"is-extglob":43,"is-glob":44}],126:[function(require,module,exports){
 module.exports.exportAPI = require('./lib/export-api')
 module.exports.importAPI = require('./lib/import-api')
-},{"./lib/export-api":117,"./lib/import-api":118}],117:[function(require,module,exports){
+},{"./lib/export-api":127,"./lib/import-api":128}],127:[function(require,module,exports){
 (function (Buffer){
 const EventEmitter = require('events')
 const { Writable } = require('stream')
@@ -15487,7 +17302,7 @@ function errorObject (err) {
 }
 
 }).call(this,{"isBuffer":require("../../../../node_modules/is-buffer/index.js")})
-},{"../../../../node_modules/is-buffer/index.js":176,"./util":119,"electron":undefined,"events":173,"stream":199}],118:[function(require,module,exports){
+},{"../../../../node_modules/is-buffer/index.js":176,"./util":129,"electron":undefined,"events":173,"stream":199}],128:[function(require,module,exports){
 const EventEmitter = require('events')
 const { Readable, Writable } = require('stream')
 const { ipcRenderer } = require('electron')
@@ -15703,7 +17518,7 @@ module.exports = function (channelName, manifest, opts) {
   return api
 }
 
-},{"./util":119,"electron":undefined,"events":173,"stream":199}],119:[function(require,module,exports){
+},{"./util":129,"electron":undefined,"events":173,"stream":199}],129:[function(require,module,exports){
 (function (Buffer){
 
 module.exports.valueToIPCValue = function (v) {
@@ -15720,7 +17535,7 @@ module.exports.IPCValueToValue = function (v) {
   return v
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":171}],120:[function(require,module,exports){
+},{"buffer":171}],130:[function(require,module,exports){
 /*!
  * preserve <https://github.com/jonschlinkert/preserve>
  *
@@ -15775,7 +17590,7 @@ function randomize() {
 }
 
 var cache = {};
-},{}],121:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -15822,12 +17637,12 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":180}],122:[function(require,module,exports){
+},{"_process":180}],132:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./lib')
 
-},{"./lib":127}],123:[function(require,module,exports){
+},{"./lib":137}],133:[function(require,module,exports){
 'use strict';
 
 var asap = require('asap/raw');
@@ -16042,7 +17857,7 @@ function doResolve(fn, promise) {
   }
 }
 
-},{"asap/raw":10}],124:[function(require,module,exports){
+},{"asap/raw":10}],134:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -16057,7 +17872,7 @@ Promise.prototype.done = function (onFulfilled, onRejected) {
   });
 };
 
-},{"./core.js":123}],125:[function(require,module,exports){
+},{"./core.js":133}],135:[function(require,module,exports){
 'use strict';
 
 //This file contains the ES6 extensions to the core Promises/A+ API
@@ -16166,7 +17981,7 @@ Promise.prototype['catch'] = function (onRejected) {
   return this.then(null, onRejected);
 };
 
-},{"./core.js":123}],126:[function(require,module,exports){
+},{"./core.js":133}],136:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -16184,7 +17999,7 @@ Promise.prototype['finally'] = function (f) {
   });
 };
 
-},{"./core.js":123}],127:[function(require,module,exports){
+},{"./core.js":133}],137:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./core.js');
@@ -16194,7 +18009,7 @@ require('./es6-extensions.js');
 require('./node-extensions.js');
 require('./synchronous.js');
 
-},{"./core.js":123,"./done.js":124,"./es6-extensions.js":125,"./finally.js":126,"./node-extensions.js":128,"./synchronous.js":129}],128:[function(require,module,exports){
+},{"./core.js":133,"./done.js":134,"./es6-extensions.js":135,"./finally.js":136,"./node-extensions.js":138,"./synchronous.js":139}],138:[function(require,module,exports){
 'use strict';
 
 // This file contains then/promise specific extensions that are only useful
@@ -16326,7 +18141,7 @@ Promise.prototype.nodeify = function (callback, ctx) {
   });
 };
 
-},{"./core.js":123,"asap":9}],129:[function(require,module,exports){
+},{"./core.js":133,"asap":9}],139:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -16390,9 +18205,9 @@ Promise.disableSynchronous = function() {
   Promise.prototype.getState = undefined;
 };
 
-},{"./core.js":123}],130:[function(require,module,exports){
+},{"./core.js":133}],140:[function(require,module,exports){
 arguments[4][25][0].apply(exports,arguments)
-},{"dup":25}],131:[function(require,module,exports){
+},{"dup":25}],141:[function(require,module,exports){
 'use strict';
 
 var has = Object.prototype.hasOwnProperty;
@@ -16466,7 +18281,7 @@ function querystringify(obj, prefix) {
 exports.stringify = querystringify;
 exports.parse = querystring;
 
-},{}],132:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 /*!
  * randomatic <https://github.com/jonschlinkert/randomatic>
  *
@@ -16550,7 +18365,7 @@ function randomatic(pattern, length, options) {
   return res;
 };
 
-},{"is-number":133,"kind-of":135}],133:[function(require,module,exports){
+},{"is-number":143,"kind-of":145}],143:[function(require,module,exports){
 /*!
  * is-number <https://github.com/jonschlinkert/is-number>
  *
@@ -16574,9 +18389,9 @@ module.exports = function isNumber(num) {
   return (num - num + 1) >= 0;
 };
 
-},{"kind-of":134}],134:[function(require,module,exports){
+},{"kind-of":144}],144:[function(require,module,exports){
 arguments[4][51][0].apply(exports,arguments)
-},{"dup":51,"is-buffer":39}],135:[function(require,module,exports){
+},{"dup":51,"is-buffer":39}],145:[function(require,module,exports){
 var isBuffer = require('is-buffer');
 var toString = Object.prototype.toString;
 
@@ -16697,7 +18512,7 @@ module.exports = function kindOf(val) {
   return 'object';
 };
 
-},{"is-buffer":39}],136:[function(require,module,exports){
+},{"is-buffer":39}],146:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -16822,7 +18637,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":138,"./_stream_writable":140,"core-util-is":14,"inherits":38,"process-nextick-args":121}],137:[function(require,module,exports){
+},{"./_stream_readable":148,"./_stream_writable":150,"core-util-is":14,"inherits":38,"process-nextick-args":131}],147:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -16870,7 +18685,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":139,"core-util-is":14,"inherits":38}],138:[function(require,module,exports){
+},{"./_stream_transform":149,"core-util-is":14,"inherits":38}],148:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -17880,7 +19695,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":136,"./internal/streams/BufferList":141,"./internal/streams/destroy":142,"./internal/streams/stream":143,"_process":180,"core-util-is":14,"events":173,"inherits":38,"isarray":48,"process-nextick-args":121,"safe-buffer":151,"string_decoder/":162,"util":170}],139:[function(require,module,exports){
+},{"./_stream_duplex":146,"./internal/streams/BufferList":151,"./internal/streams/destroy":152,"./internal/streams/stream":153,"_process":180,"core-util-is":14,"events":173,"inherits":38,"isarray":48,"process-nextick-args":131,"safe-buffer":161,"string_decoder/":162,"util":170}],149:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -18095,7 +19910,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":136,"core-util-is":14,"inherits":38}],140:[function(require,module,exports){
+},{"./_stream_duplex":146,"core-util-is":14,"inherits":38}],150:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -18762,7 +20577,7 @@ Writable.prototype._destroy = function (err, cb) {
   cb(err);
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":136,"./internal/streams/destroy":142,"./internal/streams/stream":143,"_process":180,"core-util-is":14,"inherits":38,"process-nextick-args":121,"safe-buffer":151,"util-deprecate":166}],141:[function(require,module,exports){
+},{"./_stream_duplex":146,"./internal/streams/destroy":152,"./internal/streams/stream":153,"_process":180,"core-util-is":14,"inherits":38,"process-nextick-args":131,"safe-buffer":161,"util-deprecate":166}],151:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -18837,7 +20652,7 @@ module.exports = function () {
 
   return BufferList;
 }();
-},{"safe-buffer":151}],142:[function(require,module,exports){
+},{"safe-buffer":161}],152:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -18910,10 +20725,10 @@ module.exports = {
   destroy: destroy,
   undestroy: undestroy
 };
-},{"process-nextick-args":121}],143:[function(require,module,exports){
+},{"process-nextick-args":131}],153:[function(require,module,exports){
 module.exports = require('events').EventEmitter;
 
-},{"events":173}],144:[function(require,module,exports){
+},{"events":173}],154:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = exports;
 exports.Readable = exports;
@@ -18922,10 +20737,10 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":136,"./lib/_stream_passthrough.js":137,"./lib/_stream_readable.js":138,"./lib/_stream_transform.js":139,"./lib/_stream_writable.js":140}],145:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":146,"./lib/_stream_passthrough.js":147,"./lib/_stream_readable.js":148,"./lib/_stream_transform.js":149,"./lib/_stream_writable.js":150}],155:[function(require,module,exports){
 module.exports = require('./readable').Transform
 
-},{"./readable":144}],146:[function(require,module,exports){
+},{"./readable":154}],156:[function(require,module,exports){
 /*!
  * regex-cache <https://github.com/jonschlinkert/regex-cache>
  *
@@ -18996,7 +20811,7 @@ function memo(key, opts, regex) {
 module.exports.cache = cache;
 module.exports.basic = basic;
 
-},{"is-equal-shallow":41,"is-primitive":47}],147:[function(require,module,exports){
+},{"is-equal-shallow":41,"is-primitive":47}],157:[function(require,module,exports){
 (function (process){
 var isWin = process.platform === 'win32';
 
@@ -19013,7 +20828,7 @@ function endsInSeparator(str) {
 }
 
 }).call(this,require('_process'))
-},{"_process":180}],148:[function(require,module,exports){
+},{"_process":180}],158:[function(require,module,exports){
 /*!
  * repeat-element <https://github.com/jonschlinkert/repeat-element>
  *
@@ -19033,7 +20848,7 @@ module.exports = function repeat(ele, num) {
   return arr;
 };
 
-},{}],149:[function(require,module,exports){
+},{}],159:[function(require,module,exports){
 /*!
  * repeat-string <https://github.com/jonschlinkert/repeat-string>
  *
@@ -19105,7 +20920,7 @@ function repeat(str, num) {
   return res;
 }
 
-},{}],150:[function(require,module,exports){
+},{}],160:[function(require,module,exports){
 'use strict';
 
 /**
@@ -19145,7 +20960,7 @@ module.exports = function required(port, protocol) {
   return port !== 0;
 };
 
-},{}],151:[function(require,module,exports){
+},{}],161:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -19209,1796 +21024,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":171}],152:[function(require,module,exports){
-/* globals window */
-
-const EventEmitter = require('events')
-const level = require('level-browserify')
-const sublevel = require('level-sublevel')
-const levelPromisify = require('level-promise')
-const {debug, veryDebug, assert} = require('./lib/util')
-const {SchemaError} = require('./lib/errors')
-const Schemas = require('./lib/schemas')
-const Indexer = require('./lib/indexer')
-
-class IngestDB extends EventEmitter {
-  constructor (name, opts = {}) {
-    super()
-    if (typeof window === 'undefined' && !opts.DatArchive) {
-      throw new Error('Must provide {DatArchive} opt when using IngestDB outside the browser.')
-    }
-    this.level = false
-    this.name = name
-    this.version = 0
-    this.isBeingOpened = false
-    this.isOpen = false
-    this.DatArchive = opts.DatArchive || window.DatArchive
-    this._schemas = []
-    this._archives = {}
-    this._tablesToRebuild = []
-    this._activeTableNames = []
-    this._activeSchema = null
-    this._tablePathPatterns = []
-    this._dbReadyPromise = new Promise((resolve, reject) => {
-      this.once('open', () => resolve(this))
-      this.once('open-failed', reject)
-    })
-  }
-
-  async open () {
-    // guard against duplicate opens
-    if (this.isBeingOpened || this.level) {
-      veryDebug('duplicate open, returning ready promise')
-      return this._dbReadyPromise
-    }
-    if (this.isOpen) {
-      return
-    }
-    this.isBeingOpened = true
-    Schemas.addBuiltinTableSchemas(this)
-
-    // open the db
-    debug('opening')
-    try {
-      this.level = sublevel(level(this.name, {valueEncoding: 'json'}))
-      levelPromisify(this.level)
-
-      // run upgrades
-      try {
-        var oldVersion = (await this.level.get('version')) || 0
-      } catch (e) {
-        oldVersion = 0
-      }
-      if (oldVersion < this.version) {
-        await runUpgrades({db: this, oldVersion})
-        await this.level.put('version', this.version)
-      }
-
-      // construct the final ingestdb object
-      this._activeSchema = this._schemas.reduce(Schemas.merge, {})
-      this.isBeingOpened = false
-      this.isOpen = true
-      Schemas.addTables(this)
-      let needsRebuild = await Indexer.resetOutdatedIndexes(this)
-      await Indexer.loadArchives(this, needsRebuild)
-
-      // events
-      debug('opened')
-      this.emit('open')
-    } catch (e) {
-      console.error('Upgrade has failed', e)
-      this.isBeingOpened = false
-      this.emit('open-failed', e)
-    }
-  }
-
-  async close () {
-    debug('closing')
-    this.isOpen = false
-    if (this.level) {
-      Schemas.removeTables(this)
-      this.listArchives().forEach(archive => Indexer.unwatchArchive(this, archive))
-      await new Promise(resolve => this.level.close(resolve))
-      this.level = null
-      veryDebug('db .level closed')
-    } else {
-      veryDebug('db .level didnt yet exist')
-    }
-  }
-
-  schema (desc) {
-    assert(!this.level && !this.isBeingOpened, SchemaError, 'Cannot add version when database is open')
-    Schemas.validateAndSanitize(desc)
-
-    // update current version
-    this.version = Math.max(this.version, desc.version)
-    this._schemas.push(desc)
-    this._schemas.sort(lowestVersionFirst)
-  }
-
-  get tables () {
-    return this._activeTableNames
-      .filter(name => !name.startsWith('_'))
-      .map(name => this[name])
-  }
-
-  async prepareArchive (archive) {
-    archive = typeof archive === 'string' ? new (this.DatArchive)(archive) : archive
-    await Promise.all(this.tables.map(table => {
-      if (!table.schema.singular) {
-        return archive.mkdir(`/${table.name}`).catch(() => {})
-      }
-    }))
-  }
-
-  async addArchive (archive, {prepare} = {}) {
-    // create our own new DatArchive instance
-    archive = typeof archive === 'string' ? new (this.DatArchive)(archive) : archive
-    if (!(archive.url in this._archives)) {
-      // store and process
-      debug('Ingest.addArchive', archive.url)
-      this._archives[archive.url] = archive
-      if (prepare !== false) await this.prepareArchive(archive)
-      await Indexer.addArchive(this, archive)
-    }
-  }
-
-  async addArchives (archives, opts) {
-    archives = Array.isArray(archives) ? archives : [archives]
-    return Promise.all(archives.map(a => this.addArchive(a, opts)))
-  }
-
-  async removeArchive (archive) {
-    archive = typeof archive === 'string' ? new (this.DatArchive)(archive) : archive
-    if (archive.url in this._archives) {
-      debug('Ingest.removeArchive', archive.url)
-      delete this._archives[archive.url]
-      await Indexer.removeArchive(this, archive)
-    }
-  }
-
-  listArchives (archive) {
-    return Object.keys(this._archives).map(url => this._archives[url])
-  }
-
-  static list () {
-    // TODO
-  }
-
-  static delete (name) {
-    if (typeof level.destroy !== 'function') {
-      throw new Error('Cannot .delete() databases outside of the browser environment. You should just delete the files manually.')
-    }
-
-    // delete the database from indexeddb
-    return new Promise((resolve, reject) => {
-      level.destroy(name, err => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-  }
-}
-module.exports = IngestDB
-
-// run the database's queued upgrades
-async function runUpgrades ({db, oldVersion}) {
-  // get the ones that haven't been run
-  var upgrades = db._schemas.filter(s => s.version > oldVersion)
-  db._activeSchema = db._schemas.filter(s => s.version <= oldVersion).reduce(Schemas.merge, {})
-  if (oldVersion > 0 && !db._activeSchema) {
-    throw new SchemaError(`Missing schema for previous version (${oldVersion}), unable to run upgrade.`)
-  }
-  debug(`running upgrade from ${oldVersion}, ${upgrades.length} upgrade(s) found`)
-
-  // diff and apply changes
-  var tablesToRebuild = []
-  for (let schema of upgrades) {
-    // compute diff
-    debug(`applying upgrade for version ${schema.version}`)
-    var diff = Schemas.diff(db._activeSchema, schema)
-
-    // apply diff
-    await Schemas.applyDiff(db, diff)
-    tablesToRebuild.push(diff.tablesToRebuild)
-
-    // update current schema
-    db._activeSchema = Schemas.merge(db._activeSchema, schema)
-    debug(`version ${schema.version} applied`)
-  }
-
-  // track the tables that need rebuilding
-  db._tablesToRebuild = Array.from(new Set(...tablesToRebuild))
-  debug('Ingest.runUpgrades complete', (db._tablesToRebuild.length === 0) ? '- no rebuilds needed' : 'REBUILD REQUIRED')
-}
-
-function lowestVersionFirst (a, b) {
-  return a.version - b.version
-}
-
-
-},{"./lib/errors":153,"./lib/indexer":154,"./lib/schemas":157,"./lib/util":159,"events":173,"level-browserify":52,"level-promise":75,"level-sublevel":79}],153:[function(require,module,exports){
-class ExtendableError extends Error {
-  constructor (msg) {
-    super(msg)
-    this.name = this.constructor.name
-    this.message = msg
-    if (typeof Error.captureStackTrace === 'function') {
-      Error.captureStackTrace(this, this.constructor)
-    } else {
-      this.stack = (new Error(msg)).stack
-    }
-  }
-}
-
-exports.SchemaError = class SchemaError extends ExtendableError {
-  constructor (msg) {
-    super(msg || 'Schema error')
-    this.schemaError = true
-  }
-}
-
-exports.ParameterError = class ParameterError extends ExtendableError {
-  constructor (msg) {
-    super(msg || 'Invalid parameter')
-    this.parameterError = true
-  }
-}
-
-exports.QueryError = class QueryError extends ExtendableError {
-  constructor (msg) {
-    super(msg || 'Query is malformed')
-    this.queryError = true
-  }
-}
-
-},{}],154:[function(require,module,exports){
-
-const flatten = require('lodash.flatten')
-const anymatch = require('anymatch')
-const Lev = require('./level-wrapper')
-const {debug, veryDebug, lock} = require('./util')
-
-// exported api
-// =
-
-exports.loadArchives = async function (db, needsRebuild) {
-  debug('Indexer.loadArchives, needsRebuild=' + needsRebuild)
-  var promises = []
-  await db._indexMeta.each(indexMeta => {
-    debug('loading archive', indexMeta._url, indexMeta.localPath)
-    // load the archive
-    const archive = new (db.DatArchive)(indexMeta._url, {localPath: indexMeta.localPath})
-    archive.isWritable = indexMeta.isWritable
-    if (archive.isWritable) db.prepareArchive(archive)
-    db._archives[archive.url] = archive
-
-    // process the archive
-    promises.push(indexArchive(db, archive, needsRebuild))
-    exports.watchArchive(db, archive)
-  })
-  await Promise.all(promises)
-  debug('Indexer.loadArchives done')
-}
-
-exports.addArchive = async function (db, archive) {
-  veryDebug('Indexer.addArchive', archive.url)
-  // store entry in the meta db
-  var info = await archive.getInfo()
-  archive.isWritable = info.isOwner
-  await db._indexMeta.level.put(archive.url, {
-    _url: archive.url,
-    version: 0,
-    isWritable: archive.isWritable,
-    localPath: archive._localPath
-  })
-  // process the archive
-  await indexArchive(db, archive)
-  exports.watchArchive(db, archive)
-}
-
-exports.removeArchive = async function (db, archive) {
-  veryDebug('Indexer.removeArchive', archive.url)
-  await unindexArchive(db, archive)
-  exports.unwatchArchive(db, archive)
-}
-
-exports.watchArchive = async function (db, archive) {
-  veryDebug('Indexer.watchArchive', archive.url)
-  if (archive.fileEvents) {
-    console.error('watchArchive() called on archive that already is being watched', archive.url)
-    return
-  }
-  if (archive._loadPromise) {
-    // HACK node-dat-archive fix
-    // Because of a weird API difference btwn node-dat-archive and beaker's DatArchive...
-    // ...the event-stream methods need await _loadPromise
-    // -prf
-    await archive._loadPromise
-  }
-  archive.fileEvents = archive.createFileActivityStream(db.tablePathPatterns)
-  // autodownload all changes to the watched files
-  archive.fileEvents.addEventListener('invalidated', ({path}) => archive.download(path))
-  // autoindex on changes
-  // TODO debounce!!!!
-  archive.fileEvents.addEventListener('changed', ({path}) => indexArchive(db, archive))
-}
-
-exports.unwatchArchive = function (db, archive) {
-  veryDebug('unwatching', archive.url)
-  if (archive.fileEvents) {
-    archive.fileEvents.close()
-    archive.fileEvents = null
-  }
-}
-
-exports.waitTillIndexed = async function (db, archive) {
-  debug('Indexer.waitTillIndexed', archive.url)
-  // fetch the current state of the archive's index
-  var [indexMeta, archiveMeta] = await Promise.all([
-    db._indexMeta.level.get(archive.url),
-    archive.getInfo()
-  ])
-  indexMeta = indexMeta || {version: 0}
-
-  // done?
-  if (indexMeta.version >= archiveMeta.version) {
-    debug('Indexer.waitTillIndexed already indexed')
-    return
-  }
-
-  return new Promise(resolve => {
-    db.on('indexes-updated', onIndex)
-    function onIndex (indexedArchive, version) {
-      if (indexedArchive.url === archive.url && version >= archiveMeta.version) {
-        db.removeListener('indexes-updated', onIndex)
-        resolve()
-      }
-    }
-  })
-}
-
-exports.resetOutdatedIndexes = async function (db) {
-  if (db._tablesToRebuild.length === 0) {
-    return false
-  }
-  debug(`Indexer.resetOutdatedIndexes need to rebuid ${db._tablesToRebuild.length} tables`)
-  veryDebug('Indexer.resetOutdatedIndexes tablesToRebuild', db._tablesToRebuild)
-
-  // clear tables
-  // TODO
-  // for simplicity, we just clear all data and re-index everything
-  // a better future design would only clear the tables that changed
-  // unfortunately our indexer isn't smart enough for that yet
-  // -prf
-  const tables = db.tables
-  for (let i = 0; i < tables.length; i++) {
-    let table = tables[i]
-    veryDebug('clearing', table.name)
-    // clear indexed data
-    await Lev.clear(table.level)
-  }
-
-  // reset meta records
-  var promises = []
-  await db._indexMeta.each(indexMeta => {
-    indexMeta.version = 0
-    promises.push(db._indexMeta.level.put(indexMeta._url, indexMeta))
-  })
-  await Promise.all(promises)
-
-  return true
-}
-
-// figure how what changes need to be processed
-// then update the indexes
-async function indexArchive (db, archive, needsRebuild) {
-  debug('Indexer.indexArchive', archive.url, {needsRebuild})
-  var release = await lock(`index:${archive.url}`)
-  try {
-    // sanity check
-    if (!db.isOpen) {
-      return
-    }
-    if (!db.level) {
-      return console.log('indexArchive called on corrupted db')
-    }
-
-    // fetch the current state of the archive's index
-    var [indexMeta, archiveMeta] = await Promise.all([
-      db._indexMeta.level.get(archive.url).catch(e => null),
-      archive.getInfo()
-    ])
-    indexMeta = indexMeta || {version: 0}
-
-    // has this version of the archive been processed?
-    if (indexMeta && indexMeta.version >= archiveMeta.version) {
-      debug('Indexer.indexArchive no index needed for', archive.url)
-      return // yes, stop
-    }
-    debug('Indexer.indexArchive ', archive.url, 'start', indexMeta.version, 'end', archiveMeta.version)
-
-    // find and apply all changes which haven't yet been processed
-    var updates = await scanArchiveHistoryForUpdates(db, archive, {
-      start: indexMeta.version + 1,
-      end: archiveMeta.version + 1
-    })
-    var results = await applyUpdates(db, archive, archiveMeta, updates)
-    debug('Indexer.indexArchive applied', results.length, 'updates from', archive.url)
-
-    // update meta
-    await Lev.update(db._indexMeta.level, archive.url, {
-      _url: archive.url,
-      version: archiveMeta.version // record the version we've indexed
-    })
-
-    // emit
-    var updatedTables = new Set(results)
-    for (let tableName of updatedTables) {
-      if (!tableName) continue
-      db[tableName].emit('index-updated', archive, archiveMeta.version)
-    }
-    db.emit('indexes-updated', archive, archiveMeta.version)
-  } finally {
-    release()
-  }
-}
-exports.indexArchive = indexArchive
-
-// delete all records generated from the archive
-async function unindexArchive (db, archive) {
-  var release = await lock(`index:${archive.url}`)
-  try {
-    // find any relevant records and delete them from the indexes
-    var recordMatches = await scanArchiveForRecords(db, archive)
-    await Promise.all(recordMatches.map(match => match.table.level.del(match.recordUrl)))
-    await db._indexMeta.level.del(archive.url)
-  } finally {
-    release()
-  }
-}
-exports.unindexArchive = unindexArchive
-
-// internal methods
-// =
-
-// look through the given history slice
-// match against the tables' path patterns
-// return back the *latest* change to each matching changed record
-async function scanArchiveHistoryForUpdates (db, archive, {start, end}) {
-  var history = await archive.history({start, end})
-  var updates = {}
-  history.forEach(update => {
-    if (anymatch(db._tablePathPatterns, update.path)) {
-      updates[update.path] = update
-    }
-  })
-  return updates
-}
-
-// look through the archive for any files that generate records
-async function scanArchiveForRecords (db, archive) {
-  var recordFiles = await Promise.all(db.tables.map(table => {
-    return table.listRecordFiles(archive)
-  }))
-  return flatten(recordFiles)
-}
-
-// iterate the updates and apply them to the indexes
-async function applyUpdates (db, archive, archiveMeta, updates) {
-  return Promise.all(Object.keys(updates).map(async path => {
-    var update = updates[path]
-    if (update.type === 'del') {
-      return unindexFile(db, archive, update.path)
-    } else {
-      return readAndIndexFile(db, archive, archiveMeta, update.path)
-    }
-  }))
-}
-
-// read the file, find the matching table, validate, then store
-async function readAndIndexFile (db, archive, archiveMeta, filepath) {
-  const tables = db.tables
-  const fileUrl = archive.url + filepath
-  try {
-    // read file
-    var record = JSON.parse(await archive.readFile(filepath))
-
-    // index on the first matching table
-    for (var i = 0; i < tables.length; i++) {
-      let table = tables[i]
-      if (table.isRecordFile(filepath)) {
-        // validate if needed
-        if (table.schema.validator) {
-          record = table.schema.validator(record)
-        }
-        // add standard attributes
-        record._url = fileUrl
-        record._origin = archive.url
-        record._author = archiveMeta && archiveMeta.author && archiveMeta.author.url
-        // save
-        await table.level.put(record._url, record)
-        return table.name
-      }
-    }
-  } catch (e) {
-    console.log('Failed to index', fileUrl, e)
-  }
-  return false
-}
-
-async function unindexFile (db, archive, filepath) {
-  const tables = db.tables
-  const fileUrl = archive.url + filepath
-  try {
-    // unindex on the first matching table
-    for (var i = 0; i < tables.length; i++) {
-      let table = tables[i]
-      if (table.isRecordFile(filepath)) {
-        await table.level.del(fileUrl)
-        return table.name
-      }
-    }
-  } catch (e) {
-    console.log('Failed to unindex', fileUrl, e)
-  }
-  return false
-}
-
-},{"./level-wrapper":155,"./util":159,"anymatch":161,"lodash.flatten":103}],155:[function(require,module,exports){
-const through2 = require('through2')
-const {assert, debug, veryDebug} = require('./util')
-
-exports.update = async function (db, key, updates) {
-  key = toKey(key)
-  assert(updates && typeof updates === 'object')
-  var record = await db.get(key)
-  record = record || {}
-  for (var k in updates) {
-    record[k] = updates[k]
-  }
-  await db.put(key, record)
-}
-
-exports.clear = async function (db) {
-  return new Promise((resolve, reject) => {
-    var stream = db.createKeyStream()
-      .pipe(through2.obj((key, enc, cb) => db.del(key).then(cb, cb)))
-      .on('error', reject)
-      .on('end', () => resolve())
-    stream.resume()
-  })
-}
-
-exports.iterate = async function (query, fn) {
-  return new Promise((resolve, reject) => {
-    debug('Lev.iterate', query._table.name)
-
-    // select the sublevel for the query
-    var index
-    const {_table, _where} = query
-    if (_where && _where._index !== '_url') {
-      veryDebug('Lev.iterate setting stream factory to index', _where._index)
-      index = _table.level.indexes[_where._index]
-      if (!index) {
-        return reject(new Error('Invalid index: ' + _where._index))
-      }
-    } else {
-      veryDebug('Lev.iterate using default stream factory')
-      index = _table.level
-    }
-
-    // slice opts
-    var {_offset, _limit} = query
-    _offset = _offset || 0
-    _limit = _limit || false
-    veryDebug('Lev.iterate offset', _offset, 'limit', _limit)
-    veryDebug('Lev.iterate where', query._where)
-
-    // start stream
-    var resultIndex = 0
-    var numEmitted = 0
-    var isDone = false
-    var stream = index.createValueStream(makeStreamOpts(query))
-    stream.on('data', value => {
-      if (isDone) return
-      veryDebug('data', value)
-      if (resultIndex >= _offset && applyFilters(query, value)) {
-        // iter call
-        veryDebug('emitting')
-        fn(value)
-        veryDebug('emitted')
-        numEmitted++
-      }
-      resultIndex++
-      if (_limit && numEmitted >= _limit || applyUntil(query, value)) {
-        // hit limit/until, stop here
-        isDone = true
-        veryDebug('done')
-        // TODO we need to figure out how to stop the stream -prf
-        resolve()
-      }
-    })
-    stream.on('error', err => {
-      veryDebug('stream error', err)
-      reject(err)
-    })
-    stream.on('end', resolve)
-    stream.resume()
-  })
-}
-
-// internal methods
-// =
-
-function toKey (key) {
-  if (Array.isArray(key)) {
-    return key.join('!')
-  }
-  return key
-}
-
-function makeStreamOpts (query) {
-  const {_reverse, _where} = query
-  const opts = {reverse: _reverse}
-  if (_where) {
-    if (_where._only) {
-      opts.gte = opts.lte = _where._only
-    } else {
-      if (typeof _where._lowerBound !== 'undefined') {
-        let key = _where._lowerBoundInclusive ? 'gte' : 'gt'
-        opts[key] = _where._lowerBound
-      }
-      if (typeof _where._upperBound !== 'undefined') {
-        let key = _where._upperBoundInclusive ? 'lte' : 'lt'
-        opts[key] = _where._upperBound
-      }
-    }
-  }
-  veryDebug('stream opts', opts)
-  return opts
-}
-
-function applyFilters (query, value) {
-  for (let i = 0; i < query._filters.length; i++) {
-    if (!query._filters[i](value)) {
-      return false
-    }
-  }
-  return true
-}
-
-function applyUntil (query, value) {
-  return (query._until && query._until(value))
-}
-
-},{"./util":159,"through2":163}],156:[function(require,module,exports){
-const Lev = require('./level-wrapper')
-const IngestWhereClause = require('./where-clause')
-const Indexer = require('./indexer')
-const {assert, debug} = require('./util')
-const {QueryError, ParameterError} = require('./errors')
-
-class IngestQuery {
-  constructor (table) {
-    this._table = table
-    this._filters = []
-    this._reverse = false
-    this._offset = 0
-    this._limit = false
-    this._until = null
-    this._where = null
-  }
-
-  // () => IngestQuery
-  clone () {
-    var clone = new IngestQuery()
-    for (var k in this) {
-      if (k.startsWith('_')) {
-        clone[k] = this[k]
-      }
-    }
-    return clone
-  }
-
-  // () => Promise<Number>
-  async count () {
-    var count = 0
-    await this.each(() => { count++ })
-    return count
-  }
-
-  // () => Promise<Number>
-  async delete () {
-    var deletes = []
-    await this.each(record => {
-      const archive = this._table.db._archives[record._origin]
-      debug('IngestQuery.delete', record)
-      if (archive && archive.isWritable) {
-        const filepath = record._url.slice(record._origin.length)
-        deletes.push(
-          archive.unlink(filepath)
-            .then(() => Indexer.indexArchive(this._table.db, archive))
-        )
-      } else {
-        debug('IngestQuery.delete not enacted:', !archive ? 'Archive not found' : 'Archive not writable')
-      }
-    })
-    await Promise.all(deletes)
-    return deletes.length
-  }
-
-  // (Function) => Promise<Void>
-  async each (fn) {
-    return Lev.iterate(this, fn)
-  }
-
-  // (Function) => Promise<Void>
-  async eachKey (fn) {
-    assert(typeof fn === 'function', ParameterError, `First parameter of .eachKey() must be a function, got ${fn}`)
-    return this.each(cursor => {
-      // choose the key
-      var key = this._table.schema.primaryKey // default to the primary key
-      if (this._where && this._where._index) {
-        key = this._where._index // use the where clause's key if there is one
-      }
-      if (!key) key = '_url' // fallback to url
-
-      // emit all
-      if (Array.isArray(cursor[key])) {
-        cursor[key].forEach(v => fn(v))
-      } else {
-        fn(cursor[key])
-      }
-    })
-  }
-
-  // (Function) => Promise<Void>
-  async eachUrl (fn) {
-    assert(typeof fn === 'function', ParameterError, `First parameter of .eachUrl() must be a function, got ${fn}`)
-    return this.each(cursor => { fn(cursor._url) })
-  }
-
-  // (Function) => IngestQuery
-  filter (fn) {
-    assert(typeof fn === 'function', ParameterError, `First parameter of .filter() must be a function, got ${fn}`)
-    this._filters.push(fn)
-    return this
-  }
-
-  // () => Promise<Object>
-  async first () {
-    var arr = await this.limit(1).toArray()
-    return arr[0]
-  }
-
-  // () => Promise<Array<String>>
-  async keys () {
-    var keys = []
-    await this.eachKey(key => keys.push(key))
-    return keys
-  }
-
-  // () => Promise<Object>
-  async last () {
-    return this.reverse().first()
-  }
-
-  // (Number) => IngestQuery
-  limit (n) {
-    assert(typeof n === 'number', ParameterError, `The first parameter to .limit() must be a number, got ${n}`)
-    this._limit = n
-    return this
-  }
-
-  // (Number) => IngestQuery
-  offset (n) {
-    assert(typeof n === 'number', ParameterError, `The first parameter to .offset() must be a number, got ${n}`)
-    this._offset = n
-    return this
-  }
-
-  // (index) => IngestWhereClause
-  or (index) {
-    assert(this._where, QueryError, 'Can not have a .or() before a .where()')
-    // TODO
-  }
-
-  // (index) => IngestQuery
-  orderBy (index) {
-    assert(typeof index === 'string', ParameterError, `The first parameter to .orderBy() must be a string, got ${index}`)
-    assert(!this._where, QueryError, 'Can not have an .orderBy() and a .where() - where() implicitly sets the orderBy() to its key')
-    this._where = new IngestWhereClause(this, index)
-    return this
-  }
-
-  // () => Promise<Array<String>>
-  async urls () {
-    var urls = []
-    await this.eachUrl(url => urls.push(url))
-    return urls
-  }
-
-  // () => IngestQuery
-  reverse () {
-    this._reverse = true
-    return this
-  }
-
-  // () => Promise<Array<Object>>
-  async toArray () {
-    var records = []
-    await this.each(record => records.push(record))
-    return records
-  }
-
-  // () => Promise<Array<String>>
-  async uniqueKeys () {
-    return Array.from(new Set(await this.keys()))
-  }
-
-  // (Function) => IngestQuery
-  until (fn) {
-    assert(typeof fn === 'function', ParameterError, `First parameter of .until() must be a function, got ${fn}`)
-    this._until = fn
-    return this
-  }
-
-  // (Object|Function) => Promise<Number>
-  async update (objOrFn) {
-    var fn
-    if (objOrFn && typeof objOrFn === 'object') {
-      // create a function which applies the object updates
-      const obj = objOrFn
-      fn = record => {
-        for (var k in obj) {
-          if (k === '_url' || k === '_origin' || k === '_author') {
-            continue // skip special attrs
-          }
-          if (typeof obj[k] !== 'undefined') {
-            record[k] = obj[k]
-          }
-        }
-      }
-    } else if (typeof objOrFn === 'function') {
-      fn = objOrFn
-    } else {
-      throw new ParameterError(`First parameter of .update() must be a function or object, got ${objOrFn}`)
-    }
-
-    // apply updates
-    var updates = []
-    await this.each(record => {
-      const archive = this._table.db._archives[record._origin]
-      debug('IngestQuery.update', record)
-      if (archive && archive.isWritable) {
-        // run update
-        fn(record)
-
-        // run validation
-        if (this._table.schema.validator) {
-          let {_url, _origin, _author} = record
-          record = this._table.schema.validator(record)
-          record._url = _url
-          record._origin = _origin
-          record._author = _author
-        }
-
-        // run to-file pass
-        const fileData = (this._table.schema.toFile) ?
-          this._table.schema.toFile(record) :
-          record
-
-        // write to archive
-        const filepath = record._url.slice(record._origin.length)
-        updates.push(
-          archive.writeFile(filepath, JSON.stringify(fileData))
-            .then(() => {
-              if (typeof archive.commit === 'function') {
-                // legacy dat api
-                return archive.commit()
-              }
-            })
-            .then(() => Indexer.indexArchive(this._table.db, archive))
-        )
-      } else {
-        debug('IngestQuery.delete not enacted:', !archive ? 'Archive not found' : 'Archive not writable')
-      }
-    })
-    await Promise.all(updates)
-    return updates.length
-  }
-
-  // (index|query) => IngestWhereClause|IngestQuery
-  where (indexOrQuery) {
-    assert(!this._where, QueryError, 'Can not have two .where()s unless they are separated by a .or()')
-    this._where = new IngestWhereClause(this, indexOrQuery)
-    return this._where
-  }
-}
-
-module.exports = IngestQuery
-
-},{"./errors":153,"./indexer":154,"./level-wrapper":155,"./util":159,"./where-clause":160}],157:[function(require,module,exports){
-const IngestTable = require('./table')
-const Lev = require('./level-wrapper')
-const {diffArrays, assert, debug, veryDebug, deepClone} = require('./util')
-const {SchemaError} = require('./errors')
-
-exports.validateAndSanitize = function (schema) {
-  // validate and sanitize
-  assert(schema && typeof schema === 'object', SchemaError, `Must pass a schema object to db.schema(), got ${schema}`)
-  assert(schema.version > 0 && typeof schema.version === 'number', SchemaError, `The .version field is required and must be a number, got ${schema.version}`)
-  getTableNames(schema).forEach(tableName => {
-    var table = schema[tableName]
-    if (table === null) {
-      return // done, this is a deleted table
-    }
-    assert(!('singular' in table) || typeof table.singular === 'boolean', SchemaError, `The .singular field must be a bool, got ${table.singular}`)
-    assert(!table.index || typeof table.index === 'string' || isArrayOfStrings(table.index), SchemaError, `The .index field must be a string or an array of strings, got ${schema.index}`)
-    table.index = arrayify(table.index)
-
-    // always include _origin
-    if (!table.index.includes('_origin')) {
-      table.index.push('_origin')
-    }
-  })
-}
-
-// returns {add:[], change: [], remove: [], tablesToRebuild: []}
-// - `add` is an array of [name, tableDef]s
-// - `change` is an array of [name, tableChanges]s
-// - `remove` is an array of names
-// - `tablesToRebuild` is an array of names- tables that will need to be cleared and re-ingested
-// - applied using `applyDiff()`, below
-exports.diff = function (oldSchema, newSchema) {
-  if (!oldSchema) {
-    debug(`Schemas.diff creating diff for first version`)
-  } else {
-    debug(`Schemas.diff diffing ${oldSchema.version} against ${newSchema.version}`)
-  }
-  veryDebug('diff old', oldSchema)
-  veryDebug('diff new', newSchema)
-  // compare tables in both schemas
-  // and produce a set of changes which will modify the db
-  // to match `newSchema`
-  var diff = {add: [], change: [], remove: [], tablesToRebuild: []}
-  var allTableNames = new Set(getTableNames(oldSchema).concat(getTableNames(newSchema)))
-  for (let tableName of allTableNames) {
-    var oldSchemaHasTable = oldSchema ? (tableName in oldSchema) : false
-    var newSchemaHasTable = (newSchema[tableName] !== null)
-    if (oldSchemaHasTable && !newSchemaHasTable) {
-      // remove
-      diff.remove.push(tableName)
-    } else if (!oldSchemaHasTable && newSchemaHasTable) {
-      // add
-      diff.add.push([tableName, newSchema[tableName]])
-      diff.tablesToRebuild.push(tableName)
-    } else if (newSchema[tableName]) {
-      // different?
-      var tableChanges = diffTables(oldSchema[tableName], newSchema[tableName])
-      veryDebug('Schemas.diff diffTables', tableName, tableChanges)
-      if (tableChanges.indexDiff) {
-        diff.change.push([tableName, tableChanges])
-      }
-      if (tableChanges.needsRebuild) {
-        diff.tablesToRebuild.push(tableName)
-      }
-    }
-  }
-  veryDebug('diff result, add', diff.add, 'change', diff.change, 'remove', diff.remove, 'rebuilds', diff.tablesToRebuild)
-  return diff
-}
-
-// takes the return value of .diff()
-// updates `db`
-exports.applyDiff = async function (db, diff) {
-  debug('Schemas.applyDiff')
-  veryDebug('diff', diff)
-  await Promise.all(diff.remove.map(tableName => {
-    // deleted tables
-    return Lev.clear(db.level.sublevel(tableName))
-  }))
-  // NOTE
-  // only need to delete old tables
-  // everything else is a rebuild
-  // -prf
-}
-
-// add builtin table defs to the db object
-exports.addBuiltinTableSchemas = function (db) {
-  // metadata on each indexed record
-  db._schemas[0]._indexMeta = {index: []}
-}
-
-// add table defs to the db object
-exports.addTables = function (db) {
-  const tableNames = getActiveTableNames(db)
-  debug('Schemas.addTables', tableNames)
-  db._activeTableNames = tableNames
-  tableNames.forEach(tableName => {
-    db[tableName] = new IngestTable(db, tableName, db._activeSchema[tableName])
-    db._tablePathPatterns.push(db[tableName]._pathPattern)
-  })
-}
-
-// remove table defs from the db object
-exports.removeTables = function (db) {
-  const tableNames = getActiveTableNames(db)
-  debug('Schemas.removeTables', tableNames)
-  tableNames.forEach(tableName => {
-    delete db[tableName]
-  })
-}
-
-// helper to compute the current schema
-exports.merge = function (currentSchema, newSchema) {
-  var result = currentSchema ? deepClone(currentSchema) : {}
-  // apply updates
-  for (let k in newSchema) {
-    if (newSchema[k] === null) {
-      delete result[k]
-    } else if (typeof newSchema[k] === 'object' && !Array.isArray(newSchema[k])) {
-      result[k] = exports.merge(currentSchema[k], newSchema[k])
-    } else {
-      result[k] = newSchema[k]
-    }
-  }
-  return result
-}
-
-// helpers
-// =
-
-function diffTables (oldTableDef, newTableDef) {
-  const indexDiff = newTableDef.index ? diffArrays(oldTableDef.index, newTableDef.index) : false
-  return {
-    indexDiff,
-    needsRebuild: !!indexDiff ||
-      (oldTableDef.primaryKey !== newTableDef.primaryKey) ||
-      (oldTableDef.singular !== newTableDef.singular)
-  }
-}
-
-function getTableNames (schema, fn) {
-  if (!schema) {
-    return []
-  }
-  // all keys except 'version'
-  return Object.keys(schema).filter(k => k !== 'version')
-}
-
-function getActiveTableNames (db) {
-  var tableNames = new Set()
-  db._schemas.forEach(schema => {
-    getTableNames(schema).forEach(tableName => {
-      if (schema[tableName] === null) {
-        tableNames.delete(tableName)
-      } else {
-        tableNames.add(tableName)
-      }
-    })
-  })
-  return Array.from(tableNames)
-}
-
-function arrayify (v) {
-  if (typeof v === 'undefined') return []
-  return Array.isArray(v) ? v : [v]
-}
-
-function isArrayOfStrings (v) {
-  return Array.isArray(v) && v.reduce((acc, v) => acc && typeof v === 'string', true)
-}
-
-},{"./errors":153,"./level-wrapper":155,"./table":158,"./util":159}],158:[function(require,module,exports){
-const anymatch = require('anymatch')
-const EventEmitter = require('events')
-const IngestLevel = require('ingestdb-level')
-const Indexer = require('./indexer')
-const IngestQuery = require('./query')
-const {assert, debug, veryDebug, lock, toArchiveUrl} = require('./util')
-const {ParameterError, QueryError} = require('./errors')
-
-// exported api
-// =
-
-class IngestTable extends EventEmitter {
-  constructor (db, name, schema) {
-    super()
-    this.db = db
-    this.name = name
-    this.schema = schema
-    veryDebug('IngestTable', this.name, this.schema)
-    this._pathPattern = schema.singular ? `/${name}.json` : `/${name}${'/*'}.json`
-    // ^ HACKERY: the ${'/*'} is to fool sublime's syntax highlighting -prf
-
-    // construct db object
-    this.level = IngestLevel(db.level.sublevel(name), schema.index)
-  }
-
-  // queries
-  // =
-
-  // () => IngestQuery
-  query () {
-    return new IngestQuery(this)
-  }
-
-  // (DatArchive, record) => Promise<url>
-  async add (archive, record, noLockNeeded = false) {
-    assert(archive && (typeof archive === 'string' || typeof archive.url === 'string'), ParameterError, 'The first parameter of .add() must be an archive or url')
-    assert(record && typeof record === 'object', ParameterError, 'The second parameter of .add() must be a record object')
-
-    // run validation
-    if (this.schema.validator) {
-      record = this.schema.validator(record)
-    }
-
-    // run to-file pass
-    const fileData = (this.schema.toFile) ?
-      this.schema.toFile(record) :
-      record
-
-    // lookup the archive
-    archive = this.db._archives[typeof archive === 'string' ? archive : archive.url]
-    if (!archive) {
-      throw new QueryError('Unable to add(): the given archive is not part of the index')
-    }
-    if (!archive.isWritable) {
-      throw new QueryError('Unable to add(): the given archive is not owned by this user')
-    }
-
-    // build the path
-    var filepath
-    if (this.schema.singular) {
-      filepath = `/${this.name}.json`
-    } else {
-      let key = record[this.schema.primaryKey]
-      if (!key) throw new QueryError(`Unable to add(): the given record is missing the primary key attribute, ${this.schema.primaryKey}`)
-      filepath = `/${this.name}/${key}.json`
-    }
-    debug('Table.add', filepath)
-    veryDebug('Table.add archive', archive.url)
-    veryDebug('Table.add record', record)
-    var release = noLockNeeded === true ? noop : await lock(toArchiveUrl(archive))
-    try {
-      await archive.writeFile(filepath, JSON.stringify(fileData))
-      if (typeof archive.commit === 'function') {
-        // legacy api
-        await archive.commit()
-      }
-      await Indexer.indexArchive(this.db, archive)
-      return archive.url + filepath
-    } finally {
-      release()
-    }
-  }
-
-  // () => Promise<Number>
-  async count () {
-    return this.query().count()
-  }
-
-  // (url|DatArchive, key?) => Promise<url>
-  async delete (urlOrArchive, key) {
-    if (typeof urlOrArchive === 'string') {
-      return this.where('_url').equals(urlOrArchive).delete()
-    }
-    const filepath = (this.schema.singular)
-      ? `/${this.name}.json`
-      : `/${this.name}/${key}.json`
-    const url = urlOrArchive.url + filepath
-    return this.where('_url').equals(url).delete()
-  }
-
-  // (Function) => Promise<Void>
-  async each (fn) {
-    return this.query().each(fn)
-  }
-
-  // (Function) => IngestQuery
-  filter (fn) {
-    return this.query().filter(fn)
-  }
-
-  // (url) => Promise<Object>
-  // (archive) => Promise<Object>
-  // (archive, key) => Promise<Object>
-  // (index, value) => Promise<Object>
-  async get (...args) {
-    if (args.length === 2) {
-      if (typeof args[0] === 'string' && args[0].indexOf('://') === -1) {
-        return getByKeyValue(this, ...args)
-      }
-      return getMultiByKey(this, ...args)
-    }
-    if (typeof args[0] === 'string' && args[0].endsWith('.json')) {
-      return getByRecordUrl(this, ...args)
-    }
-    return getSingle(this, args[0])
-  }
-
-  // (Number) => IngestQuery
-  limit (n) {
-    return this.query().limit(n)
-  }
-
-  // (Number) => IngestQuery
-  offset (n) {
-    return this.query().offset(n)
-  }
-
-  // (index) => IngestQuery
-  orderBy (index) {
-    return this.query().orderBy(index)
-  }
-
-  // () => IngestQuery
-  reverse () {
-    return this.query().reverse()
-  }
-
-  // () => Promise<Array>
-  async toArray () {
-    return this.query().toArray()
-  }
-
-  // (record) => Promise<Number>
-  // (url, updates) => Promise<Number>
-  // (archive, updates) => Promise<Number>
-  // (archive, key, updates) => Promise<Number>
-  async update (...args) {
-    if (args.length === 3) {
-      return updateByKey(this, ...args)
-    }
-    if (args.length === 2) {
-      if (this.schema.singular && typeof args[0] === 'object') {
-        return updateSingular(this, ...args)
-      }
-      return updateByUrl(this, ...args)
-    }
-    return updateRecord(this, ...args)
-  }
-
-  // (url|archive, Object|Function) => Promise<Void | url>
-  async upsert (archive, objOrFn) {
-    assert(archive && (typeof archive === 'string' || typeof archive.url === 'string'), ParameterError, 'The first parameter of .upsert() must be an archive or url')
-    assert(objOrFn && (typeof objOrFn === 'object' || typeof objOrFn === 'function'), ParameterError, 'The second parameter of .upsert() must be a record object or an update function')
-
-    // update or add
-    var release = await lock(toArchiveUrl(archive))
-    try {
-      var changes = (this.schema.singular)
-        ? await updateSingular(this, archive, objOrFn, true)
-        : await updateByUrl(this, archive, objOrFn, true)
-      if (changes === 0) {
-        return this.add(archive, typeof objOrFn === 'function' ? objOrFn() : objOrFn, true)
-      }
-      return changes
-    } finally {
-      release()
-    }
-  }
-
-  // (index|query) => IngestWhereClause|IngestQuery
-  where (indexOrQuery) {
-    return this.query().where(indexOrQuery)
-  }
-
-  // record helpers
-  // =
-
-  // (String) => Boolean
-  isRecordFile (filepath) {
-    return anymatch(this._pathPattern, filepath)
-  }
-
-  // (DatArchive) => Array<Object>
-  async listRecordFiles (archive) {
-    try {
-      if (this.schema.singular) {
-        // check if the record exists on this archive
-        let filepath = `/${this.name}.json`
-        await archive.stat(filepath)
-        return [{recordUrl: archive.url + filepath, table: this}]
-      } else {
-        // scan for matching records
-        let records = await archive.readdir(this.name)
-        return records.filter(name => name.endsWith('.json')).map(name => {
-          return {
-            recordUrl: archive.url + '/' + this.name + '/' + name,
-            table: this
-          }
-        })
-      }
-    } catch (e) {
-      return []
-    }
-  }
-}
-
-function getByKeyValue (table, key, value) {
-  debug('getByKeyValue')
-  veryDebug('getByKeyValue table', table.name)
-  veryDebug('getByKeyValue key', key)
-  veryDebug('getByKeyValue value', value)
-  return table.where(key).equals(value).first()
-}
-
-function getMultiByKey (table, archive, key) {
-  debug('getMultiByKey')
-  veryDebug('getMultiByKey table', table.name)
-  veryDebug('getMultiByKey archive', archive)
-  veryDebug('getMultiByKey key', key)
-  var url = typeof archive === 'string' ? archive : archive.url
-  return table.where('_url').equals(`${url}/${table.name}/${key}.json`).first()
-}
-
-function getSingle (table, archive) {
-  debug('getSingle')
-  veryDebug('getSingle table', table.name)
-  veryDebug('getSingle archive', archive)
-  var url = typeof archive === 'string' ? archive : archive.url
-  return table.where('_url').equals(`${url}/${table.name}.json`).first()
-}
-
-function getByRecordUrl (table, url) {
-  debug('getByRecordUrl')
-  veryDebug('getByRecordUrl table', table.name)
-  veryDebug('getByRecordUrl url', url)
-  return table.where('_url').equals(url).first()
-}
-
-async function updateByKey (table, archive, key, updates, noLockNeeded = false) {
-  debug('updateByKey')
-  veryDebug('updateByKey table', table.name)
-  veryDebug('updateByKey archive', archive.url)
-  veryDebug('updateByKey key', key)
-  veryDebug('updateByKey updates', updates)
-  assert(archive && typeof archive.url === 'string', ParameterError, 'Invalid parameters given to update()')
-  assert(typeof key === 'string', ParameterError, 'Invalid parameters given to update()')
-  assert(updates && (typeof updates === 'object' || typeof updates === 'function'), ParameterError, 'Invalid parameters given to update()')
-
-  var release = noLockNeeded === true ? noop : await lock(toArchiveUrl(archive))
-  try {
-    return table.where(table.schema.primaryKey).equals(key).update(updates)
-  } finally {
-    release()
-  }
-}
-
-async function updateSingular (table, archive, updates, noLockNeeded = false) {
-  const archiveUrl = toArchiveUrl(archive)
-  debug('updateSingular')
-  veryDebug('updateSingular table', table.name)
-  veryDebug('updateSingular archive', archiveUrl)
-  veryDebug('updateSingular updates', updates)
-  assert(updates && (typeof updates === 'object' || typeof updates === 'function'), ParameterError, 'Invalid parameters given to update()')
-
-  var release = noLockNeeded === true ? noop : await lock(archiveUrl)
-  try {
-    const url = archiveUrl + `/${table.name}.json`
-    return table.where('_url').equals(url).update(updates)
-  } finally {
-    release()
-  }
-}
-
-async function updateByUrl (table, url, updates, noLockNeeded = false) {
-  debug('updateByUrl')
-  url = url && url.url ? url.url : url
-  veryDebug('updateByUrl table', table.name)
-  veryDebug('updateByUrl url', url)
-  veryDebug('updateByUrl updates', updates)
-  assert(typeof url === 'string', ParameterError, 'Invalid parameters given to update()')
-  assert(updates && (typeof updates === 'object' || typeof updates === 'function'), ParameterError, 'Invalid parameters given to update()')
-  if (url.endsWith('.json') === false && typeof updates === 'object') {
-    // this is probably the url of an archive - add the path
-    url += (url.endsWith('/') ? '' : '/') + table.name + '/' + updates[table.schema.primaryKey] + '.json'
-  }
-
-  var release = noLockNeeded === true ? noop : await lock(toArchiveUrl(url))
-  try {
-    return table.where('_url').equals(url).update(updates)
-  } finally {
-    release()
-  }
-}
-
-async function updateRecord (table, record, noLockNeeded = false) {
-  debug('updateRecord')
-  veryDebug('updateRecord table', table.name)
-  veryDebug('updateRecord record', record)
-  assert(record && typeof record._url === 'string', ParameterError, 'Invalid parameters given to update()')
-
-  var release = noLockNeeded === true ? noop : await lock(toArchiveUrl(record._url))
-  try {
-    return table.where('_url').equals(record._url).update(record)
-  } finally {
-    release()
-  }
-}
-
-function noop () {}
-
-module.exports = IngestTable
-
-},{"./errors":153,"./indexer":154,"./query":156,"./util":159,"anymatch":161,"events":173,"ingestdb-level":36}],159:[function(require,module,exports){
-(function (process){
-/* globals window process console URL */
-const AwaitLock = require('await-lock')
-const URL = (typeof window === 'undefined') ? require('url-parse') : window.URL
-
-// read log level from the environment
-const LOG_LEVEL = (typeof window === 'undefined'
-  ? +process.env.LOG_LEVEL
-  : +window.localStorage.LOG_LEVEL) || 0
-const LOG_LEVEL_DEBUG = 1
-const LOG_LEVEL_VERYDEBUG = 2
-
-// debug logging
-function noop () {}
-exports.debug = (LOG_LEVEL >= LOG_LEVEL_DEBUG) ? console.log : noop
-exports.veryDebug = (LOG_LEVEL >= LOG_LEVEL_VERYDEBUG) ? console.log : noop
-
-// assert helper
-exports.assert = function (cond, ErrorConstructor = Error, msg) {
-  if (!cond) {
-    throw new ErrorConstructor(msg)
-  }
-}
-
-// provide a diff of 2 arrays
-// eg diffArrays([1,2], [2,3]) => {add: [3], remove: [1]}
-// if no difference, returns false
-exports.diffArrays = function (left, right) {
-  var diff = {add: [], remove: []}
-
-  // iterate all values in the arrays
-  var union = new Set(left.concat(right))
-  for (let index of union) {
-    // push to add/remove based on left/right membership
-    var leftHas = left.indexOf(index) !== -1
-    var rightHas = right.indexOf(index) !== -1
-    if (leftHas && !rightHas) {
-      diff.remove.push(index)
-    } else if (!leftHas && rightHas) {
-      diff.add.push(index)
-    }
-  }
-
-  if (diff.add.length === 0 && diff.remove.add === 0) {
-    return false
-  }
-  return diff
-}
-
-exports.deepClone = function (v) {
-  return JSON.parse(JSON.stringify(v))
-}
-
-exports.toArchiveUrl = function (v) {
-  if (v) {
-    if (typeof v.url === 'string') {
-      v = v.url
-    }
-    const urlp = new URL(v)
-    return urlp.protocol + '//' + urlp.hostname
-  }
-  throw new Error('Not a valid archive')
-}
-
-// wraps await-lock in a simpler interface, with many possible locks
-// usage:
-/*
-async function foo () {
-  var release = await lock('bar')
-  // ...
-  release()
-}
-*/
-var locks = {}
-exports.lock = async function (key) {
-  if (!(key in locks)) locks[key] = new AwaitLock()
-
-  var lock = locks[key]
-  await lock.acquireAsync()
-  return lock.release.bind(lock)
-}
-
-}).call(this,require('_process'))
-},{"_process":180,"await-lock":11,"url-parse":165}],160:[function(require,module,exports){
-const {assert} = require('./util')
-const {ParameterError, QueryError} = require('./errors')
-const MAX_STRING = String.fromCharCode(65535)
-
-// exported api
-// =
-
-class IngestWhereClause {
-  constructor (query, index) {
-    this.query = query
-    this._index = index
-    this._only = undefined
-    this._lowerBound = undefined
-    this._lowerBoundInclusive = false
-    this._upperBound = undefined
-    this._upperBoundInclusive = false
-  }
-
-  // (lowerBound) => IngestQuery
-  above (lowerBound) {
-    this._lowerBound = lowerBound
-    this._lowerBoundInclusive = false
-    return this.query
-  }
-
-  // (lowerBound) => IngestQuery
-  aboveOrEqual (lowerBound) {
-    this._lowerBound = lowerBound
-    this._lowerBoundInclusive = true
-    return this.query
-  }
-
-  // (Array|...args) => IngestQuery
-  anyOf (...args) {
-    // do a between() of the min and max values
-    // then filter down to matches
-    args.sort()
-    var [lo, hi] = [args[0], args[args.length - 1]]
-    try {
-      args = toArrayOfStrings(args)
-    } catch (e) {
-      throw new QueryError('The parameters to .anyOf() must be strings or numbers')
-    }
-    return this.between(lo, hi, {includeLower: true, includeUpper: true})
-      .filter(record => {
-        return testValues(record[this._index], v => {
-          v = (v || '').toString()
-          return args.indexOf(v) !== -1
-        })
-      })
-  }
-
-  // (Array|...args) => IngestQuery
-  anyOfIgnoreCase (...args) {
-    // just filter down to matches
-    try {
-      args = toArrayOfStrings(args, {toLowerCase: true})
-    } catch (e) {
-      throw new QueryError('The parameters to .anyOfIgnoreCase() must be strings or numbers')
-    }
-    return this.query.filter(record => {
-      return testValues(record[this._index], v => {
-        v = (v || '').toString().toLowerCase()
-        return args.indexOf(v) !== -1
-      })
-    })
-  }
-
-  // (upperBound) => IngestQuery
-  below (upperBound) {
-    this._upperBound = upperBound
-    this._upperBoundInclusive = false
-    return this.query
-  }
-
-  // (upperBound) => IngestQuery
-  belowOrEqual (upperBound) {
-    this._upperBound = upperBound
-    this._upperBoundInclusive = true
-    return this.query
-  }
-
-  // (lowerBound, upperBound, opts) => IngestQuery
-  between (lowerBound, upperBound, {includeLower, includeUpper} = {}) {
-    this._lowerBound = lowerBound
-    this._upperBound = upperBound
-    this._lowerBoundInclusive = !!includeLower
-    this._upperBoundInclusive = !!includeUpper
-    return this.query
-  }
-
-  // (value) => IngestQuery
-  equals (value) {
-    this._only = value
-    return this.query
-  }
-
-  // (value) => IngestQuery
-  equalsIgnoreCase (value) {
-    // just filter down to matches
-    assert(typeof value !== 'object', QueryError, 'The parameter to .equalsIgnoreCase() must be a string or number')
-    value = (value || '').toString().toLowerCase()
-    return this.query.filter(record => {
-      return testValues(record[this._index], v => {
-        v = (v || '').toString().toLowerCase()
-        return v === value
-      })
-    })
-  }
-
-  // (Array|...args) => IngestQuery
-  noneOf (...args) {
-    // just filter down to matches
-    try {
-      args = toArrayOfStrings(args)
-    } catch (e) {
-      throw new QueryError('The parameters to .noneOf() must be strings or numbers')
-    }
-    return this.query.filter(record => {
-      return testValues(record[this._index], v => {
-        v = (v || '').toString()
-        return args.indexOf(v) === -1
-      })
-    })
-  }
-
-  // (value) => IngestQuery
-  notEqual (value) {
-    // just filter down to matches
-    return this.query.filter(record => {
-      return testValues(record[this._index], v => {
-        return v !== value
-      })
-    })
-  }
-
-  // (value) => IngestQuery
-  startsWith (value) {
-    assert(typeof value === 'string', ParameterError, `First parameter or .startsWith() must be a string, got ${value}`)
-    return this.between(value, value + MAX_STRING)
-  }
-
-  // (Array|...args) => IngestQuery
-  startsWithAnyOf (...args) {
-    // just filter down to matches
-    try {
-      args = toArrayOfStrings(args)
-    } catch (e) {
-      throw new QueryError('The parameters to .startsWithAnyOf() must be strings or numbers')
-    }
-    return this.query.filter(record => {
-      return testValues(record[this._index], v => {
-        v = (v || '').toString()
-        for (let i = 0; i < args.length; i++) {
-          if (v.startsWith(args[i])) {
-            return true
-          }
-        }
-        return false
-      })
-    })
-  }
-
-  // (Array|...args) => IngestQuery
-  startsWithAnyOfIgnoreCase (...args) {
-    // just filter down to matches
-    try {
-      args = toArrayOfStrings(args, {toLowerCase: true})
-    } catch (e) {
-      throw new QueryError('The parameters to .startsWithAnyOfIgnoreCase() must be strings or numbers')
-    }
-    return this.query.filter(record => {
-      return testValues(record[this._index], v => {
-        v = (v || '').toString().toLowerCase()
-        for (let i = 0; i < args.length; i++) {
-          if (v.startsWith(args[i])) {
-            return true
-          }
-        }
-        return false
-      })
-    })
-  }
-
-  // (value) => IngestQuery
-  startsWithIgnoreCase (value) {
-    assert(typeof value === 'string', ParameterError, `First parameter or .startsWith() must be a string, got ${value}`)
-    value = value.toLowerCase()
-    // just filter down to matches
-    return this.query.filter(record => {
-      return testValues(record[this._index], v => {
-        return (v || '').toString().toLowerCase().startsWith(value)
-      })
-    })
-  }
-}
-
-module.exports = IngestWhereClause
-
-// internal methods
-// =
-
-function testValues (v, fn) {
-  if (Array.isArray(v)) {
-    return v.reduce((agg, v) => agg || fn(v), false)
-  }
-  return fn(v)
-}
-
-function toArrayOfStrings (arr, {toLowerCase} = {}) {
-  return arr.map(v => {
-    if (typeof v === 'object') {
-      throw new ParameterError()
-    }
-    v = v ? v.toString() : ''
-    if (toLowerCase) v = v.toLowerCase()
-    return v
-  })
-}
-
-},{"./errors":153,"./util":159}],161:[function(require,module,exports){
-'use strict';
-
-var micromatch = require('micromatch');
-var normalize = require('normalize-path');
-var path = require('path'); // required for tests.
-var arrify = function(a) { return a == null ? [] : (Array.isArray(a) ? a : [a]); };
-
-var anymatch = function(criteria, value, returnIndex, startIndex, endIndex) {
-  criteria = arrify(criteria);
-  value = arrify(value);
-  if (arguments.length === 1) {
-    return anymatch.bind(null, criteria.map(function(criterion) {
-      return typeof criterion === 'string' && criterion[0] !== '!' ?
-        micromatch.matcher(criterion) : criterion;
-    }));
-  }
-  startIndex = startIndex || 0;
-  var string = value[0];
-  var altString, altValue;
-  var matched = false;
-  var matchIndex = -1;
-  function testCriteria(criterion, index) {
-    var result;
-    switch (Object.prototype.toString.call(criterion)) {
-    case '[object String]':
-      result = string === criterion || altString && altString === criterion;
-      result = result || micromatch.isMatch(string, criterion);
-      break;
-    case '[object RegExp]':
-      result = criterion.test(string) || altString && criterion.test(altString);
-      break;
-    case '[object Function]':
-      result = criterion.apply(null, value);
-      result = result || altValue && criterion.apply(null, altValue);
-      break;
-    default:
-      result = false;
-    }
-    if (result) {
-      matchIndex = index + startIndex;
-    }
-    return result;
-  }
-  var crit = criteria;
-  var negGlobs = crit.reduce(function(arr, criterion, index) {
-    if (typeof criterion === 'string' && criterion[0] === '!') {
-      if (crit === criteria) {
-        // make a copy before modifying
-        crit = crit.slice();
-      }
-      crit[index] = null;
-      arr.push(criterion.substr(1));
-    }
-    return arr;
-  }, []);
-  if (!negGlobs.length || !micromatch.any(string, negGlobs)) {
-    if (path.sep === '\\' && typeof string === 'string') {
-      altString = normalize(string);
-      altString = altString === string ? null : altString;
-      if (altString) altValue = [altString].concat(value.slice(1));
-    }
-    matched = crit.slice(startIndex, endIndex).some(testCriteria);
-  }
-  return returnIndex === true ? matchIndex : matched;
-};
-
-module.exports = anymatch;
-
-},{"micromatch":105,"normalize-path":110,"path":178}],162:[function(require,module,exports){
+},{"buffer":171}],162:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('safe-buffer').Buffer;
@@ -21271,7 +21297,7 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":151}],163:[function(require,module,exports){
+},{"safe-buffer":161}],163:[function(require,module,exports){
 (function (process){
 var Transform = require('readable-stream/transform')
   , inherits  = require('util').inherits
@@ -21371,7 +21397,7 @@ module.exports.obj = through2(function (options, transform, flush) {
 })
 
 }).call(this,require('_process'))
-},{"_process":180,"readable-stream/transform":145,"util":206,"xtend":167}],164:[function(require,module,exports){
+},{"_process":180,"readable-stream/transform":155,"util":206,"xtend":167}],164:[function(require,module,exports){
 (function (Buffer){
 /**
  * Convert a typed array to a Buffer without a copy
@@ -21805,7 +21831,7 @@ URL.qs = qs;
 module.exports = URL;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"querystringify":131,"requires-port":150}],166:[function(require,module,exports){
+},{"querystringify":141,"requires-port":160}],166:[function(require,module,exports){
 (function (global){
 
 /**
@@ -25038,8 +25064,8 @@ var substr = 'ab'.substr(-1) === 'b'
 
 }).call(this,require('_process'))
 },{"_process":180}],179:[function(require,module,exports){
-arguments[4][121][0].apply(exports,arguments)
-},{"_process":180,"dup":121}],180:[function(require,module,exports){
+arguments[4][131][0].apply(exports,arguments)
+},{"_process":180,"dup":131}],180:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -25945,34 +25971,34 @@ exports.encode = exports.stringify = require('./encode');
 module.exports = require('./lib/_stream_duplex.js');
 
 },{"./lib/_stream_duplex.js":186}],186:[function(require,module,exports){
-arguments[4][136][0].apply(exports,arguments)
-},{"./_stream_readable":188,"./_stream_writable":190,"core-util-is":172,"dup":136,"inherits":175,"process-nextick-args":179}],187:[function(require,module,exports){
-arguments[4][137][0].apply(exports,arguments)
-},{"./_stream_transform":189,"core-util-is":172,"dup":137,"inherits":175}],188:[function(require,module,exports){
-arguments[4][138][0].apply(exports,arguments)
-},{"./_stream_duplex":186,"./internal/streams/BufferList":191,"./internal/streams/destroy":192,"./internal/streams/stream":193,"_process":180,"core-util-is":172,"dup":138,"events":173,"inherits":175,"isarray":177,"process-nextick-args":179,"safe-buffer":198,"string_decoder/":200,"util":170}],189:[function(require,module,exports){
-arguments[4][139][0].apply(exports,arguments)
-},{"./_stream_duplex":186,"core-util-is":172,"dup":139,"inherits":175}],190:[function(require,module,exports){
-arguments[4][140][0].apply(exports,arguments)
-},{"./_stream_duplex":186,"./internal/streams/destroy":192,"./internal/streams/stream":193,"_process":180,"core-util-is":172,"dup":140,"inherits":175,"process-nextick-args":179,"safe-buffer":198,"util-deprecate":203}],191:[function(require,module,exports){
-arguments[4][141][0].apply(exports,arguments)
-},{"dup":141,"safe-buffer":198}],192:[function(require,module,exports){
-arguments[4][142][0].apply(exports,arguments)
-},{"dup":142,"process-nextick-args":179}],193:[function(require,module,exports){
-arguments[4][143][0].apply(exports,arguments)
-},{"dup":143,"events":173}],194:[function(require,module,exports){
+arguments[4][146][0].apply(exports,arguments)
+},{"./_stream_readable":188,"./_stream_writable":190,"core-util-is":172,"dup":146,"inherits":175,"process-nextick-args":179}],187:[function(require,module,exports){
+arguments[4][147][0].apply(exports,arguments)
+},{"./_stream_transform":189,"core-util-is":172,"dup":147,"inherits":175}],188:[function(require,module,exports){
+arguments[4][148][0].apply(exports,arguments)
+},{"./_stream_duplex":186,"./internal/streams/BufferList":191,"./internal/streams/destroy":192,"./internal/streams/stream":193,"_process":180,"core-util-is":172,"dup":148,"events":173,"inherits":175,"isarray":177,"process-nextick-args":179,"safe-buffer":198,"string_decoder/":200,"util":170}],189:[function(require,module,exports){
+arguments[4][149][0].apply(exports,arguments)
+},{"./_stream_duplex":186,"core-util-is":172,"dup":149,"inherits":175}],190:[function(require,module,exports){
+arguments[4][150][0].apply(exports,arguments)
+},{"./_stream_duplex":186,"./internal/streams/destroy":192,"./internal/streams/stream":193,"_process":180,"core-util-is":172,"dup":150,"inherits":175,"process-nextick-args":179,"safe-buffer":198,"util-deprecate":203}],191:[function(require,module,exports){
+arguments[4][151][0].apply(exports,arguments)
+},{"dup":151,"safe-buffer":198}],192:[function(require,module,exports){
+arguments[4][152][0].apply(exports,arguments)
+},{"dup":152,"process-nextick-args":179}],193:[function(require,module,exports){
+arguments[4][153][0].apply(exports,arguments)
+},{"dup":153,"events":173}],194:[function(require,module,exports){
 module.exports = require('./readable').PassThrough
 
 },{"./readable":195}],195:[function(require,module,exports){
-arguments[4][144][0].apply(exports,arguments)
-},{"./lib/_stream_duplex.js":186,"./lib/_stream_passthrough.js":187,"./lib/_stream_readable.js":188,"./lib/_stream_transform.js":189,"./lib/_stream_writable.js":190,"dup":144}],196:[function(require,module,exports){
-arguments[4][145][0].apply(exports,arguments)
-},{"./readable":195,"dup":145}],197:[function(require,module,exports){
+arguments[4][154][0].apply(exports,arguments)
+},{"./lib/_stream_duplex.js":186,"./lib/_stream_passthrough.js":187,"./lib/_stream_readable.js":188,"./lib/_stream_transform.js":189,"./lib/_stream_writable.js":190,"dup":154}],196:[function(require,module,exports){
+arguments[4][155][0].apply(exports,arguments)
+},{"./readable":195,"dup":155}],197:[function(require,module,exports){
 module.exports = require('./lib/_stream_writable.js');
 
 },{"./lib/_stream_writable.js":190}],198:[function(require,module,exports){
-arguments[4][151][0].apply(exports,arguments)
-},{"buffer":171,"dup":151}],199:[function(require,module,exports){
+arguments[4][161][0].apply(exports,arguments)
+},{"buffer":171,"dup":161}],199:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a

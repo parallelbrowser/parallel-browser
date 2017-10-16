@@ -1,5 +1,5 @@
 /* globals DatArchive beaker */
-import ParallelAPI from 'parallel-scratch-api'
+import ParallelAPI from 'parallel-api'
 import * as yo from 'yo-yo'
 import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
@@ -39,13 +39,15 @@ export class ParallelBtn {
   }
 
   onSetActive (page) {
+    var url = this.parseURL(page.url)
     this.posts = null
     this.updateActives()
     this.loadGizmos()
-    this.loadPosts(page.url)
+    this.loadPosts(url)
   }
 
   onLoadCommit (url) {
+    url = this.parseURL(url)
     this.posts = null
     this.updateActives()
     this.loadGizmos()
@@ -53,10 +55,18 @@ export class ParallelBtn {
   }
 
   onReloadPosts (url) {
+    url = this.parseURL(url)
     this.posts = null
     this.updateActives()
     this.loadGizmos()
     this.loadPosts(url)
+  }
+
+  parseURL (url) {
+    if (url.indexOf('?') !== -1) {
+      url = url.split('?')[0]
+    }
+    return url
   }
 
   async loadPosts (currentURL) {

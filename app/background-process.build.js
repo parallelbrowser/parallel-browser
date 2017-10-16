@@ -957,7 +957,8 @@ var keysManifest = {
   changeAppURL: 'promise',
   changeProfileURL: 'promise',
   remove: 'promise',
-  get: 'promise'
+  get: 'promise',
+  sendPulse: 'promise'
 };
 
 // globals
@@ -2582,12 +2583,36 @@ function get$4 (profileId) {
   return get$2(`SELECT appURL, profileURL FROM keys WHERE profileId = ?`, [profileId])
 }
 
+var hypercore = require('hypercore');
+var hyperdiscovery = require('hyperdiscovery');
+var ram = require('random-access-memory');
+
+function sendPulse () {
+  var feed = hypercore(() => { return ram() }, 'e9b687d9e7aeb2a5990bbb16659bbc28f01d8e51b5ebf12d90925e57f4a37272');
+
+  var swarm;
+  feed.on('ready', function () {
+    console.log(feed.key.toString('hex'));
+    swarm = hyperdiscovery(feed);
+    swarm.on('connection', function (peer, type) {
+      console.log('we had a connection');
+    });
+    feed.append({item: 'hello, parallel!'});
+    // feed.close()
+    setTimeout(closeSwarm, 1500);
+  });
+
+  function closeSwarm () {
+    swarm.close();
+    feed.close();
+  }
+}
+
 // exported api
 // =
 
 var keysAPI = {
   async add (...args) {
-    console.log('lol. im here in web-apis/keys.js', args);
     return add$2(0, ...args)
   },
 
@@ -2605,6 +2630,11 @@ var keysAPI = {
 
   async get (...args) {
     return get$4(0, ...args)
+  },
+
+  async sendPulse () {
+    sendPulse();
+    return Promise.resolve(true)
   }
 };
 
@@ -3878,13 +3908,6 @@ function createShellWindow () {
 
   electron.ipcMain.on('inject-post', (event, post) => {
     promptInjectPost(win, post);
-  });
-
-  // this listens for the current webview url from
-  // webview-preload/locationbar.js
-
-  electron.ipcMain.on('get-webview-url', (event, url$$1) => {
-    getActiveWindow().send('new-url', url$$1); // sends to shell-window/ui/navbar/browser-script.js
   });
 
   // end
