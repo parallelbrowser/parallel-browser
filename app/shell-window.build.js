@@ -5577,8 +5577,7 @@ var keysManifest = {
   changeAppURL: 'promise',
   changeProfileURL: 'promise',
   remove: 'promise',
-  get: 'promise',
-  sendPulse: 'promise'
+  get: 'promise'
 };
 
 /* globals DatArchive */
@@ -5654,7 +5653,6 @@ if (window.location.protocol === 'beaker:') {
   beaker$1.keys.changeProfileURL = keysRPC.changeProfileURL;
   beaker$1.keys.remove = keysRPC.remove;
   beaker$1.keys.get = keysRPC.get;
-  beaker$1.keys.sendPulse = keysRPC.sendPulse;
 }
 
 beaker$1.keys.get(0).then(keyset => {

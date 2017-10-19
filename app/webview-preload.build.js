@@ -402,8 +402,7 @@ var keysManifest = {
   changeAppURL: 'promise',
   changeProfileURL: 'promise',
   remove: 'promise',
-  get: 'promise',
-  sendPulse: 'promise'
+  get: 'promise'
 };
 
 /* globals DatArchive */
@@ -479,7 +478,6 @@ if (window.location.protocol === 'beaker:') {
   beaker.keys.changeProfileURL = keysRPC.changeProfileURL;
   beaker.keys.remove = keysRPC.remove;
   beaker.keys.get = keysRPC.get;
-  beaker.keys.sendPulse = keysRPC.sendPulse;
 }
 
 // exported api
@@ -554,7 +552,9 @@ function setup$2 () {
   electron.ipcRenderer.on('inject-gizmo', (event, gizmo) => {
     profileURL = gizmo.keyset.profileURL;
     localStorage.setItem('activeGizmoURL', gizmo._url);
+    console.log('all dependencies', gizmo.fullDependencies);
     gizmo.fullDependencies.forEach((d, idx) => {
+      console.log('dependency', d);
       inject(d.gizmoJS, d.gizmoCSS, d._url);
     });
     inject(gizmo.gizmoJS, gizmo.gizmoCSS, gizmo._url);
@@ -592,7 +592,9 @@ function inject (js, css, gizmoURL) {
 }
 
 function togglePost (post) {
+  console.log('all dependencies', post.postDependencies);
   post.postDependencies.forEach((d, idx) => {
+    console.log('dependency', d);
     inject(d.gizmoJS, d.gizmoCSS, d._url);
   });
   window.postParams = JSON.parse(post.postParams);

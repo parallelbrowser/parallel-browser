@@ -1,5 +1,4 @@
 import * as keysDb from '../dbs/keys'
-import * as keysLibrary from '../networks/keys/library'
 // exported api
 // =
 
@@ -22,10 +21,5 @@ export default {
 
   async get (...args) {
     return keysDb.get(0, ...args)
-  },
-
-  async sendPulse () {
-    keysLibrary.sendPulse()
-    return Promise.resolve(true)
   }
 }

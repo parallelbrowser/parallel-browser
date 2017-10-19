@@ -3,6 +3,5 @@ export default {
   changeAppURL: 'promise',
   changeProfileURL: 'promise',
   remove: 'promise',
-  get: 'promise',
-  sendPulse: 'promise'
+  get: 'promise'
 }

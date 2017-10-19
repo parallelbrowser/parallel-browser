@@ -76,17 +76,11 @@ function render () {
             <li>Restart and reopen Parallel</li>
             <li>You're done!</li>
           </ol>
-          <button onclick=${() => sendPulse()}>Send pulse</button>
         </div>`);
 }
 
 // event handlers
 // =
-
-function sendPulse () {
-  console.log('sending pulse');
-  beaker.keys.sendPulse();
-}
 
 function onClickEdit (i) {
   return e => {
