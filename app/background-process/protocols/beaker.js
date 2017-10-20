@@ -8,7 +8,7 @@ import crypto from 'crypto'
 import listenRandomPort from 'listen-random-port'
 import errorPage from '../../lib/error-page'
 import {archivesDebugPage, datDnsCachePage, datDnsCacheJS} from '../networks/dat/debugging'
-
+import * as keysDb from '../dbs/keys'
 // constants
 // =
 
@@ -16,7 +16,7 @@ import {archivesDebugPage, datDnsCachePage, datDnsCacheJS} from '../networks/dat
 const BEAKER_CSP = `
   default-src 'self' beaker:;
   img-src beaker-favicon: beaker: data: dat: http: https;
-  script-src 'self' beaker:;
+  script-src 'self' 'unsafe-eval' beaker:;
   media-src 'self' beaker: dat:;
   style-src 'self' 'unsafe-inline' beaker:;
 `.replace(/\n/g, '')
@@ -162,9 +162,22 @@ async function beakerServer (req, res) {
 
   // new - keys
 
+  if (requestUrl.indexOf('beaker://setup/') !== -1) {
+    let profileKey = requestUrl.split('beaker://setup/')[1]
+    console.log('profileKey', profileKey)
+    keysDb.changeProfileURL(0, profileKey)
+    return cb(200, 'OK', 'text/html; charset=utf-8', path.join(__dirname, 'builtin-pages/setup.html'))
+    // dat://f3a2818262f647f0f2460905e7e9cb911868edc5a4eaac7a0a3245b5c18218cb
+  }
+
+  if (requestUrl === 'beaker://setup/main.js') {
+    return cb(200, 'OK', 'application/javascript; charset=utf-8', path.join(__dirname, 'builtin-pages/build/setup.build.js'))
+  }
+
   if (requestUrl === 'beaker://keys/') {
     return cb(200, 'OK', 'text/html; charset=utf-8', path.join(__dirname, 'builtin-pages/keys.html'))
   }
+
   if (requestUrl === 'beaker://keys/main.js') {
     return cb(200, 'OK', 'application/javascript; charset=utf-8', path.join(__dirname, 'builtin-pages/build/keys.build.js'))
   }

@@ -4,8 +4,7 @@ import * as yo from 'yo-yo'
 const debounce = require('debounce')
 const moment = require('moment')
 import * as pages from '../../../pages'
-import ParallelAPI from 'parallel-scratch-api'
-import datURLS from './dat-urls'
+import ParallelAPI from 'parallel-api'
 
 export class Comments {
   constructor (post, keyset, loadPosts, updatePostActives) {
@@ -14,15 +13,13 @@ export class Comments {
     this.updatePostActives = updatePostActives
     this.replies = post.replies || []
     this.commentDraft = ''
-    this.userAppURL = keyset.appURL
-    this.userProfileURL = keyset.profileURL
-    this.el = this.render()
+    this.keyset = keyset
   }
   render () {
     return yo`
     <div class="comments" id=${this.parseDatPath()}>
       <div class="comments-editor">
-        <textarea style="cursor: auto" onkeypress=${this.onDetectEnter.bind(this)} onkeyup=${debounce(this.onChangeComment.bind(this), 300)} type="text" placeholder="Write a comment...">${this.commentDraft}</textarea>
+        <textarea style="cursor: auto" onkeypress=${this.onDetectEnter.bind(this)} onclick=${(e) => this.stopProp(e)} onkeyup=${(e) => this.onChangeComment(e)} type="text" placeholder="Write a comment...">${this.commentDraft}</textarea>
       </div>
 
       ${this.replies.map(r => yo`
@@ -39,6 +36,10 @@ export class Comments {
     `
   }
 
+  stopProp (e) {
+    e.stopPropagation()
+  }
+
   parseDatPath () {
     let dat = this.post._url.replace(/\//g, '')
     dat = dat.replace(/\./g, '')
@@ -47,7 +48,7 @@ export class Comments {
   }
 
   onOpenProfilePage (author) {
-    const url = this.userAppURL + this.getViewProfileURL(author)
+    const url = this.keyset.appURL + this.getViewProfileURL(author)
     pages.setActive(pages.create(url))
   }
 
@@ -63,19 +64,25 @@ export class Comments {
   }
 
   async submitComment () {
-    const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL))
+    let newReply = {author: {_origin: this.keyset.profileURL, name: 'You'}, text: this.commentDraft, createdAt: Date.now()}
+    console.log('newreply', newReply)
+    this.replies.push(newReply)
+    console.log('this.replies', this.replies)
+    console.log('el', document.getElementById(this.parseDatPath()))
+    const finalComment = this.commentDraft
+
+    this.commentDraft = ''
+    this.updatePostActives()
+    yo.update(document.getElementById(this.parseDatPath()), this.render())
+    const userDB = await ParallelAPI.open(new DatArchive(this.keyset.profileURL))
     try {
       await userDB.broadcast(
-        this.userProfileURL,
-        {text: this.commentDraft, threadParent: this.post._url})
+        this.keyset.profileURL,
+        {text: finalComment, threadParent: this.post._url})
     } catch (e) {
       console.error(e)
       return
     }
-    this.commentDraft = ''
-    this.loadPosts(this.post.postHTTP)
-    this.updatePostActives()
-    yo.update(this.el, this.render())
   }
 
   onChangeComment (e) {

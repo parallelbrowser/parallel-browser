@@ -1,12 +1,10 @@
-/* globals DatArchive beaker prompt */
-import ParallelAPI from 'parallel-scratch-api'
+/* globals DatArchive beaker */
+import ParallelAPI from 'parallel-api'
 import * as yo from 'yo-yo'
 import { findParent } from '../../../lib/fg/event-handlers'
 import * as pages from '../../pages'
 import { GizmoList } from './parallel/gizmo-list'
 import {PostList} from './parallel/post-list'
-import datURLs from './parallel/dat-urls'
-import { ipcRenderer } from 'electron'
 
 export class ParallelBtn {
   constructor () {
@@ -14,35 +12,24 @@ export class ParallelBtn {
     this.showGizmos = true
     this.gizmos = null
     this.posts = null
-    this.userAppURL = null
-    this.userProfileURL = null
     this.keyset = null
     window.addEventListener('mousedown', this.onClickAnywhere.bind(this), true)
-    this.wireIPC()
     this.setup()
   }
 
   async loadGizmos () {
-    const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL))
+    const userDB = await ParallelAPI.open(new DatArchive(this.keyset.profileURL))
     this.gizmos = await userDB.listGizmos({
       fetchAuthor: true,
       reverse: true,
-      subscriber: this.userProfileURL,
+      subscriber: this.keyset.profileURL,
       fetchGizmoDependencies: true
-    })
-  }
-
-  wireIPC () {
-    ipcRenderer.on('keys-reset', e => {
-      this.setup()
     })
   }
 
   setup () {
     beaker.keys.get(0).then(keyset => {
       this.keyset = keyset
-      this.userAppURL = keyset.appURL
-      this.userProfileURL = keyset.profileURL
       this.loadGizmos()
       this.updateActives()
       pages.on('set-active', this.onSetActive.bind(this))
@@ -52,13 +39,15 @@ export class ParallelBtn {
   }
 
   onSetActive (page) {
+    var url = this.parseURL(page.url)
     this.posts = null
     this.updateActives()
     this.loadGizmos()
-    this.loadPosts(page.url)
+    this.loadPosts(url)
   }
 
   onLoadCommit (url) {
+    url = this.parseURL(url)
     this.posts = null
     this.updateActives()
     this.loadGizmos()
@@ -66,40 +55,35 @@ export class ParallelBtn {
   }
 
   onReloadPosts (url) {
+    url = this.parseURL(url)
     this.posts = null
     this.updateActives()
     this.loadGizmos()
     this.loadPosts(url)
   }
 
+  parseURL (url) {
+    if (url.indexOf('?') !== -1) {
+      url = url.split('?')[0]
+    }
+    return url
+  }
+
   async loadPosts (currentURL) {
-    if (currentURL && this.userProfileURL) {
-      const userDB = await ParallelAPI.open(new DatArchive(this.userProfileURL))
+    if (currentURL && this.keyset.profileURL) {
+      const userDB = await ParallelAPI.open(new DatArchive(this.keyset.profileURL))
       this.posts = await userDB.listPosts({
         fetchAuthor: true,
         fetchReplies: true,
         countVotes: true,
         reverse: true,
         fetchGizmo: true,
-        requester: this.userProfileURL,
+        requester: this.keyset.profileURL,
         currentURL,
         fetchPostDependencies: true
       })
     }
     this.updateActives()
-  }
-
-  toggleKeyPrompt () {
-    // const appURL = prompt('Enter the app URL.')
-    // const profileURL = prompt('Enter the profile URL.')
-    beaker.keys.add(
-      'dat://b60149d2cf3cde895ebc17f248d6d6a47eda2818cddf45648eecb8beb3d93b3e',
-      'dat://627a7a94c0e4893be3b216fcfc34d39ba1a84794401b3782ba53bbf418ebf70f'
-    )
-    beaker.keys.get(0).then(keyset => {
-      datURLs.userAppURL = keyset.userAppURL
-      datURLs.userProfileURL = keyset.userProfileURL
-    })
   }
 
   render () {
@@ -120,7 +104,7 @@ export class ParallelBtn {
             </div>
             ${this.showGizmos ? new GizmoList(this.gizmos, this.keyset).render() : new PostList(this.posts, this.keyset, this.loadPosts.bind(this)).render()}
             <div class="footer" style="">
-              <a onclick=${e => this.onOpenPage(e, this.userAppURL)}>
+              <a onclick=${e => this.onOpenPage(e, this.keyset.appURL)}>
                 <i class="fa fa-home"></i>
                 <span>Home</span>
               </a>
@@ -137,19 +121,12 @@ export class ParallelBtn {
     // render btn
     return yo`
       <div class="toolbar-dropdown-menu browser-dropdown-scripts">
-        <button class="toolbar-btn toolbar-dropdown-menu-btn ${this.isDropdownOpen ? 'pressed' : ''}" onclick=${e => this.onClickBtn(e)} title="Script">
-          <span class="fa fa-code"></span>
+        <button style="background-image :url(beaker://assets/logo); background-size: contain; background-repeat: no-repeat;"
+          class="toolbar-btn toolbar-dropdown-menu-btn ${this.isDropdownOpen ? 'pressed' : ''}" onclick=${e => this.onClickBtn(e)} title="Script">
         </button>
         ${dropdownEl}
       </div>
     `
-  }
-
-  // Manages the redirect to other scripts from the clicked author
-  clickedAuthor (scriptObj) {
-      // TODO: send an ipc request for the rest of the scripts from this author
-      //       and find a way to display them
-    this.updateActives()
   }
 
   // Toggles whether the user is viewing prescripts or post scripts on the current site
@@ -179,6 +156,7 @@ export class ParallelBtn {
 
   onClickBtn (e) {
     this.isDropdownOpen = !this.isDropdownOpen
+    this.setup()
     this.updateActives()
   }
 

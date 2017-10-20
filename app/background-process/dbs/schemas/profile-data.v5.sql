@@ -8,7 +8,7 @@ CREATE TABLE keys (
   FOREIGN KEY (profileId) REFERENCES profiles (id) ON DELETE CASCADE
 );
 
-INSERT INTO keys (profileId, appURL, profileURL) VALUES (0, 'dat://8783d32b34bd79da196a8039dc476b2c7ca39a618af840baba68d968fefcec16', 'empty');
+INSERT INTO keys (profileId, appURL, profileURL) VALUES (0, 'dat://ca4ed3a956dd8ba2a6025cfa44cffe4b220298194009b130aa0b5fe2fae00f9a', 'empty');
 
 
 PRAGMA user_version = 5;

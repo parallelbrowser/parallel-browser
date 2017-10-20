@@ -1,11 +1,9 @@
 import * as keysDb from '../dbs/keys'
-
 // exported api
 // =
 
 export default {
   async add (...args) {
-    console.log('lol. im here in web-apis/keys.js', args)
     return keysDb.add(0, ...args)
   },
 

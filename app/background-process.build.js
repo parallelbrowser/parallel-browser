@@ -2587,7 +2587,6 @@ function get$4 (profileId) {
 
 var keysAPI = {
   async add (...args) {
-    console.log('lol. im here in web-apis/keys.js', args);
     return add$2(0, ...args)
   },
 
@@ -3872,38 +3871,12 @@ function createShellWindow () {
   // in the shell-window/ui/pages.js in the "create" function and returns
   // 'pong'
 
-  electron.ipcMain.on('synchronous-message', (event, arg) => {
-    console.log(arg); // prints "ping"
-    event.returnValue = 'pong';
-  });
-
-  // this listens for an asynchronous message from the icp
-  // in the shell-window/ui/pages.js in the "create" function
-
-  electron.ipcMain.on('asynchronous-message', (event, arg) => {
-    console.log(arg); // prints "ping"
-    event.sender.send('asynchronous-reply', 'pong');
-  });
-
   electron.ipcMain.on('inject-gizmo', (event, gizmo) => {
     promptInjectGizmo(win, gizmo);
   });
 
   electron.ipcMain.on('inject-post', (event, post) => {
     promptInjectPost(win, post);
-  });
-
-  // this listens for the current webview url from
-  // webview-preload/locationbar.js
-
-  electron.ipcMain.on('get-webview-url', (event, url$$1) => {
-    getActiveWindow().send('new-url', url$$1); // sends to shell-window/ui/navbar/browser-script.js
-  });
-
-  electron.ipcMain.on('keys-reset', event => {
-    var win = getActiveWindow();
-    console.log('keys reset in windows');
-    win.webContents.send('keys-reset');
   });
 
   // end
@@ -4858,7 +4831,7 @@ function datDnsCacheJS () {
 const BEAKER_CSP = `
   default-src 'self' beaker:;
   img-src beaker-favicon: beaker: data: dat: http: https;
-  script-src 'self' beaker:;
+  script-src 'self' 'unsafe-eval' beaker:;
   media-src 'self' beaker: dat:;
   style-src 'self' 'unsafe-inline' beaker:;
 `.replace(/\n/g, '');
@@ -5004,9 +4977,22 @@ async function beakerServer (req, res) {
 
   // new - keys
 
+  if (requestUrl.indexOf('beaker://setup/') !== -1) {
+    let profileKey = requestUrl.split('beaker://setup/')[1];
+    console.log('profileKey', profileKey);
+    changeProfileURL(0, profileKey);
+    return cb(200, 'OK', 'text/html; charset=utf-8', path__default.join(__dirname, 'builtin-pages/setup.html'))
+    // dat://f3a2818262f647f0f2460905e7e9cb911868edc5a4eaac7a0a3245b5c18218cb
+  }
+
+  if (requestUrl === 'beaker://setup/main.js') {
+    return cb(200, 'OK', 'application/javascript; charset=utf-8', path__default.join(__dirname, 'builtin-pages/build/setup.build.js'))
+  }
+
   if (requestUrl === 'beaker://keys/') {
     return cb(200, 'OK', 'text/html; charset=utf-8', path__default.join(__dirname, 'builtin-pages/keys.html'))
   }
+
   if (requestUrl === 'beaker://keys/main.js') {
     return cb(200, 'OK', 'application/javascript; charset=utf-8', path__default.join(__dirname, 'builtin-pages/build/keys.build.js'))
   }

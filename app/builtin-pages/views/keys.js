@@ -1,5 +1,4 @@
 /* globals beaker */
-import { ipcRenderer} from 'electron'
 
 const yo = require('yo-yo')
 const co = require('co')
@@ -16,7 +15,6 @@ var keys
 co(function * () {
   // get the bookmarks, ordered by # of views
   keys = yield beaker.keys.get(0)
-  console.log('keys in keys', keys)
   keys = [{title: 'App Key', url: keys.appURL}, {title: 'Profile Key', url: keys.profileURL}]
   render()
 })
@@ -114,7 +112,6 @@ function onKeyUp (i) {
 
       // save in backend
       beaker.keys.add(keys[0].url, keys[1].url)
-      ipcRenderer.send('keys-reset')
     } else if (e.keyCode == 27) {
       // escape-key
       // exit edit-mode
