@@ -10,8 +10,8 @@ import {renderShelf, setUpdate} from '../com/shelf'
 const colorThief = new ColorThief()
 
 const LATEST_VERSION = 7004 // semver where major*1mm and minor*1k; thus 3.2.1 = 3002001
-const WELCOME_URL = 'https://github.com/parallelbrowser/parallel-browser'
-const RELEASE_NOTES_URL = 'https://github.com/parallelbrowser/parallel-browser'
+const WELCOME_URL = 'beaker://start'
+const RELEASE_NOTES_URL = 'beaker://start'
 
 // globals
 // =
@@ -29,7 +29,7 @@ async function setup () {
   await loadBookmarks()
   archivesStatus = await beaker.archives.status()
   userProfile = await beaker.profiles.get(0)
-  appURL = await beaker.keys.get(0).appURL
+  appURL = 'dat://ca4ed3a956dd8ba2a6025cfa44cffe4b220298194009b130aa0b5fe2fae00f9a'
   try {
     userProfile.title = (await beaker.archives.get(userProfile.url, {timeout: 500})).title
   } catch (e) {
@@ -215,7 +215,7 @@ function renderPinnedBookmark (bookmark) {
     <a class="pinned-bookmark ${isManagingBookmarks ? 'nolink' : ''}" href=${isManagingBookmarks ? '' : url}>
       <div class="favicon-container" style="background: rgb(${r}, ${g}, ${b})">
         ${isManagingBookmarks ? yo`<a class="unpin" onclick=${e => unpinBookmark(e, bookmark)}><i class="fa fa-times"></i></a>` : ''}
-        <img src=${'beaker-favicon:' + url} class="favicon"/>
+        <img src="beaker://assets/logo" class="favicon"/>
       </div>
       <div class="title">${title}</div>
     </a>

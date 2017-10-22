@@ -58,6 +58,6 @@ CREATE UNIQUE INDEX visits_stats_url ON visit_stats (url);
 INSERT INTO profiles (id) VALUES (0);
 
 -- default bookmarks
-INSERT INTO bookmarks (profileId, title, url, pinned) VALUES (0, 'Parallel - Click to Start', 'dat://ca4ed3a956dd8ba2a6025cfa44cffe4b220298194009b130aa0b5fe2fae00f9a', 1);
+INSERT INTO bookmarks (profileId, title, url, pinned) VALUES (0, 'START', 'dat://ca4ed3a956dd8ba2a6025cfa44cffe4b220298194009b130aa0b5fe2fae00f9a', 1);
 
 PRAGMA user_version = 1;
